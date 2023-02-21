@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_C_COMPILER )
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 project(alchemy)
@@ -15,7 +14,8 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/src/renderer/shader.cpp
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.cpp
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.cpp
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.cpp)
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_keyboard.cpp
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_xinput_gamepad.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
             ${PROJECT_SOURCE_DIR}/src
@@ -28,11 +28,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                       user32.lib
                       gdi32.lib
                       opengl32.lib
+                      xinput.lib
                       ${PROJECT_SOURCE_DIR}/lib/freetype/freetype.lib)
 
-set_target_properties(${PROJECT_NAME}
-                      PROPERTIES 
-                      RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(${PROJECT_NAME} PROPERTIES 
+                      RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}
+                      VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res)
 
 if (MSVC)
     # C4100 and C4189 are about unused parameters/variables and are not particularly useful

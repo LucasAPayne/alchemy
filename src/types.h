@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
+
 #define internal        static
 #define local_persist   static
 #define global_variable static

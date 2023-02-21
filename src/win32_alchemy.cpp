@@ -5,7 +5,10 @@
 
 #include "example.h"
 #include "types.h"
-#include "platform/windows/win32_input.h"
+#include "platform/windows/win32_keyboard.h"
+#include "platform/windows/win32_xinput_gamepad.h"
+
+#include "gamepad.h"
 
 #include <windows.h>
 
@@ -13,6 +16,7 @@
 #include <glad/glad.h>
 
 #include <stdio.h>
+#include <limits.h>
 
 #if ALCHEMY_DEBUG
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
@@ -29,7 +33,7 @@ struct win32_window_dimensions
 internal win32_window_dimensions win32_get_window_dimensions(HWND window)
 {
     win32_window_dimensions dimensions;
-    RECT client_rect;
+    RECT client_rect = {0};
     GetClientRect(window, &client_rect);
     dimensions.width = client_rect.right - client_rect.left;
     dimensions.height = client_rect.bottom - client_rect.top;
@@ -246,8 +250,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     while(global_running)
     {
         // Double buffer input to detect keys held
-        keyboard_input old_input = state.key_input;
-        win32_process_input(window, &state.key_input);
+        keyboard_input old_keyboard = state.keyboard;
+        win32_process_keyboard_input(window, &state.keyboard);
+
+        gamepad old_gamepad = state.gamepad;
+        win32_process_xinput_gamepad_input(&state.gamepad);
 
         HDC device_context = GetDC(window);
         win32_window_dimensions dimensions = win32_get_window_dimensions(window);
@@ -256,8 +263,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         SwapBuffers(device_context);
         ReleaseDC(window, device_context);
 
-        // The key input of this frame becomes the old input
-        old_input = state.key_input;
+        // The input of this frame becomes the old input for next frame
+        old_keyboard = state.keyboard;
+        old_gamepad = state.gamepad;
     }
 
     delete_example_state(&state);

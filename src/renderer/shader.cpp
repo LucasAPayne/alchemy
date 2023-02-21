@@ -9,9 +9,6 @@
 #include <stdio.h>  // File I/O
 #include <stdlib.h> // malloc()
 
-// TODO(lucas): To be moved elsewhere
-#define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
-
 // NOTE(lucas): This is a temporary file loading function that will probably be changed or replaced
 /*
  * Reads the file 'path' into a string 'buf'. If 'add_null' is true, terminates string with '\0'.
