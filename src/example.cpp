@@ -165,13 +165,9 @@ void example_update_and_render(example_state* state, u32 window_width, u32 windo
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     glViewport(0, 0, window_width, window_height);
     glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
+
     if (is_key_released(&state->keyboard, key::A))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    
-    if (is_gamepad_button_pressed(state->gamepad.right_stick_downright))
-        glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    if (is_gamepad_button_released(state->gamepad.right_stick_downright))
-        glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
     
     glClear(GL_COLOR_BUFFER_BIT);
 

@@ -4,7 +4,6 @@
 
 struct key_state
 {
-    u32 times_pressed;  // How many times key was pressed in a frame
     bool is_pressed;
     bool is_released;
 };
@@ -57,9 +56,5 @@ inline bool is_key_pressed(keyboard_input* input, int key)
 
 inline bool is_key_released(keyboard_input* input, int key)
 {
-    // NOTE(lucas): Key release state should not persist.
-    // It needs to be explicitly set to false.
-    bool released = input->keys[key].is_released;
-    input->keys[key].is_released = false;
-    return released;
+    return input->keys[key].is_released;
 }

@@ -13,18 +13,18 @@ internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
      */ 
     WORD vk = LOWORD(wparam); // virtual-key code
     WORD key_flags = HIWORD(lparam);
-    WORD scancode = LOBYTE(key_flags); // scancode
+    WORD scan_code = LOBYTE(key_flags); // scancode
     BOOL extended = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
     
     if (extended)
-        scancode = MAKEWORD(scancode, 0xE0);
+        scan_code = MAKEWORD(scan_code, 0xE0);
 
     switch (vk)
     {
         case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
         case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
         case VK_MENU:    // converts to VK_LMENU or VK_RMENU
-            vk = LOWORD(MapVirtualKeyW(scancode, MAPVK_VSC_TO_VK_EX));
+            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
             break;
 
         default: break;
@@ -33,9 +33,19 @@ internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
     return vk;
 }
 
+internal void win32_process_key(key_state* key, bool32 is_down, bool32 was_down)
+{
+    key->is_pressed = is_down;
+    key->is_released = was_down && !is_down;
+}
+
 // TODO(lucas): Support for non-US keyboard layouts
 void win32_process_keyboard_input(HWND window, keyboard_input* key_input)
 {
+    // Release state should not persist, so make sure it is false for each button
+    for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
+        key_input->keys[key].is_released = false;
+
     MSG msg;
     while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
     {
@@ -70,108 +80,104 @@ void win32_process_keyboard_input(HWND window, keyboard_input* key_input)
                 // For keys that have no ANSI equivalent, Windows provides defines for virtual keycodes
                 switch(virtual_key_code)
                 {
-                    case 'A':
-                    {
-                        key_input->keys[key::A].is_pressed = is_down;
-                        key_input->keys[key::A].is_released = was_down && !is_down;
-                    } break;
-                    case 'B': key_input->keys[key::B].is_pressed = is_down; break;
-                    case 'C': key_input->keys[key::C].is_pressed = is_down; break;
-                    case 'D': key_input->keys[key::D].is_pressed = is_down; break;
-                    case 'E': key_input->keys[key::E].is_pressed = is_down; break;
-                    case 'F': key_input->keys[key::F].is_pressed = is_down; break;
-                    case 'G': key_input->keys[key::G].is_pressed = is_down; break;
-                    case 'H': key_input->keys[key::H].is_pressed = is_down; break;
-                    case 'I': key_input->keys[key::I].is_pressed = is_down; break;
-                    case 'J': key_input->keys[key::J].is_pressed = is_down; break;
-                    case 'K': key_input->keys[key::K].is_pressed = is_down; break;
-                    case 'L': key_input->keys[key::L].is_pressed = is_down; break;
-                    case 'M': key_input->keys[key::M].is_pressed = is_down; break;
-                    case 'N': key_input->keys[key::N].is_pressed = is_down; break;
-                    case 'O': key_input->keys[key::O].is_pressed = is_down; break;
-                    case 'P': key_input->keys[key::P].is_pressed = is_down; break;
-                    case 'Q': key_input->keys[key::Q].is_pressed = is_down; break;
-                    case 'R': key_input->keys[key::R].is_pressed = is_down; break;
-                    case 'S': key_input->keys[key::S].is_pressed = is_down; break;
-                    case 'T': key_input->keys[key::T].is_pressed = is_down; break;
-                    case 'U': key_input->keys[key::U].is_pressed = is_down; break;
-                    case 'V': key_input->keys[key::V].is_pressed = is_down; break;
-                    case 'W': key_input->keys[key::W].is_pressed = is_down; break;
-                    case 'X': key_input->keys[key::X].is_pressed = is_down; break;
-                    case 'Y': key_input->keys[key::Y].is_pressed = is_down; break;
-                    case 'Z': key_input->keys[key::Z].is_pressed = is_down; break;
+                    case 'A': win32_process_key(&key_input->keys[key::A], is_down, was_down); break;
+                    case 'B': win32_process_key(&key_input->keys[key::B], is_down, was_down); break;
+                    case 'C': win32_process_key(&key_input->keys[key::C], is_down, was_down); break;
+                    case 'D': win32_process_key(&key_input->keys[key::D], is_down, was_down); break;
+                    case 'E': win32_process_key(&key_input->keys[key::E], is_down, was_down); break;
+                    case 'F': win32_process_key(&key_input->keys[key::F], is_down, was_down); break;
+                    case 'G': win32_process_key(&key_input->keys[key::G], is_down, was_down); break;
+                    case 'H': win32_process_key(&key_input->keys[key::H], is_down, was_down); break;
+                    case 'I': win32_process_key(&key_input->keys[key::I], is_down, was_down); break;
+                    case 'J': win32_process_key(&key_input->keys[key::J], is_down, was_down); break;
+                    case 'K': win32_process_key(&key_input->keys[key::K], is_down, was_down); break;
+                    case 'L': win32_process_key(&key_input->keys[key::L], is_down, was_down); break;
+                    case 'M': win32_process_key(&key_input->keys[key::M], is_down, was_down); break;
+                    case 'N': win32_process_key(&key_input->keys[key::N], is_down, was_down); break;
+                    case 'O': win32_process_key(&key_input->keys[key::O], is_down, was_down); break;
+                    case 'P': win32_process_key(&key_input->keys[key::P], is_down, was_down); break;
+                    case 'Q': win32_process_key(&key_input->keys[key::Q], is_down, was_down); break;
+                    case 'R': win32_process_key(&key_input->keys[key::R], is_down, was_down); break;
+                    case 'S': win32_process_key(&key_input->keys[key::S], is_down, was_down); break;
+                    case 'T': win32_process_key(&key_input->keys[key::T], is_down, was_down); break;
+                    case 'U': win32_process_key(&key_input->keys[key::U], is_down, was_down); break;
+                    case 'V': win32_process_key(&key_input->keys[key::V], is_down, was_down); break;
+                    case 'W': win32_process_key(&key_input->keys[key::W], is_down, was_down); break;
+                    case 'X': win32_process_key(&key_input->keys[key::X], is_down, was_down); break;
+                    case 'Y': win32_process_key(&key_input->keys[key::Y], is_down, was_down); break;
+                    case 'Z': win32_process_key(&key_input->keys[key::Z], is_down, was_down); break;
 
-                    case '0': key_input->keys[key::NUM0].is_pressed = is_down; break;
-                    case '1': key_input->keys[key::NUM1].is_pressed = is_down; break;
-                    case '2': key_input->keys[key::NUM2].is_pressed = is_down; break;
-                    case '3': key_input->keys[key::NUM3].is_pressed = is_down; break;
-                    case '4': key_input->keys[key::NUM4].is_pressed = is_down; break;
-                    case '5': key_input->keys[key::NUM5].is_pressed = is_down; break;
-                    case '6': key_input->keys[key::NUM6].is_pressed = is_down; break;
-                    case '7': key_input->keys[key::NUM7].is_pressed = is_down; break;
-                    case '8': key_input->keys[key::NUM8].is_pressed = is_down; break;
-                    case '9': key_input->keys[key::NUM9].is_pressed = is_down; break;
+                    case '0': win32_process_key(&key_input->keys[key::NUM0], is_down, was_down); break;
+                    case '1': win32_process_key(&key_input->keys[key::NUM1], is_down, was_down); break;
+                    case '2': win32_process_key(&key_input->keys[key::NUM2], is_down, was_down); break;
+                    case '3': win32_process_key(&key_input->keys[key::NUM3], is_down, was_down); break;
+                    case '4': win32_process_key(&key_input->keys[key::NUM4], is_down, was_down); break;
+                    case '5': win32_process_key(&key_input->keys[key::NUM5], is_down, was_down); break;
+                    case '6': win32_process_key(&key_input->keys[key::NUM6], is_down, was_down); break;
+                    case '7': win32_process_key(&key_input->keys[key::NUM7], is_down, was_down); break;
+                    case '8': win32_process_key(&key_input->keys[key::NUM8], is_down, was_down); break;
+                    case '9': win32_process_key(&key_input->keys[key::NUM9], is_down, was_down); break;
 
-                    case VK_OEM_4:      key_input->keys[key::LBRACKET].is_pressed  = is_down; break;
-                    case VK_OEM_6:      key_input->keys[key::RBRACKET].is_pressed  = is_down; break;
-                    case VK_OEM_1:      key_input->keys[key::SEMICOLON].is_pressed = is_down; break;
-                    case VK_OEM_7:      key_input->keys[key::QUOTE].is_pressed     = is_down; break;
-                    case VK_OEM_COMMA:  key_input->keys[key::COMMA].is_pressed     = is_down; break;
-                    case VK_OEM_PERIOD: key_input->keys[key::PERIOD].is_pressed    = is_down; break;
-                    case VK_OEM_2:      key_input->keys[key::SLASH].is_pressed     = is_down; break;
-                    case VK_OEM_5:      key_input->keys[key::BACKSLASH].is_pressed = is_down; break;
-                    case VK_OEM_3:      key_input->keys[key::TILDE].is_pressed     = is_down; break;
-                    case VK_OEM_PLUS:   key_input->keys[key::EQUAL].is_pressed     = is_down; break;
-                    case VK_OEM_MINUS:  key_input->keys[key::HYPHEN].is_pressed    = is_down; break;
+                    case VK_OEM_4:      win32_process_key(&key_input->keys[key::LBRACKET],  is_down, was_down); break;
+                    case VK_OEM_6:      win32_process_key(&key_input->keys[key::RBRACKET],  is_down, was_down); break;
+                    case VK_OEM_1:      win32_process_key(&key_input->keys[key::SEMICOLON], is_down, was_down); break;
+                    case VK_OEM_7:      win32_process_key(&key_input->keys[key::QUOTE],     is_down, was_down); break;
+                    case VK_OEM_COMMA:  win32_process_key(&key_input->keys[key::COMMA],     is_down, was_down); break;
+                    case VK_OEM_PERIOD: win32_process_key(&key_input->keys[key::PERIOD],    is_down, was_down); break;
+                    case VK_OEM_2:      win32_process_key(&key_input->keys[key::SLASH],     is_down, was_down); break;
+                    case VK_OEM_5:      win32_process_key(&key_input->keys[key::BACKSLASH], is_down, was_down); break;
+                    case VK_OEM_3:      win32_process_key(&key_input->keys[key::TILDE],     is_down, was_down); break;
+                    case VK_OEM_PLUS:   win32_process_key(&key_input->keys[key::EQUAL],     is_down, was_down); break;
+                    case VK_OEM_MINUS:  win32_process_key(&key_input->keys[key::HYPHEN],    is_down, was_down); break;
 
-                    case VK_SPACE: key_input->keys[key::SPACE].is_pressed       = is_down; break;
-                    case VK_RETURN: key_input->keys[key::ENTER].is_pressed      = is_down; break;
-                    case VK_ESCAPE: key_input->keys[key::ESCAPE].is_pressed     = is_down; break;
-                    case VK_BACK: key_input->keys[key::BACKSPACE].is_pressed    = is_down; break;
-                    case VK_TAB: key_input->keys[key::TAB].is_pressed           = is_down; break;
-                    case VK_LSHIFT: key_input->keys[key::LSHIFT].is_pressed     = is_down; break;
-                    case VK_RSHIFT: key_input->keys[key::RSHIFT].is_pressed     = is_down; break;
-                    case VK_LCONTROL: key_input->keys[key::LCONTROL].is_pressed = is_down; break;
-                    case VK_RCONTROL: key_input->keys[key::RCONTROL].is_pressed = is_down; break;
-                    case VK_LMENU: key_input->keys[key::LALT].is_pressed        = is_down; break;
-                    case VK_RMENU: key_input->keys[key::RALT].is_pressed        = is_down; break;
-                    case VK_LWIN: key_input->keys[key::LSYSTEM].is_pressed      = is_down; break;
-                    case VK_RWIN: key_input->keys[key::RSYSTEM].is_pressed      = is_down; break;
-                    case VK_APPS: key_input->keys[key::MENU].is_pressed         = is_down; break;
-                    case VK_PRIOR: key_input->keys[key::PAGEUP].is_pressed      = is_down; break;
-                    case VK_NEXT: key_input->keys[key::PAGEDOWN].is_pressed     = is_down; break;
-                    case VK_END: key_input->keys[key::END].is_pressed           = is_down; break;
-                    case VK_HOME: key_input->keys[key::HOME].is_pressed         = is_down; break;
-                    case VK_INSERT: key_input->keys[key::INSERT].is_pressed     = is_down; break;
-                    case VK_DELETE: key_input->keys[key::DEL].is_pressed        = is_down; break;
-                    case VK_UP: key_input->keys[key::UP].is_pressed             = is_down; break;
-                    case VK_DOWN: key_input->keys[key::DOWN].is_pressed         = is_down; break;
-                    case VK_LEFT: key_input->keys[key::LEFT].is_pressed         = is_down; break;
-                    case VK_RIGHT: key_input->keys[key::RIGHT].is_pressed       = is_down; break;
+                    case VK_SPACE:      win32_process_key(&key_input->keys[key::SPACE],     is_down, was_down); break;
+                    case VK_RETURN:     win32_process_key(&key_input->keys[key::ENTER],     is_down, was_down); break;
+                    case VK_ESCAPE:     win32_process_key(&key_input->keys[key::ESCAPE],    is_down, was_down); break;
+                    case VK_BACK:       win32_process_key(&key_input->keys[key::BACKSPACE], is_down, was_down); break;
+                    case VK_TAB:        win32_process_key(&key_input->keys[key::TAB],       is_down, was_down); break;
+                    case VK_LSHIFT:     win32_process_key(&key_input->keys[key::LSHIFT],    is_down, was_down); break;
+                    case VK_RSHIFT:     win32_process_key(&key_input->keys[key::RSHIFT],    is_down, was_down); break;
+                    case VK_LCONTROL:   win32_process_key(&key_input->keys[key::LCONTROL],  is_down, was_down); break;
+                    case VK_RCONTROL:   win32_process_key(&key_input->keys[key::RCONTROL],  is_down, was_down); break;
+                    case VK_LMENU:      win32_process_key(&key_input->keys[key::LALT],      is_down, was_down); break;
+                    case VK_RMENU:      win32_process_key(&key_input->keys[key::RALT],      is_down, was_down); break;
+                    case VK_LWIN:       win32_process_key(&key_input->keys[key::LSYSTEM],   is_down, was_down); break;
+                    case VK_RWIN:       win32_process_key(&key_input->keys[key::RSYSTEM],   is_down, was_down); break;
+                    case VK_APPS:       win32_process_key(&key_input->keys[key::MENU],      is_down, was_down); break;
+                    case VK_PRIOR:      win32_process_key(&key_input->keys[key::PAGEUP],    is_down, was_down); break;
+                    case VK_NEXT:       win32_process_key(&key_input->keys[key::PAGEDOWN],  is_down, was_down); break;
+                    case VK_END:        win32_process_key(&key_input->keys[key::END],       is_down, was_down); break;
+                    case VK_HOME:       win32_process_key(&key_input->keys[key::HOME],      is_down, was_down); break;
+                    case VK_INSERT:     win32_process_key(&key_input->keys[key::INSERT],    is_down, was_down); break;
+                    case VK_DELETE:     win32_process_key(&key_input->keys[key::DEL],       is_down, was_down); break;
+                    case VK_UP:         win32_process_key(&key_input->keys[key::UP],        is_down, was_down); break;
+                    case VK_DOWN:       win32_process_key(&key_input->keys[key::DOWN],      is_down, was_down); break;
+                    case VK_LEFT:       win32_process_key(&key_input->keys[key::LEFT],      is_down, was_down); break;
+                    case VK_RIGHT:      win32_process_key(&key_input->keys[key::RIGHT],     is_down, was_down); break;
 
-                    case VK_NUMPAD0: key_input->keys[key::NUMPAD0].is_pressed = is_down; break;
-                    case VK_NUMPAD1: key_input->keys[key::NUMPAD1].is_pressed = is_down; break;
-                    case VK_NUMPAD2: key_input->keys[key::NUMPAD2].is_pressed = is_down; break;
-                    case VK_NUMPAD3: key_input->keys[key::NUMPAD3].is_pressed = is_down; break;
-                    case VK_NUMPAD4: key_input->keys[key::NUMPAD4].is_pressed = is_down; break;
-                    case VK_NUMPAD5: key_input->keys[key::NUMPAD5].is_pressed = is_down; break;
-                    case VK_NUMPAD6: key_input->keys[key::NUMPAD6].is_pressed = is_down; break;
-                    case VK_NUMPAD7: key_input->keys[key::NUMPAD7].is_pressed = is_down; break;
-                    case VK_NUMPAD8: key_input->keys[key::NUMPAD8].is_pressed = is_down; break;
-                    case VK_NUMPAD9: key_input->keys[key::NUMPAD9].is_pressed = is_down; break;
+                    case VK_NUMPAD0:    win32_process_key(&key_input->keys[key::NUMPAD0], is_down, was_down); break;
+                    case VK_NUMPAD1:    win32_process_key(&key_input->keys[key::NUMPAD1], is_down, was_down); break;
+                    case VK_NUMPAD2:    win32_process_key(&key_input->keys[key::NUMPAD2], is_down, was_down); break;
+                    case VK_NUMPAD3:    win32_process_key(&key_input->keys[key::NUMPAD3], is_down, was_down); break;
+                    case VK_NUMPAD4:    win32_process_key(&key_input->keys[key::NUMPAD4], is_down, was_down); break;
+                    case VK_NUMPAD5:    win32_process_key(&key_input->keys[key::NUMPAD5], is_down, was_down); break;
+                    case VK_NUMPAD6:    win32_process_key(&key_input->keys[key::NUMPAD6], is_down, was_down); break;
+                    case VK_NUMPAD7:    win32_process_key(&key_input->keys[key::NUMPAD7], is_down, was_down); break;
+                    case VK_NUMPAD8:    win32_process_key(&key_input->keys[key::NUMPAD8], is_down, was_down); break;
+                    case VK_NUMPAD9:    win32_process_key(&key_input->keys[key::NUMPAD9], is_down, was_down); break;
 
-                    case VK_F1: key_input->keys[key::F1].is_pressed   = is_down; break;
-                    case VK_F2: key_input->keys[key::F2].is_pressed   = is_down; break;
-                    case VK_F3: key_input->keys[key::F3].is_pressed   = is_down; break;
-                    case VK_F4: key_input->keys[key::F4].is_pressed   = is_down; break;
-                    case VK_F5: key_input->keys[key::F5].is_pressed   = is_down; break;
-                    case VK_F6: key_input->keys[key::F6].is_pressed   = is_down; break;
-                    case VK_F7: key_input->keys[key::F7].is_pressed   = is_down; break;
-                    case VK_F8: key_input->keys[key::F8].is_pressed   = is_down; break;
-                    case VK_F9: key_input->keys[key::F9].is_pressed   = is_down; break;
-                    case VK_F10: key_input->keys[key::F10].is_pressed = is_down; break;
-                    case VK_F11: key_input->keys[key::F11].is_pressed = is_down; break;
-                    case VK_F12: key_input->keys[key::F12].is_pressed = is_down; break;
+                    case VK_F1:         win32_process_key(&key_input->keys[key::F1], is_down,  was_down); break;
+                    case VK_F2:         win32_process_key(&key_input->keys[key::F2], is_down,  was_down); break;
+                    case VK_F3:         win32_process_key(&key_input->keys[key::F3], is_down,  was_down); break;
+                    case VK_F4:         win32_process_key(&key_input->keys[key::F4], is_down,  was_down); break;
+                    case VK_F5:         win32_process_key(&key_input->keys[key::F5], is_down,  was_down); break;
+                    case VK_F6:         win32_process_key(&key_input->keys[key::F6], is_down,  was_down); break;
+                    case VK_F7:         win32_process_key(&key_input->keys[key::F7], is_down,  was_down); break;
+                    case VK_F8:         win32_process_key(&key_input->keys[key::F8], is_down,  was_down); break;
+                    case VK_F9:         win32_process_key(&key_input->keys[key::F9], is_down,  was_down); break;
+                    case VK_F10:        win32_process_key(&key_input->keys[key::F10], is_down, was_down); break;
+                    case VK_F11:        win32_process_key(&key_input->keys[key::F11], is_down, was_down); break;
+                    case VK_F12:        win32_process_key(&key_input->keys[key::F12], is_down, was_down); break;
                 }
 
                 // Handle Alt+F4 closing window
