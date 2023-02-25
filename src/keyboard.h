@@ -4,8 +4,8 @@
 
 struct key_state
 {
-    u32 times_pressed;  // How many times key was pressed in a frame
-    bool is_down;
+    bool is_pressed;
+    bool is_released;
 };
 
 /* IMPORTANT(lucas): This enum is used for array indexing.
@@ -49,7 +49,12 @@ struct keyboard_input
     key_state keys[key::NUM_KEYS];
 };
 
-inline bool is_key_down(keyboard_input input, int key)
+inline bool is_key_pressed(keyboard_input* input, int key)
 {
-    return input.keys[key].is_down;
+    return input->keys[key].is_pressed;
+}
+
+inline bool is_key_released(keyboard_input* input, int key)
+{
+    return input->keys[key].is_released;
 }
