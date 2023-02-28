@@ -2,4 +2,4 @@
 
 #include "gamepad.h"
 
-void win32_process_xinput_gamepad_input(gamepad* gamepad);
+void win32_process_xinput_gamepad_input(Gamepad* gamepad);

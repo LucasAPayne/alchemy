@@ -12,7 +12,7 @@
 
 #include <stdlib.h> // rand
 
-internal void update_dvd(example_state* state, u32 window_width, u32 window_height)
+internal void update_dvd(ExampleState* state, u32 window_width, u32 window_height)
 {
     state->logo.position.x += 1 * state->logo_x_direction;
     state->logo.position.y += 1 * state->logo_y_direction;
@@ -42,7 +42,7 @@ internal void update_dvd(example_state* state, u32 window_width, u32 window_heig
     }
 }
 
-internal void update_player(example_state* state, u32 window_width, u32 window_height)
+internal void update_player(ExampleState* state, u32 window_width, u32 window_height)
 {
     // Update player position
     state->player.position.x += 10.0f * state->gamepad.left_stick_x;
@@ -107,7 +107,7 @@ internal void update_player(example_state* state, u32 window_width, u32 window_h
         gamepad_set_vibration(&state->gamepad, 16000, 16000);
 }
 
-void init_example_state(example_state* state)
+void init_example_state(ExampleState* state)
 {
     srand(0);
     state->keyboard = {0};
@@ -117,13 +117,13 @@ void init_example_state(example_state* state)
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
 
-    init_sprite_renderer(&state->spr_renderer, sprite_shader);
-    init_font_renderer(&state->fon_renderer, font_shader);
-    load_font(&state->fon_renderer, "fonts/cardinal.ttf", 24);
+    init_sprite_renderer(&state->sprite_renderer, sprite_shader);
+    init_font_renderer(&state->font_renderer, font_shader);
+    load_font(&state->font_renderer, "fonts/cardinal.ttf", 24);
 
     u32 logo_tex = generate_texture("textures/dvd.png");
     state->logo = {0};
-    state->logo.renderer = &state->spr_renderer;
+    state->logo.renderer = &state->sprite_renderer;
     state->logo.texture = logo_tex;
     state->logo.color = glm::vec3(1.0f);
     state->logo.position = glm::vec2(0.0f, 0.0f);
@@ -135,7 +135,7 @@ void init_example_state(example_state* state)
 
     u32 player_tex = generate_texture("textures/white_pixel.png");
     state->player = {0};
-    state->player.renderer = &state->spr_renderer;
+    state->player.renderer = &state->sprite_renderer;
     state->player.texture = player_tex;
     state->player.color = glm::vec3(1.0f);
     state->player.position = glm::vec2(0.0f, 0.0f);
@@ -146,18 +146,18 @@ void init_example_state(example_state* state)
     state->dash_direction = 0.0f;
     state->dash_distance = 300.0f;
 
-    shader_set_int(state->spr_renderer.shader, "image", 0);
+    shader_set_int(state->sprite_renderer.shader, "image", 0);
 }
 
-void delete_example_state(example_state* state)
+void delete_example_state(ExampleState* state)
 {
-    delete_font_renderer(&state->fon_renderer);
-    delete_sprite_renderer(&state->spr_renderer);
+    delete_font_renderer(&state->font_renderer);
+    delete_sprite_renderer(&state->sprite_renderer);
     delete_texture(state->logo.texture);
     delete_texture(state->player.texture);
 }
 
-void example_update_and_render(example_state* state, u32 window_width, u32 window_height)
+void example_update_and_render(ExampleState* state, u32 window_width, u32 window_height)
 {
     update_dvd(state, window_width, window_height);
     update_player(state, window_width, window_height);  
@@ -166,18 +166,18 @@ void example_update_and_render(example_state* state, u32 window_width, u32 windo
     glViewport(0, 0, window_width, window_height);
     glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
 
-    if (is_key_released(&state->keyboard, key::A))
+    if (is_key_released(&state->keyboard, Key::A))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     glClear(GL_COLOR_BUFFER_BIT);
 
     glm::mat4 projection = glm::ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f);
-    shader_set_mat4f(state->fon_renderer.shader, "projection", projection);
-    shader_set_mat4f(state->spr_renderer.shader, "projection", projection);
+    shader_set_mat4f(state->font_renderer.shader, "projection", projection);
+    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection);
 
     draw_sprite(state->logo);
     draw_sprite(state->player);
 
     glm::vec3 font_color = glm::vec3(0.6f, 0.2f, 0.2f);
-    render_text(&state->fon_renderer, "Alchemy Engine", glm::vec2(500.0f, 50.0f), 1.0f, font_color);
+    render_text(&state->font_renderer, "Alchemy Engine", glm::vec2(500.0f, 50.0f), 1.0f, font_color);
 }

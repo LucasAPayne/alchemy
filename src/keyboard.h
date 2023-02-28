@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-struct key_state
+struct KeyState
 {
     bool is_pressed;
     bool is_released;
@@ -12,7 +12,7 @@ struct key_state
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
 */ 
-enum key
+enum Key
 {
     UNKNOWN = 0,
     A, B, C,
@@ -44,17 +44,17 @@ enum key
     NUM_KEYS
 };
 
-struct keyboard_input
+struct KeyboardInput
 {
-    key_state keys[key::NUM_KEYS];
+    KeyState keys[Key::NUM_KEYS];
 };
 
-inline bool is_key_pressed(keyboard_input* input, int key)
+inline bool is_key_pressed(KeyboardInput* input, int key)
 {
     return input->keys[key].is_pressed;
 }
 
-inline bool is_key_released(keyboard_input* input, int key)
+inline bool is_key_released(KeyboardInput* input, int key)
 {
     return input->keys[key].is_released;
 }

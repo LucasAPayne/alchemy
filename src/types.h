@@ -10,7 +10,7 @@
 #define local_persist   static
 #define global_variable static
 
-typedef uint32_t bool32;
+typedef uint32_t b32;
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

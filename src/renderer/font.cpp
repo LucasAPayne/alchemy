@@ -5,7 +5,7 @@
 
 #include <glad/glad.h>
 
-void init_font_renderer(font_renderer* renderer, u32 shader)
+void init_font_renderer(FontRenderer* font_renderer, u32 shader)
 {
     u32 vao;
     glGenVertexArrays(1, &vao);
@@ -38,21 +38,21 @@ void init_font_renderer(font_renderer* renderer, u32 shader)
 
     glBindVertexArray(0);
 
-    renderer->shader = shader;
-    renderer->vao = vao;
-    renderer->vbo = vbo;
-    renderer->ibo = ibo;
+    font_renderer->shader = shader;
+    font_renderer->vao = vao;
+    font_renderer->vbo = vbo;
+    font_renderer->ibo = ibo;
 }
 
-void delete_font_renderer(font_renderer* renderer)
+void delete_font_renderer(FontRenderer* font_renderer)
 {
-    glDeleteVertexArrays(1, &renderer->vao);
-    glDeleteBuffers(1, &renderer->vbo);
-    glDeleteBuffers(1, &renderer->ibo);
-    glDeleteProgram(renderer->shader);
+    glDeleteVertexArrays(1, &font_renderer->vao);
+    glDeleteBuffers(1, &font_renderer->vbo);
+    glDeleteBuffers(1, &font_renderer->ibo);
+    glDeleteProgram(font_renderer->shader);
 }
 
-void load_font(font_renderer* renderer, const char* filename, u32 font_size)
+void load_font(FontRenderer* font_renderer, const char* filename, u32 font_size)
 {
     FT_Library ft;
     if (FT_Init_FreeType(&ft))
@@ -92,31 +92,31 @@ void load_font(font_renderer* renderer, const char* filename, u32 font_size)
         u32 texture = generate_font_texture(width, height, face->glyph->bitmap.buffer);
 
         // Store character
-        font_character character = {texture,
+        FontCharacter character = {texture,
             glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
             glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
             (u32)face->glyph->advance.x};
-        renderer->characters.insert({c, character});
+        font_renderer->characters.insert({c, character});
     }
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 }
 
-void render_text(font_renderer* renderer, const char* text, glm::vec2 position, f32 scale, glm::vec3 color)
+void render_text(FontRenderer* font_renderer, const char* text, glm::vec2 position, f32 scale, glm::vec3 color)
 {
-    shader_set_vec3f(renderer->shader, "text_color", color);
+    shader_set_vec3f(font_renderer->shader, "text_color", color);
     glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(renderer->vao);
+    glBindVertexArray(font_renderer->vao);
 
     for (int i = 0; i < strlen(text); i++)
     {
         char c = text[i];
-        font_character ch = renderer->characters[c];
+        FontCharacter ch = font_renderer->characters[c];
 
         // Calculate glyph origin
         // NOTE(lucas): The calculation for y_pos draws quads lower for glyps such as 'p' that go below the baseline
         f32 x_pos = position.x + ch.bearing.x * scale;
-        f32 y_pos = position.y + (renderer->characters['H'].bearing.y - ch.bearing.y) * scale;
+        f32 y_pos = position.y + (font_renderer->characters['H'].bearing.y - ch.bearing.y) * scale;
 
         // Calculate glyph size
         f32 width = ch.size.x * scale;
@@ -136,7 +136,7 @@ void render_text(font_renderer* renderer, const char* text, glm::vec2 position, 
         bind_texture(ch.texture_id, 0);
 
         // Update VBO memory
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, font_renderer->vbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
