@@ -22,17 +22,17 @@
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
 #endif
 
-global_variable bool32 global_running;
+global_variable b32 global_running;
 
-struct win32_window_dimensions
+struct Win32WindowDimensions
 {
     int width;
     int height;
 };
 
-internal win32_window_dimensions win32_get_window_dimensions(HWND window)
+internal Win32WindowDimensions win32_get_window_dimensions(HWND window)
 {
-    win32_window_dimensions dimensions;
+    Win32WindowDimensions dimensions;
     RECT client_rect = {0};
     GetClientRect(window, &client_rect);
     dimensions.width = client_rect.right - client_rect.left;
@@ -242,7 +242,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     win32_init_opengl(window);
 
-    example_state state;
+    ExampleState state;
     init_example_state(&state);
 
     global_running = true;
@@ -250,14 +250,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     while(global_running)
     {
         // Double buffer input to detect keys held
-        keyboard_input old_keyboard = state.keyboard;
+        KeyboardInput old_keyboard = state.keyboard;
         win32_process_keyboard_input(window, &state.keyboard);
 
-        gamepad old_gamepad = state.gamepad;
+        Gamepad old_gamepad = state.gamepad;
         win32_process_xinput_gamepad_input(&state.gamepad);
 
         HDC device_context = GetDC(window);
-        win32_window_dimensions dimensions = win32_get_window_dimensions(window);
+        Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
        
         example_update_and_render(&state, dimensions.width, dimensions.height);
         SwapBuffers(device_context);

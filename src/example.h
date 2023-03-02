@@ -6,14 +6,14 @@
 #include "renderer/font.h"
 #include "renderer/sprite.h"
 
-struct example_state
+struct ExampleState
 {
-    keyboard_input keyboard;
-    gamepad gamepad;
+    KeyboardInput keyboard;
+    Gamepad gamepad;
 
-    sprite_renderer spr_renderer;
-    font_renderer fon_renderer;
-    sprite logo;
+    SpriteRenderer sprite_renderer;
+    FontRenderer font_renderer;
+    Sprite logo;
     int logo_x_direction;
     int logo_y_direction;
     glm::vec3 colors[7] = {glm::vec3(1.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
@@ -21,7 +21,7 @@ struct example_state
                      glm::vec3(0.0f, 1.0f, 1.0f)};
     int last_color_index;
 
-    sprite player;
+    Sprite player;
     int dash_counter;
     int dash_frames;
     f32 dash_direction; // -1: left, 1: right
@@ -30,6 +30,6 @@ struct example_state
     glm::vec3 clear_color;
 };
 
-void init_example_state(example_state* state);
-void delete_example_state(example_state* state);
-void example_update_and_render(example_state* state, u32 window_width, u32 window_height);
+void init_example_state(ExampleState* state);
+void delete_example_state(ExampleState* state);
+void example_update_and_render(ExampleState* state, u32 window_width, u32 window_height);

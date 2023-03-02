@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-void init_sprite_renderer(sprite_renderer* renderer, u32 shader)
+void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
 {
     f32 vertices[] = 
     { 
@@ -46,23 +46,23 @@ void init_sprite_renderer(sprite_renderer* renderer, u32 shader)
     
     glBindVertexArray(0);
 
-    renderer->shader = shader;
-    renderer->vao = vao;
-    renderer->vbo = vbo;
-    renderer->ibo = ibo;
+    sprite_renderer->shader = shader;
+    sprite_renderer->vao = vao;
+    sprite_renderer->vbo = vbo;
+    sprite_renderer->ibo = ibo;
 }
 
-void delete_sprite_renderer(sprite_renderer* renderer)
+void delete_sprite_renderer(SpriteRenderer* sprite_renderer)
 {
-    glDeleteVertexArrays(1, &renderer->vao);
-    glDeleteBuffers(1, &renderer->vbo);
-    glDeleteBuffers(1, &renderer->ibo);
-    delete_shader(renderer->shader);
+    glDeleteVertexArrays(1, &sprite_renderer->vao);
+    glDeleteBuffers(1, &sprite_renderer->vbo);
+    glDeleteBuffers(1, &sprite_renderer->ibo);
+    delete_shader(sprite_renderer->shader);
 }
 
 // TODO(lucas): Allow using only color and no texture
 // Note that texture could not be set to 0 for no texture since that is OpenGL's error case
-void draw_sprite(sprite_renderer* renderer, u32 texture, glm::vec2 position, glm::vec2 size, f32 rotation,
+void draw_sprite(SpriteRenderer* sprite_renderer, u32 texture, glm::vec2 position, glm::vec2 size, f32 rotation,
                  glm::vec3 color)
 {
     glm::mat4 model = glm::mat4(1.0f);
@@ -77,17 +77,17 @@ void draw_sprite(sprite_renderer* renderer, u32 texture, glm::vec2 position, glm
 
     model = glm::scale(model, glm::vec3(size, 1.0f));
 
-    shader_set_mat4f(renderer->shader, "model", model);
-    shader_set_vec3f(renderer->shader, "color", color);
+    shader_set_mat4f(sprite_renderer->shader, "model", model);
+    shader_set_vec3f(sprite_renderer->shader, "color", color);
 
     bind_texture(texture, 0);
 
-    glBindVertexArray(renderer->vao);
+    glBindVertexArray(sprite_renderer->vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 
-void draw_sprite(sprite s)
+void draw_sprite(Sprite sprite)
 {
-    draw_sprite(s.renderer, s.texture, s.position, s.size, s.rotation, s.color);
+    draw_sprite(sprite.renderer, sprite.texture, sprite.position, sprite.size, sprite.rotation, sprite.color);
 }

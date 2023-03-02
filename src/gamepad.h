@@ -2,16 +2,16 @@
 
 #include "types.h"
 
-struct button_state
+struct ButtonState
 {
     bool is_pressed;
     bool is_released;
 };
 
 // TODO(lucas): Add support for multiple gamepads
-struct gamepad
+struct Gamepad
 {
-    bool32 is_connected;
+    b32 is_connected;
 
     f32 left_stick_x;
     f32 left_stick_y;
@@ -27,67 +27,67 @@ struct gamepad
     // NOTE(lucas): This union makes it easy to loop through all buttons when necessary
     union
     {
-        button_state buttons[32];
+        ButtonState buttons[32];
         struct
         {
-            button_state a_button;
-            button_state b_button;
-            button_state x_button;
-            button_state y_button;
+            ButtonState a_button;
+            ButtonState b_button;
+            ButtonState x_button;
+            ButtonState y_button;
 
-            button_state dpad_up;
-            button_state dpad_down;
-            button_state dpad_left;
-            button_state dpad_right;
+            ButtonState dpad_up;
+            ButtonState dpad_down;
+            ButtonState dpad_left;
+            ButtonState dpad_right;
 
-            button_state left_shoulder;
-            button_state right_shoulder;
+            ButtonState left_shoulder;
+            ButtonState right_shoulder;
 
-            button_state start_button;
-            button_state back_button;
+            ButtonState start_button;
+            ButtonState back_button;
 
             // NOTE(lucas): There are situations where it only matters whether a trigger is activated
             // (for example, when shooting a gun).
-            button_state left_trigger;
-            button_state right_trigger;
+            ButtonState left_trigger;
+            ButtonState right_trigger;
 
             // NOTE(lucas): Keep button states on sticks for situations where it is only necessary to know
             // direction and not magnitude (for example, navigating a menu with the stick or moving twice to dash).
             // Also, keep states for pressing sticks in
-            button_state left_stick_press;
-            button_state left_stick_up;
-            button_state left_stick_down;
-            button_state left_stick_left;
-            button_state left_stick_right;
-            button_state left_stick_upleft;
-            button_state left_stick_upright;
-            button_state left_stick_downleft;
-            button_state left_stick_downright;
+            ButtonState left_stick_press;
+            ButtonState left_stick_up;
+            ButtonState left_stick_down;
+            ButtonState left_stick_left;
+            ButtonState left_stick_right;
+            ButtonState left_stick_upleft;
+            ButtonState left_stick_upright;
+            ButtonState left_stick_downleft;
+            ButtonState left_stick_downright;
 
-            button_state right_stick_press;
-            button_state right_stick_up;
-            button_state right_stick_down;
-            button_state right_stick_left;
-            button_state right_stick_right;
-            button_state right_stick_upleft;
-            button_state right_stick_upright;
-            button_state right_stick_downleft;
-            button_state right_stick_downright;
+            ButtonState right_stick_press;
+            ButtonState right_stick_up;
+            ButtonState right_stick_down;
+            ButtonState right_stick_left;
+            ButtonState right_stick_right;
+            ButtonState right_stick_upleft;
+            ButtonState right_stick_upright;
+            ButtonState right_stick_downleft;
+            ButtonState right_stick_downright;
         };
     };  
 };
 
-inline bool is_gamepad_button_pressed(button_state button)
+inline bool is_gamepad_button_pressed(ButtonState button)
 {
     return button.is_pressed;
 }
 
-inline bool is_gamepad_button_released(button_state button)
+inline bool is_gamepad_button_released(ButtonState button)
 {
     return button.is_released;
 }
 
-inline void gamepad_set_vibration(gamepad* pad, u16 left_vibration, u16 right_vibration)
+inline void gamepad_set_vibration(Gamepad* pad, u16 left_vibration, u16 right_vibration)
 {
     pad->left_vibration = left_vibration;
     pad->right_vibration = right_vibration;
