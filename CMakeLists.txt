@@ -15,7 +15,8 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.cpp
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.cpp
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_keyboard.cpp
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_xinput_gamepad.cpp)
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_xinput_gamepad.cpp
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
             ${PROJECT_SOURCE_DIR}/src
@@ -29,6 +30,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                       gdi32.lib
                       opengl32.lib
                       xinput.lib
+                      xaudio2.lib
                       ${PROJECT_SOURCE_DIR}/lib/freetype/freetype.lib)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 
@@ -38,7 +40,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 if (MSVC)
     # C4100 and C4189 are about unused parameters/variables and are not particularly useful
     # /Oi: Generate intrinsic functions
-    target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201)
+    target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL Debug)

@@ -4,11 +4,12 @@
 #define UNICODE
 
 #include "example.h"
+#include "gamepad.h"
+#include "keyboard.h"
 #include "types.h"
 #include "platform/windows/win32_keyboard.h"
 #include "platform/windows/win32_xinput_gamepad.h"
-
-#include "gamepad.h"
+#include "platform/windows/win32_sound.h"
 
 #include <windows.h>
 
@@ -16,7 +17,6 @@
 #include <glad/glad.h>
 
 #include <stdio.h>
-#include <limits.h>
 
 #if ALCHEMY_DEBUG
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
@@ -202,6 +202,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND window, UINT msg, WPAR
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int show_cmd)
 {
+    b32 sound_played = false;
     // Open a window
     HWND window;
     {
@@ -215,7 +216,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         window_class.lpszClassName = L"MyWindowClass";
         window_class.hIconSm = LoadIconW(0, IDI_APPLICATION);
 
-        if(!RegisterClassExW(&window_class)) {
+        if(!RegisterClassExW(&window_class))
+        {
             MessageBoxA(0, "RegisterClassEx failed", "Fatal Error", MB_OK);
             return GetLastError();
         }
@@ -234,14 +236,27 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
                                 initial_window_height,
                                 0, 0, instance, 0);
 
-        if(!window) {
+        if(!window)
+        {
             MessageBoxA(0, "CreateWindowEx failed", "Fatal Error", MB_OK);
             return GetLastError();
         }
     }
 
+    // Initialize COM
+    {
+        if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
+        {
+            // Could not initialize COM
+            MessageBoxA(0, "CoInitializeEx failed", "COM error", MB_OK);
+        }
+    }
+
     win32_init_opengl(window);
 
+    Win32Xaudio2State xaudio2_state;
+    win32_init_xaudio2(&xaudio2_state);
+    
     ExampleState state;
     init_example_state(&state);
 
@@ -260,12 +275,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
        
         example_update_and_render(&state, dimensions.width, dimensions.height);
+
+        // Sound test
+        win32_process_sound_output(&state.sound_output, &xaudio2_state);
+
         SwapBuffers(device_context);
         ReleaseDC(window, device_context);
 
         // The input of this frame becomes the old input for next frame
         old_keyboard = state.keyboard;
-        old_gamepad = state.gamepad;
+        old_gamepad  = state.gamepad;
     }
 
     delete_example_state(&state);
