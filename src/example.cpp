@@ -148,7 +148,6 @@ void init_example_state(ExampleState* state)
     state->dash_distance = 300.0f;
 
     shader_set_int(state->sprite_renderer.shader, "image", 0);
-
     const char* test_sound_filename = "sounds/pew.wav";
     strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
               strlen(test_sound_filename));
