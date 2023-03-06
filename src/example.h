@@ -2,6 +2,7 @@
 
 #include "gamepad.h"
 #include "keyboard.h"
+#include "sound.h"
 #include "types.h"
 #include "renderer/font.h"
 #include "renderer/sprite.h"
@@ -28,6 +29,9 @@ struct ExampleState
     f32 dash_distance;
 
     glm::vec3 clear_color;
+
+    SoundOutput sound_output;
+    b32 is_shooting;
 };
 
 void init_example_state(ExampleState* state);

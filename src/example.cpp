@@ -11,6 +11,7 @@
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
+#include <string.h> // Temporary
 
 internal void update_dvd(ExampleState* state, u32 window_width, u32 window_height)
 {
@@ -103,7 +104,7 @@ internal void update_player(ExampleState* state, u32 window_width, u32 window_he
     }
 
     // Vibration test
-    if (is_gamepad_button_pressed(state->gamepad.a_button))
+    if (is_gamepad_button_pressed(state->gamepad.x_button))
         gamepad_set_vibration(&state->gamepad, 16000, 16000);
 }
 
@@ -147,6 +148,13 @@ void init_example_state(ExampleState* state)
     state->dash_distance = 300.0f;
 
     shader_set_int(state->sprite_renderer.shader, "image", 0);
+
+    const char* test_sound_filename = "sounds/pew.wav";
+    strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
+              strlen(test_sound_filename));
+    set_volume(&state->sound_output, 0.5f);
+    state->sound_output.should_play = false;
+    state->is_shooting = false;
 }
 
 void delete_example_state(ExampleState* state)
@@ -168,6 +176,15 @@ void example_update_and_render(ExampleState* state, u32 window_width, u32 window
 
     if (is_key_released(&state->keyboard, Key::A))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+    
+    state->sound_output.should_play = false;
+    if (is_gamepad_button_pressed(state->gamepad.a_button) && !state->is_shooting)
+    {
+        state->is_shooting = true;
+        state->sound_output.should_play = true;
+    }
+    if (is_gamepad_button_released(state->gamepad.a_button))
+        state->is_shooting = false;
     
     glClear(GL_COLOR_BUFFER_BIT);
 
