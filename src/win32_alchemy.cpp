@@ -40,6 +40,32 @@ internal Win32WindowDimensions win32_get_window_dimensions(HWND window)
     return dimensions;
 }
 
+inline i64 win32_get_ticks(void)
+{
+    LARGE_INTEGER ticks;
+    QueryPerformanceCounter(&ticks);
+    return ticks.QuadPart;
+}
+
+inline f32 win32_get_seconds_elapsed(i64 start_ticks, i64 end_ticks, i64 ticks_per_second)
+{
+    i64 microseconds_elapsed = (end_ticks - start_ticks);
+
+	// We now have the elapsed number of ticks, along with the
+	// number of ticks-per-second. We use these values
+	// to convert to the number of elapsed microseconds.
+	// To guard against loss-of-precision, we convert
+	// to microseconds *before* dividing by ticks-per-second.
+	microseconds_elapsed *= 1000000;
+	microseconds_elapsed /= ticks_per_second;
+    
+    f32 seconds_elapsed = (f32)microseconds_elapsed / 1000000.0f;
+    if (seconds_elapsed < 0.0f)
+        seconds_elapsed = 0.0f;
+    
+    return seconds_elapsed;
+}
+
 void GLAPIENTRY opengl_error_callback(GLenum source,
                                       GLenum type,
                                       GLuint id,
@@ -202,7 +228,10 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND window, UINT msg, WPAR
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int show_cmd)
 {
-    b32 sound_played = false;
+    LARGE_INTEGER frequency;
+    QueryPerformanceFrequency(&frequency);
+    i64 ticks_per_second = frequency.QuadPart;
+
     // Open a window
     HWND window;
     {
@@ -260,8 +289,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     ExampleState state;
     init_example_state(&state);
 
+    i64 start_ticks = win32_get_ticks();
+
     global_running = true;
-    // Main Loop
     while(global_running)
     {
         // Double buffer input to detect keys held
@@ -274,7 +304,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         HDC device_context = GetDC(window);
         Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
        
-        example_update_and_render(&state, dimensions.width, dimensions.height);
+        f32 delta_time = win32_get_seconds_elapsed(start_ticks, win32_get_ticks(), ticks_per_second);
+        start_ticks = win32_get_ticks();
+        example_update_and_render(&state, delta_time, dimensions.width, dimensions.height);
 
         // Sound test
         win32_process_sound_output(&state.sound_output, &xaudio2_state);
