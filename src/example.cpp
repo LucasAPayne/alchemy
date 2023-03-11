@@ -11,17 +11,21 @@
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
+#include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
 
-internal void update_dvd(ExampleState* state, u32 window_width, u32 window_height)
+internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
-    state->logo.position.x += 1 * state->logo_x_direction;
-    state->logo.position.y += 1 * state->logo_y_direction;
+    f32 speed = 100.0f; // pixels per second
 
+    state->logo.position.x += speed * delta_time * state->logo_x_direction;
+    state->logo.position.y += speed * delta_time * state->logo_y_direction;
+
+    // TODO(lucas): Clamp position to boundaries
     if (state->logo.position.x > (window_width - state->logo.size.x) || state->logo.position.x < 0)
     {
         // Bounce off screen boundary
-        state->logo_x_direction *= -1;
+        state->logo_x_direction *= -1.0f;
 
         int color_index = rand() % 7;
         // Make sure new color is different. Incredibly efficient
@@ -32,7 +36,7 @@ internal void update_dvd(ExampleState* state, u32 window_width, u32 window_heigh
     }
     if (state->logo.position.y > (window_height - state->logo.size.y) || state->logo.position.y < 0)
     {
-        state->logo_y_direction *= -1;
+        state->logo_y_direction *= -1.0f;
 
         int color_index = rand() % 7;
         // Make sure new color is different. Incredibly efficient
@@ -43,11 +47,12 @@ internal void update_dvd(ExampleState* state, u32 window_width, u32 window_heigh
     }
 }
 
-internal void update_player(ExampleState* state, u32 window_width, u32 window_height)
+internal void update_player(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
+    f32 speed = 250.0f; // pixels per second
     // Update player position
-    state->player.position.x += 10.0f * state->gamepad.left_stick_x;
-    state->player.position.y += 10.0f * state->gamepad.left_stick_y;
+    state->player.position.x += speed * delta_time * state->gamepad.left_stick_x;
+    state->player.position.y += speed * delta_time * state->gamepad.left_stick_y;
 
     // Dash
     if (is_gamepad_button_released(state->gamepad.left_shoulder) && state->dash_counter == 0)
@@ -130,8 +135,8 @@ void init_example_state(ExampleState* state)
     state->logo.position = glm::vec2(0.0f, 0.0f);
     state->logo.size = glm::vec2(300.0f, 150.0f);
     state->logo.rotation = 0.0f;
-    state->logo_x_direction = 1;
-    state->logo_y_direction = 1;
+    state->logo_x_direction = 1.0f;
+    state->logo_y_direction = 1.0f;
     state->clear_color = glm::vec3(0.2f, 0.2f, 0.2f);
 
     u32 player_tex = generate_texture("textures/white_pixel.png");
@@ -165,10 +170,10 @@ void delete_example_state(ExampleState* state)
     delete_texture(state->player.texture);
 }
 
-void example_update_and_render(ExampleState* state, u32 window_width, u32 window_height)
+void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
-    update_dvd(state, window_width, window_height);
-    update_player(state, window_width, window_height);  
+    update_dvd(state, delta_time, window_width, window_height);
+    update_player(state, delta_time, window_width, window_height);  
     
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     glViewport(0, 0, window_width, window_height);
@@ -197,4 +202,7 @@ void example_update_and_render(ExampleState* state, u32 window_width, u32 window
 
     glm::vec3 font_color = glm::vec3(0.6f, 0.2f, 0.2f);
     render_text(&state->font_renderer, "Alchemy Engine", glm::vec2(500.0f, 50.0f), 1.0f, font_color);
+    char buffer[512];
+    sprintf_s(buffer, sizeof(buffer), "MS per frame: %f", delta_time * 1000.0f);
+    render_text(&state->font_renderer, buffer, glm::vec2(750.0f, 650.0f), 1.0f, font_color);
 }

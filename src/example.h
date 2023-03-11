@@ -15,8 +15,8 @@ struct ExampleState
     SpriteRenderer sprite_renderer;
     FontRenderer font_renderer;
     Sprite logo;
-    int logo_x_direction;
-    int logo_y_direction;
+    f32 logo_x_direction;
+    f32 logo_y_direction;
     glm::vec3 colors[7] = {glm::vec3(1.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
                      glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 1.0f),
                      glm::vec3(0.0f, 1.0f, 1.0f)};
@@ -36,4 +36,4 @@ struct ExampleState
 
 void init_example_state(ExampleState* state);
 void delete_example_state(ExampleState* state);
-void example_update_and_render(ExampleState* state, u32 window_width, u32 window_height);
+void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height);
