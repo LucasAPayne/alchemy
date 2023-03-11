@@ -285,7 +285,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     Win32Xaudio2State xaudio2_state;
     win32_init_xaudio2(&xaudio2_state);
-
+    
     ExampleState state;
     init_example_state(&state);
 
