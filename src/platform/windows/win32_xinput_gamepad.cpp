@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <Xinput.h>
 
-internal void win32_xinput_button_release(ButtonState* button)
+internal void win32_xinput_button_release(GamepadButtonState* button)
 {
     button->is_released = true;
     button->is_pressed  = false; 

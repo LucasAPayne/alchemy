@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-struct ButtonState
+struct GamepadButtonState
 {
     bool is_pressed;
     bool is_released;
@@ -27,62 +27,62 @@ struct Gamepad
     // NOTE(lucas): This union makes it easy to loop through all buttons when necessary
     union
     {
-        ButtonState buttons[32];
+        GamepadButtonState buttons[32];
         struct
         {
-            ButtonState a_button;
-            ButtonState b_button;
-            ButtonState x_button;
-            ButtonState y_button;
+            GamepadButtonState a_button;
+            GamepadButtonState b_button;
+            GamepadButtonState x_button;
+            GamepadButtonState y_button;
 
-            ButtonState dpad_up;
-            ButtonState dpad_down;
-            ButtonState dpad_left;
-            ButtonState dpad_right;
+            GamepadButtonState dpad_up;
+            GamepadButtonState dpad_down;
+            GamepadButtonState dpad_left;
+            GamepadButtonState dpad_right;
 
-            ButtonState left_shoulder;
-            ButtonState right_shoulder;
+            GamepadButtonState left_shoulder;
+            GamepadButtonState right_shoulder;
 
-            ButtonState start_button;
-            ButtonState back_button;
+            GamepadButtonState start_button;
+            GamepadButtonState back_button;
 
             // NOTE(lucas): There are situations where it only matters whether a trigger is activated
             // (for example, when shooting a gun).
-            ButtonState left_trigger;
-            ButtonState right_trigger;
+            GamepadButtonState left_trigger;
+            GamepadButtonState right_trigger;
 
             // NOTE(lucas): Keep button states on sticks for situations where it is only necessary to know
             // direction and not magnitude (for example, navigating a menu with the stick or moving twice to dash).
             // Also, keep states for pressing sticks in
-            ButtonState left_stick_press;
-            ButtonState left_stick_up;
-            ButtonState left_stick_down;
-            ButtonState left_stick_left;
-            ButtonState left_stick_right;
-            ButtonState left_stick_upleft;
-            ButtonState left_stick_upright;
-            ButtonState left_stick_downleft;
-            ButtonState left_stick_downright;
+            GamepadButtonState left_stick_press;
+            GamepadButtonState left_stick_up;
+            GamepadButtonState left_stick_down;
+            GamepadButtonState left_stick_left;
+            GamepadButtonState left_stick_right;
+            GamepadButtonState left_stick_upleft;
+            GamepadButtonState left_stick_upright;
+            GamepadButtonState left_stick_downleft;
+            GamepadButtonState left_stick_downright;
 
-            ButtonState right_stick_press;
-            ButtonState right_stick_up;
-            ButtonState right_stick_down;
-            ButtonState right_stick_left;
-            ButtonState right_stick_right;
-            ButtonState right_stick_upleft;
-            ButtonState right_stick_upright;
-            ButtonState right_stick_downleft;
-            ButtonState right_stick_downright;
+            GamepadButtonState right_stick_press;
+            GamepadButtonState right_stick_up;
+            GamepadButtonState right_stick_down;
+            GamepadButtonState right_stick_left;
+            GamepadButtonState right_stick_right;
+            GamepadButtonState right_stick_upleft;
+            GamepadButtonState right_stick_upright;
+            GamepadButtonState right_stick_downleft;
+            GamepadButtonState right_stick_downright;
         };
     };  
 };
 
-inline bool is_gamepad_button_pressed(ButtonState button)
+inline bool is_gamepad_button_pressed(GamepadButtonState button)
 {
     return button.is_pressed;
 }
 
-inline bool is_gamepad_button_released(ButtonState button)
+inline bool is_gamepad_button_released(GamepadButtonState button)
 {
     return button.is_released;
 }

@@ -5,9 +5,11 @@
 
 #include "example.h"
 #include "gamepad.h"
+#include "mouse.h"
 #include "keyboard.h"
 #include "types.h"
 #include "platform/windows/win32_keyboard.h"
+#include "platform/windows/win32_mouse.h"
 #include "platform/windows/win32_xinput_gamepad.h"
 #include "platform/windows/win32_sound.h"
 
@@ -298,6 +300,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         KeyboardInput old_keyboard = state.keyboard;
         win32_process_keyboard_input(window, &state.keyboard);
 
+        MouseInput old_mouse = state.mouse;
+        win32_process_mouse_input(&state.mouse);
+
         Gamepad old_gamepad = state.gamepad;
         win32_process_xinput_gamepad_input(&state.gamepad);
 
@@ -316,6 +321,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
         // The input of this frame becomes the old input for next frame
         old_keyboard = state.keyboard;
+        old_mouse = state.mouse;
         old_gamepad  = state.gamepad;
     }
 
