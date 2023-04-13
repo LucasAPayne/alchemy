@@ -2,6 +2,7 @@
 
 #include "gamepad.h"
 #include "keyboard.h"
+#include "mouse.h"
 #include "sound.h"
 #include "types.h"
 #include "renderer/font.h"
@@ -10,6 +11,7 @@
 struct ExampleState
 {
     KeyboardInput keyboard;
+    MouseInput mouse;
     Gamepad gamepad;
 
     SpriteRenderer sprite_renderer;

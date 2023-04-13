@@ -117,6 +117,7 @@ void init_example_state(ExampleState* state)
 {
     srand(0);
     state->keyboard = {0};
+    state->mouse = {0};
     state->gamepad = {0};
 
     // Compile and Load shaders
@@ -178,7 +179,8 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     glViewport(0, 0, window_width, window_height);
     glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
 
-    if (is_key_released(&state->keyboard, Key::A))
+    // if (is_key_released(&state->keyboard, Key::A))
+    if (is_mouse_button_pressed(&state->mouse, MouseButton::MOUSE_X2))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     state->sound_output.should_play = false;
