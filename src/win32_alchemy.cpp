@@ -4,13 +4,9 @@
 #define UNICODE
 
 #include "example.h"
-#include "gamepad.h"
-#include "mouse.h"
-#include "keyboard.h"
+#include "input.h"
 #include "types.h"
-#include "platform/windows/win32_keyboard.h"
-#include "platform/windows/win32_mouse.h"
-#include "platform/windows/win32_xinput_gamepad.h"
+#include "platform/windows/win32_input.h"
 #include "platform/windows/win32_sound.h"
 
 #include <windows.h>
