@@ -23,19 +23,19 @@ enum MouseButton
     NUM_BUTTONS
 };
 
-struct MouseInput
+struct Mouse
 {
     i32 x;
     i32 y;
     MouseButtonState buttons[MouseButton::NUM_BUTTONS];
 };
 
-inline bool is_mouse_button_pressed(MouseInput* mouse, int button)
+inline bool is_mouse_button_pressed(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_pressed;
 }
 
-inline bool is_mouse_button_released(MouseInput* mouse, int button)
+inline bool is_mouse_button_released(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_released;
 }

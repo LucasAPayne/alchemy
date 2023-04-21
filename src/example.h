@@ -1,8 +1,6 @@
 #pragma once
 
-#include "gamepad.h"
-#include "keyboard.h"
-#include "mouse.h"
+#include "input.h"
 #include "sound.h"
 #include "types.h"
 #include "renderer/font.h"
@@ -10,10 +8,7 @@
 
 struct ExampleState
 {
-    KeyboardInput keyboard;
-    MouseInput mouse;
-    Gamepad gamepad;
-
+    Input input;
     SpriteRenderer sprite_renderer;
     FontRenderer font_renderer;
     Sprite logo;

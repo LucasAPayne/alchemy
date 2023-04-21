@@ -40,7 +40,7 @@ internal void win32_process_key(KeyState* key, b32 is_down, b32 was_down)
 }
 
 // TODO(lucas): Support for non-US keyboard layouts
-void win32_process_keyboard_input(HWND window, KeyboardInput* key_input)
+void win32_process_keyboard_input(HWND window, Keyboard* key_input)
 {
     // Release state should not persist, so make sure it is false for each button
     for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
