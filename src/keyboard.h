@@ -44,17 +44,17 @@ enum Key
     NUM_KEYS
 };
 
-struct KeyboardInput
+struct Keyboard
 {
     KeyState keys[Key::NUM_KEYS];
 };
 
-inline bool is_key_pressed(KeyboardInput* input, int key)
+inline bool is_key_pressed(Keyboard* input, int key)
 {
     return input->keys[key].is_pressed;
 }
 
-inline bool is_key_released(KeyboardInput* input, int key)
+inline bool is_key_released(Keyboard* input, int key)
 {
     return input->keys[key].is_released;
 }

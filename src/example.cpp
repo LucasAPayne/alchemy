@@ -49,18 +49,20 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
 
 internal void update_player(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
+    Gamepad* gamepad = &state->input.gamepads[0];
     f32 speed = 250.0f; // pixels per second
     // Update player position
-    state->player.position.x += speed * delta_time * state->gamepad.left_stick_x;
-    state->player.position.y += speed * delta_time * state->gamepad.left_stick_y;
+    state->player.position.x += speed * delta_time * gamepad->left_stick_x;
+    state->player.position.y += speed * delta_time * gamepad->left_stick_y;
+
 
     // Dash
-    if (is_gamepad_button_released(state->gamepad.left_shoulder) && state->dash_counter == 0)
+    if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
     {
         state->dash_counter = state->dash_frames;
         state->dash_direction = -1.0f;
     }
-    if (is_gamepad_button_released(state->gamepad.right_shoulder) && state->dash_counter == 0)
+    if (is_gamepad_button_released(gamepad->right_shoulder) && state->dash_counter == 0)
     {
         state->dash_counter = state->dash_frames;
         state->dash_direction = 1.0f;
@@ -91,14 +93,14 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     }
 
     // Update player rotation
-    state->player.rotation += 2.0f * state->gamepad.right_trigger_val;
-    state->player.rotation -= 2.0f * state->gamepad.left_trigger_val;
+    state->player.rotation += 2.0f * gamepad->right_trigger_val;
+    state->player.rotation -= 2.0f * gamepad->left_trigger_val;
     if (state->player.rotation > 45.0f)
         state->player.rotation = 45.0f;
     if (state->player.rotation < -45.0f)
         state->player.rotation = -45.0f;
-    if (!is_gamepad_button_pressed(state->gamepad.left_trigger) &&
-        !is_gamepad_button_pressed(state->gamepad.right_trigger))
+    if (!is_gamepad_button_pressed(gamepad->left_trigger) &&
+        !is_gamepad_button_pressed(gamepad->right_trigger))
     {
         if (state->player.rotation > 0.0f)
             state->player.rotation -= 2.0f;
@@ -109,16 +111,16 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     }
 
     // Vibration test
-    if (is_gamepad_button_pressed(state->gamepad.x_button))
-        gamepad_set_vibration(&state->gamepad, 16000, 16000);
+    if (is_gamepad_button_pressed(gamepad->x_button))
+        gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
 void init_example_state(ExampleState* state)
 {
     srand(0);
-    state->keyboard = {0};
-    state->mouse = {0};
-    state->gamepad = {0};
+    state->input.keyboard = {0};
+    state->input.mouse = {0};
+    state->input.gamepads[0] = {0};
 
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
@@ -172,6 +174,7 @@ void delete_example_state(ExampleState* state)
 
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
+    Gamepad* gamepad = &state->input.gamepads[0];
     update_dvd(state, delta_time, window_width, window_height);
     update_player(state, delta_time, window_width, window_height);  
     
@@ -180,16 +183,16 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
 
     // if (is_key_released(&state->keyboard, Key::A))
-    if (is_mouse_button_pressed(&state->mouse, MouseButton::MOUSE_X2))
+    if (is_mouse_button_pressed(&state->input.mouse, MouseButton::MOUSE_X2))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     state->sound_output.should_play = false;
-    if (is_gamepad_button_pressed(state->gamepad.a_button) && !state->is_shooting)
+    if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
     {
         state->is_shooting = true;
         state->sound_output.should_play = true;
     }
-    if (is_gamepad_button_released(state->gamepad.a_button))
+    if (is_gamepad_button_released(gamepad->a_button))
         state->is_shooting = false;
     
     glClear(GL_COLOR_BUFFER_BIT);

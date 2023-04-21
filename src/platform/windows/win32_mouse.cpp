@@ -15,7 +15,7 @@ internal void win32_process_mouse_button(MouseButtonState* button, bool is_down)
         button->is_pressed = is_down;
 }
 
-void win32_process_mouse_input(MouseInput* mouse)
+void win32_process_mouse_input(Mouse* mouse)
 {
     // Release tate should not persist, so set it to false
     for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
