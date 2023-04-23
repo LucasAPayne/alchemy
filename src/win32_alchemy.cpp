@@ -292,15 +292,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     global_running = true;
     while(global_running)
     {
-        // Double buffer input to detect keys held
-        Keyboard old_keyboard = state.input.keyboard;
+        // Double buffer input to detect buttons held
+        Input old_input = state.input;
         win32_process_keyboard_input(window, &state.input.keyboard);
-
-        Mouse old_mouse = state.input.mouse;
         win32_process_mouse_input(&state.input.mouse);
-
-        Gamepad old_gamepad = state.input.gamepads[0];
-        win32_process_xinput_gamepad_input(&state.input.gamepads[0]);
+        win32_process_xinput_gamepad_input(&state.input);
 
         HDC device_context = GetDC(window);
         Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
@@ -316,9 +312,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         ReleaseDC(window, device_context);
 
         // The input of this frame becomes the old input for next frame
-        old_keyboard = state.input.keyboard;
-        old_mouse = state.input.mouse;
-        old_gamepad  = state.input.gamepads[0];
+        old_input = state.input;
     }
 
     delete_example_state(&state);

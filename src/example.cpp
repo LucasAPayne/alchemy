@@ -55,7 +55,6 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     state->player.position.x += speed * delta_time * gamepad->left_stick_x;
     state->player.position.y += speed * delta_time * gamepad->left_stick_y;
 
-
     // Dash
     if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
     {
@@ -120,7 +119,8 @@ void init_example_state(ExampleState* state)
     srand(0);
     state->input.keyboard = {0};
     state->input.mouse = {0};
-    state->input.gamepads[0] = {0};
+    for (int i = 0; i < MAX_GAMEPADS; ++i)
+        state->input.gamepads[i] = {0};
 
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
