@@ -380,25 +380,31 @@ internal f32 win32_process_xinput_trigger(BYTE xinput_trigger_value)
     return result;
 }
 
-void win32_process_xinput_gamepad_input(Gamepad* gamepad)
+void win32_process_xinput_gamepad_input(Input* input)
 {
+    Gamepad* gamepad = {0};
+    for (int i = 0; i < MAX_GAMEPADS; ++i)
+    {
+        gamepad = &input->gamepads[i];
+
         // Release state should not persist, so make sure it is false for each button
         for (int button_index = 0; button_index < ARRAY_COUNT(gamepad->buttons); button_index++)
             gamepad->buttons[button_index].is_released = false;
 
         XINPUT_STATE controller_state;
+        ZeroMemory(&controller_state, sizeof(XINPUT_STATE));
 
-        if (XInputGetState(0, &controller_state) != ERROR_SUCCESS)
+        if (XInputGetState(i, &controller_state) != ERROR_SUCCESS)
         {
             // NOTE(lucas): The controller is not available
             gamepad->is_connected = false;
-            return;
+            continue;
         }
         gamepad->is_connected = true;
 
         // Buttons
         XINPUT_KEYSTROKE keystroke = {0};
-        DWORD status = XInputGetKeystroke(0, 0, &keystroke);
+        DWORD status = XInputGetKeystroke(i, 0, &keystroke);
         switch(status)
         {
             case ERROR_EMPTY: break; // Queue is empty
@@ -423,9 +429,9 @@ void win32_process_xinput_gamepad_input(Gamepad* gamepad)
         // Sticks
         XINPUT_GAMEPAD xinput_gamepad = controller_state.Gamepad;
         gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX, 
-                                                           XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+                                                            XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->left_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbLY,
-                                                           XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+                                                            XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->right_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbRX,
                                                             XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
         gamepad->right_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbRY,
@@ -441,4 +447,5 @@ void win32_process_xinput_gamepad_input(Gamepad* gamepad)
         vibration.wRightMotorSpeed = gamepad->right_vibration;
         XInputSetState(0, &vibration);
         gamepad->left_vibration = gamepad->right_vibration = 0;
+    }
 }
