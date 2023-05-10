@@ -4,11 +4,9 @@
 #define UNICODE
 
 #include "example.h"
-#include "gamepad.h"
-#include "keyboard.h"
+#include "input.h"
 #include "types.h"
-#include "platform/windows/win32_keyboard.h"
-#include "platform/windows/win32_xinput_gamepad.h"
+#include "platform/windows/win32_input.h"
 #include "platform/windows/win32_sound.h"
 
 #include <windows.h>
@@ -294,12 +292,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     global_running = true;
     while(global_running)
     {
-        // Double buffer input to detect keys held
-        KeyboardInput old_keyboard = state.keyboard;
-        win32_process_keyboard_input(window, &state.keyboard);
-
-        Gamepad old_gamepad = state.gamepad;
-        win32_process_xinput_gamepad_input(&state.gamepad);
+        // Double buffer input to detect buttons held
+        Input old_input = state.input;
+        win32_process_keyboard_input(window, &state.input.keyboard);
+        win32_process_mouse_input(&state.input.mouse);
+        win32_process_xinput_gamepad_input(&state.input);
 
         HDC device_context = GetDC(window);
         Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
@@ -315,8 +312,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         ReleaseDC(window, device_context);
 
         // The input of this frame becomes the old input for next frame
-        old_keyboard = state.keyboard;
-        old_gamepad  = state.gamepad;
+        old_input = state.input;
     }
 
     delete_example_state(&state);
