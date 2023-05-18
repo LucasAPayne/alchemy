@@ -6,7 +6,7 @@
 #include "renderer/font.h"
 #include "renderer/sprite.h"
 
-struct ExampleState
+typedef struct ExampleState
 {
     Input input;
     SpriteRenderer sprite_renderer;
@@ -29,7 +29,7 @@ struct ExampleState
 
     SoundOutput sound_output;
     b32 is_shooting;
-};
+} ExampleState;
 
 void init_example_state(ExampleState* state);
 void delete_example_state(ExampleState* state);

@@ -11,16 +11,16 @@
 // TODO(lucas): TEMPORARY
 #include <map>
 
-struct FontCharacter
+typedef struct FontCharacter
 {
     u32 texture_id;
     glm::ivec2 size;
     glm::ivec2 bearing;
     u32 advance;
-};
+} FontCharacter;
 
 // NOTE(lucas): For now, there will be a font renderer for each different font
-struct FontRenderer
+typedef struct FontRenderer
 {
     u32 shader;
     u32 vao;
@@ -29,7 +29,7 @@ struct FontRenderer
     // TODO(lucas): Replace std::map with custom lookup tabe/BST to get rid of STL dependency
     // It may also be sufficient (or better) to use a simple array, and index using character codes
     std::map<char, FontCharacter> characters;
-};
+} FontRenderer;
 
 void init_font_renderer(FontRenderer* renderer, u32 shader);
 void delete_font_renderer(FontRenderer* renderer);

@@ -4,11 +4,11 @@
 
 #define MAX_GAMEPADS 4
 
-struct ButtonState
+typedef struct ButtonState
 {
     bool is_pressed;
     bool is_released;
-};
+} ButtonState;
 
 /* IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
@@ -46,10 +46,10 @@ enum Key
     NUM_KEYS
 };
 
-struct Keyboard
+typedef struct Keyboard
 {
     ButtonState keys[Key::NUM_KEYS];
-};
+} Keyboard;
 
 inline bool is_key_pressed(Keyboard* input, int key)
 {
@@ -76,12 +76,12 @@ enum MouseButton
     NUM_BUTTONS
 };
 
-struct Mouse
+typedef struct Mouse
 {
     i32 x;
     i32 y;
     ButtonState buttons[MouseButton::NUM_BUTTONS];
-};
+} Mouse;
 
 inline bool is_mouse_button_pressed(Mouse* mouse, int button)
 {
@@ -94,7 +94,7 @@ inline bool is_mouse_button_released(Mouse* mouse, int button)
 }
 
 // TODO(lucas): Add support for multiple gamepads
-struct Gamepad
+typedef struct Gamepad
 {
     b32 is_connected;
 
@@ -160,7 +160,7 @@ struct Gamepad
             ButtonState right_stick_downright;
         };
     };  
-};
+} Gamepad;
 
 inline bool is_gamepad_button_pressed(ButtonState button)
 {
@@ -178,9 +178,9 @@ inline void gamepad_set_vibration(Gamepad* pad, u16 left_vibration, u16 right_vi
     pad->right_vibration = right_vibration;
 }
 
-struct Input
+typedef struct Input
 {
     Gamepad gamepads[MAX_GAMEPADS];
     Keyboard keyboard;
     Mouse mouse;
-};
+} Input;

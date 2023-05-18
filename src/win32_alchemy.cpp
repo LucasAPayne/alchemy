@@ -22,11 +22,11 @@
 
 global_variable b32 global_running;
 
-struct Win32WindowDimensions
+typedef struct Win32WindowDimensions
 {
     int width;
     int height;
-};
+} Win32WindowDimensions;
 
 internal Win32WindowDimensions win32_get_window_dimensions(HWND window)
 {
