@@ -14,8 +14,8 @@
 typedef struct FontCharacter
 {
     u32 texture_id;
-    glm::ivec2 size;
-    glm::ivec2 bearing;
+    ivec2 size;
+    ivec2 bearing;
     u32 advance;
 } FontCharacter;
 
@@ -35,4 +35,4 @@ void init_font_renderer(FontRenderer* renderer, u32 shader);
 void delete_font_renderer(FontRenderer* renderer);
 
 void load_font(FontRenderer* font_renderer, const char* filename, u32 font_size);
-void render_text(FontRenderer* font_renderer, const char* text, glm::vec2 position, f32 scale, glm::vec3 color);
+void render_text(FontRenderer* font_renderer, const char* text, vec2 position, f32 scale, vec3 color);

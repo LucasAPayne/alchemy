@@ -21,7 +21,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
             ${PROJECT_SOURCE_DIR}/src
             ${PROJECT_SOURCE_DIR}/lib
             ${PROJECT_SOURCE_DIR}/lib/glad/include
-            ${PROJECT_SOURCE_DIR}/lib/glm
+            ${PROJECT_SOURCE_DIR}/lib/cglm
             ${PROJECT_SOURCE_DIR}/lib/freetype/include)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -30,7 +30,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                       opengl32.lib
                       xinput.lib
                       xaudio2.lib
+                      cglm_headers
                       ${PROJECT_SOURCE_DIR}/lib/freetype/freetype.lib)
+
+option(CGLM_STATIC "Static build" ON)
+add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}

@@ -87,14 +87,14 @@ void load_font(FontRenderer* font_renderer, const char* filename, u32 font_size)
             // TODO(lucas): Logging
         }
 
-        u32 width = face->glyph->bitmap.width;
-        u32 height = face->glyph->bitmap.rows;
+        i32 width = (i32)face->glyph->bitmap.width;
+        i32 height = (i32)face->glyph->bitmap.rows;
         u32 texture = generate_font_texture(width, height, face->glyph->bitmap.buffer);
 
         // Store character
         FontCharacter character = {texture,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            {width, height},
+            {face->glyph->bitmap_left, face->glyph->bitmap_top},
             (u32)face->glyph->advance.x};
         font_renderer->characters.insert({c, character});
     }
@@ -102,7 +102,7 @@ void load_font(FontRenderer* font_renderer, const char* filename, u32 font_size)
     FT_Done_FreeType(ft);
 }
 
-void render_text(FontRenderer* font_renderer, const char* text, glm::vec2 position, f32 scale, glm::vec3 color)
+void render_text(FontRenderer* font_renderer, const char* text, vec2 position, f32 scale, vec3 color)
 {
     shader_set_vec3f(font_renderer->shader, "text_color", color);
     glActiveTexture(GL_TEXTURE0);
@@ -115,12 +115,12 @@ void render_text(FontRenderer* font_renderer, const char* text, glm::vec2 positi
 
         // Calculate glyph origin
         // NOTE(lucas): The calculation for y_pos draws quads lower for glyps such as 'p' that go below the baseline
-        f32 x_pos = position.x + ch.bearing.x * scale;
-        f32 y_pos = position.y + (font_renderer->characters['H'].bearing.y - ch.bearing.y) * scale;
+        f32 x_pos = position[0] + ch.bearing[0] * scale;
+        f32 y_pos = position[1] + (font_renderer->characters['H'].bearing[1] - ch.bearing[1]) * scale;
 
         // Calculate glyph size
-        f32 width = ch.size.x * scale;
-        f32 height = ch.size.y * scale;
+        f32 width = ch.size[0] * scale;
+        f32 height = ch.size[1] * scale;
 
         // Update vertex buffer for each character
         f32 vertices[] = 
@@ -143,7 +143,7 @@ void render_text(FontRenderer* font_renderer, const char* text, glm::vec2 positi
 
         // Advance cursor for next glyph
         // NOTE(lucas): advance is given in 1/64th pixels, so multiply by 2^6 = 64 to get pixels
-        position.x += (ch.advance >> 6) * scale;
+        position[0] += (ch.advance >> 6) * scale;
     }
     glBindVertexArray(0);
     unbind_texture();

@@ -5,9 +5,6 @@
 #include "renderer/sprite.h"
 #include "renderer/texture.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
@@ -18,11 +15,11 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
 {
     f32 speed = 100.0f; // pixels per second
 
-    state->logo.position.x += speed * delta_time * state->logo_x_direction;
-    state->logo.position.y += speed * delta_time * state->logo_y_direction;
+    state->logo.position[0] += speed * delta_time * state->logo_x_direction;
+    state->logo.position[1] += speed * delta_time * state->logo_y_direction;
 
     // TODO(lucas): Clamp position to boundaries
-    if (state->logo.position.x > (window_width - state->logo.size.x) || state->logo.position.x < 0)
+    if (state->logo.position[0] > (window_width - state->logo.size[0]) || state->logo.position[0] < 0)
     {
         // Bounce off screen boundary
         state->logo_x_direction *= -1.0f;
@@ -31,10 +28,10 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        state->logo.color = state->colors[color_index];
+        glm_vec3_copy(state->colors[color_index], state->logo.color);
         state->last_color_index = color_index;
     }
-    if (state->logo.position.y > (window_height - state->logo.size.y) || state->logo.position.y < 0)
+    if (state->logo.position[1] > (window_height - state->logo.size[1]) || state->logo.position[1] < 0)
     {
         state->logo_y_direction *= -1.0f;
 
@@ -42,7 +39,7 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        state->logo.color = state->colors[color_index];
+        glm_vec3_copy(state->colors[color_index], state->logo.color);
         state->last_color_index = color_index;
     }
 }
@@ -52,8 +49,8 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     Gamepad* gamepad = &state->input.gamepads[0];
     f32 speed = 250.0f; // pixels per second
     // Update player position
-    state->player.position.x += speed * delta_time * gamepad->left_stick_x;
-    state->player.position.y += speed * delta_time * gamepad->left_stick_y;
+    state->player.position[0] += speed * delta_time * gamepad->left_stick_x;
+    state->player.position[1] += speed * delta_time * gamepad->left_stick_y;
 
     // Dash
     if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
@@ -69,26 +66,26 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     if (state->dash_counter > 0)
     {
         f32 dash_delta = state->dash_distance / (f32)(state->dash_frames);
-        state->player.position.x += dash_delta * state->dash_direction;
+        state->player.position[0] += dash_delta * state->dash_direction;
         state->dash_counter--;
     }
 
     // Bounds checking
-    if (state->player.position.x > (window_width - state->player.size.x))
+    if (state->player.position[0] > (window_width - state->player.size[0]))
     {
-        state->player.position.x = window_width - state->player.size.x;
+        state->player.position[0] = window_width - state->player.size[0];
     }
-    if (state->player.position.x < 0.0f)
+    if (state->player.position[0] < 0.0f)
     {
-        state->player.position.x = 0.0f;
+        state->player.position[0] = 0.0f;
     }
-    if (state->player.position.y > (window_height - state->player.size.y))
+    if (state->player.position[1] > (window_height - state->player.size[1]))
     {
-        state->player.position.y = window_height - state->player.size.y;
+        state->player.position[1] = window_height - state->player.size[1];
     }
-    if (state->player.position.y < 0.0f)
+    if (state->player.position[1] < 0.0f)
     {
-        state->player.position.y = 0.0f;
+        state->player.position[1] = 0.0f;
     }
 
     // Update player rotation
@@ -130,25 +127,30 @@ void init_example_state(ExampleState* state)
     init_font_renderer(&state->font_renderer, font_shader);
     load_font(&state->font_renderer, "fonts/cardinal.ttf", 24);
 
+    vec2 logo_size = {300.0f, 150.0f};
+    vec3 clear_color = {0.2f, 0.2f, 0.2f};
+
     u32 logo_tex = generate_texture("textures/dvd.png");
     state->logo = {0};
     state->logo.renderer = &state->sprite_renderer;
     state->logo.texture = logo_tex;
-    state->logo.color = glm::vec3(1.0f);
-    state->logo.position = glm::vec2(0.0f, 0.0f);
-    state->logo.size = glm::vec2(300.0f, 150.0f);
+    glm_vec3_copy(state->colors[0], state->logo.color);
+    glm_vec2_zero(state->logo.position);
+    glm_vec2_copy(logo_size, state->logo.size);
     state->logo.rotation = 0.0f;
     state->logo_x_direction = 1.0f;
     state->logo_y_direction = 1.0f;
-    state->clear_color = glm::vec3(0.2f, 0.2f, 0.2f);
+    glm_vec3_copy(clear_color, state->clear_color);
+
+    vec2 player_size = {50.0f, 50.0f};
 
     u32 player_tex = generate_texture("textures/white_pixel.png");
     state->player = {0};
     state->player.renderer = &state->sprite_renderer;
     state->player.texture = player_tex;
-    state->player.color = glm::vec3(1.0f);
-    state->player.position = glm::vec2(0.0f, 0.0f);
-    state->player.size = glm::vec2(50.0f, 50.0f);
+    glm_vec3_one(state->player.color);
+    glm_vec3_zero(state->player.position);
+    glm_vec3_copy(player_size, state->player.size);
     state->player.rotation = 0.0f;
     state->dash_counter = 0;
     state->dash_frames = 15;
@@ -180,7 +182,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     glViewport(0, 0, window_width, window_height);
-    glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
+    glClearColor(state->clear_color[0], state->clear_color[1], state->clear_color[1], 1.0f);
 
     // if (is_key_released(&state->keyboard, Key::A))
     if (is_mouse_button_pressed(&state->input.mouse, MouseButton::MOUSE_X2))
@@ -197,16 +199,19 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glm::mat4 projection = glm::ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f);
-    shader_set_mat4f(state->font_renderer.shader, "projection", projection);
-    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection);
+    mat4 projection;
+    glm_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f, projection); 
+    shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
+    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
 
     draw_sprite(state->logo);
     draw_sprite(state->player);
 
-    glm::vec3 font_color = glm::vec3(0.6f, 0.2f, 0.2f);
-    render_text(&state->font_renderer, "Alchemy Engine", glm::vec2(500.0f, 50.0f), 1.0f, font_color);
+    vec3 font_color = {0.6f, 0.2f, 0.2f};
+    vec2 engine_text_pos = {500.0f, 50.0f};
+    vec2 ms_text_pos = {750.0f, 650.0f};
+    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 1.0f, font_color);
     char buffer[512];
     sprintf_s(buffer, sizeof(buffer), "MS per frame: %f", delta_time * 1000.0f);
-    render_text(&state->font_renderer, buffer, glm::vec2(750.0f, 650.0f), 1.0f, font_color);
+    render_text(&state->font_renderer, buffer, ms_text_pos, 1.0f, font_color);
 }
