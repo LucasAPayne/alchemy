@@ -5,8 +5,19 @@
 
 #include <glad/glad.h>
 
-void init_font_renderer(FontRenderer* font_renderer, u32 shader)
+void init_font_renderer(FontRenderer* font_renderer, u32 shader, const char* filename)
 {
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft))
+    {
+        // TODO(lucas): Diagnostic, could not init freetype lib
+    }
+
+    if (FT_New_Face(ft, filename, 0, &font_renderer->face))
+    {
+        // TODO(lucas): Diagnostic, could not open font
+    }
+
     u32 vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -14,7 +25,6 @@ void init_font_renderer(FontRenderer* font_renderer, u32 shader)
     u32 vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 4 * 4 * sizeof(f32), NULL, GL_DYNAMIC_DRAW);
 
     // NOTE(lucas): While vertex buffer data changes a lot, the order in which indices are drawn
     // does not. So, indices and index buffer can be defined here.
@@ -52,99 +62,61 @@ void delete_font_renderer(FontRenderer* font_renderer)
     glDeleteProgram(font_renderer->shader);
 }
 
-void load_font(FontRenderer* font_renderer, const char* filename, u32 font_size)
+void render_text(FontRenderer* font_renderer, const char* text, vec2 position, u32 pt, vec4 color)
 {
-    FT_Library ft;
-    if (FT_Init_FreeType(&ft))
-    {
-        // TODO(lucas): Logging
-    }
+    // Set font size in pt
+    FT_Set_Pixel_Sizes(font_renderer->face, 0, pt);
+    FT_GlyphSlot glyph = font_renderer->face->glyph;
 
-    FT_Face face;
-    if (FT_New_Face(ft, filename, 0, &face))
-    {
-        // TODO(lucas): Logging
-    }
-
-    FT_Set_Pixel_Sizes(face, 0, 48);
-
-    if (FT_Load_Char(face, 'X', FT_LOAD_RENDER))
-    {
-        // TODO(lucas): Logging
-    }
-
-    // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries.
-    // However, these are grayscale images and only need 1 byte, so disable the restriction
-    // (While glyphs are processed as grayscale, color can be added through shaders)
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    // NOTE(lucas): Currently, only the first 128 ACII characters are considered.
-    for (ubyte c = 0; c < 128; c++)
-    {
-        // Load character glyph
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-        {
-            // TODO(lucas): Logging
-        }
-
-        i32 width = (i32)face->glyph->bitmap.width;
-        i32 height = (i32)face->glyph->bitmap.rows;
-        u32 texture = generate_font_texture(width, height, face->glyph->bitmap.buffer);
-
-        // Store character
-        FontCharacter character = {texture,
-            {width, height},
-            {face->glyph->bitmap_left, face->glyph->bitmap_top},
-            (u32)face->glyph->advance.x};
-        font_renderer->characters.insert({c, character});
-    }
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
-}
-
-void render_text(FontRenderer* font_renderer, const char* text, vec2 position, f32 scale, vec3 color)
-{
-    shader_set_vec3f(font_renderer->shader, "text_color", color);
-    glActiveTexture(GL_TEXTURE0);
+    shader_set_vec4f(font_renderer->shader, "text_color", color);
     glBindVertexArray(font_renderer->vao);
 
-    for (int i = 0; i < strlen(text); i++)
+    // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
+    // but we need 1-byte alignment for grayscale glyph bitmaps
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    u32 texture = generate_texture();
+
+    const char *c;
+    for (c = text; *c; ++c)
     {
-        char c = text[i];
-        FontCharacter ch = font_renderer->characters[c];
-
-        // Calculate glyph origin
-        // NOTE(lucas): The calculation for y_pos draws quads lower for glyps such as 'p' that go below the baseline
-        f32 x_pos = position[0] + ch.bearing[0] * scale;
-        f32 y_pos = position[1] + (font_renderer->characters['H'].bearing[1] - ch.bearing[1]) * scale;
-
-        // Calculate glyph size
-        f32 width = ch.size[0] * scale;
-        f32 height = ch.size[1] * scale;
-
-        // Update vertex buffer for each character
-        f32 vertices[] = 
+        if (!FT_Load_Char(font_renderer->face, *c, FT_LOAD_RENDER))
         {
-            // pos                         // tex
-            x_pos + width, y_pos         , 1.0f, 0.0f, // top right
-            x_pos + width, y_pos + height, 1.0f, 1.0f, // bottom right
-            x_pos        , y_pos + height, 0.0f, 1.0f, // bottom left
-            x_pos        , y_pos         , 0.0f, 0.0f  // top left
-        };
+            // TODO(lucas): Diagnostic, could not load character
+        }
 
-        // Render glyph texture over quad
-        bind_texture(ch.texture_id, 0);
+        glTexImage2D(GL_TEXTURE_2D,
+                     0,
+                     GL_RED,
+                     glyph->bitmap.width,
+                     glyph->bitmap.rows,
+                     0,
+                     GL_RED,
+                     GL_UNSIGNED_BYTE,
+                     glyph->bitmap.buffer);
+
+        f32 x2 =  position[0] + glyph->bitmap_left;
+        f32 y2 = position[1] - glyph->bitmap_top;
+        f32 w = (f32)glyph->bitmap.width;
+        f32 h = (f32)glyph->bitmap.rows;
+    
+        f32 vertices[] = {
+            x2 + w, y2    , 1.0f, 0.0f,
+            x2 + w, y2 + h, 1.0f, 1.0f,
+            x2,     y2 + h, 0.0f, 1.0f,
+            x2,     y2    , 0.0f, 0.0f,
+        };
 
         // Update VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, font_renderer->vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Advance cursor for next glyph
-        // NOTE(lucas): advance is given in 1/64th pixels, so multiply by 2^6 = 64 to get pixels
-        position[0] += (ch.advance >> 6) * scale;
+        position[0] += glyph->advance.x/64;
+        position[1] += glyph->advance.y/64;
     }
+
     glBindVertexArray(0);
     unbind_texture();
 }

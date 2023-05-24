@@ -102,7 +102,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
             state->player.rotation -= 2.0f;
         if (state->player.rotation < 0.0f)
             state->player.rotation += 2.0f;
-        if (abs(state->player.rotation - 0.0f) < 2.0f)
+        if (fabs(state->player.rotation - 0.0f) < 2.0f)
             state->player.rotation = 0.0f;
     }
 
@@ -124,13 +124,13 @@ void init_example_state(ExampleState* state)
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
 
     init_sprite_renderer(&state->sprite_renderer, sprite_shader);
-    init_font_renderer(&state->font_renderer, font_shader);
-    load_font(&state->font_renderer, "fonts/cardinal.ttf", 24);
+    init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
     vec2 logo_size = {300.0f, 150.0f};
     vec3 clear_color = {0.2f, 0.2f, 0.2f};
 
-    u32 logo_tex = generate_texture("textures/dvd.png");
+    u32 logo_tex = generate_texture_from_file("textures/dvd.png");
     state->logo = {0};
     state->logo.renderer = &state->sprite_renderer;
     state->logo.texture = logo_tex;
@@ -144,7 +144,7 @@ void init_example_state(ExampleState* state)
 
     vec2 player_size = {50.0f, 50.0f};
 
-    u32 player_tex = generate_texture("textures/white_pixel.png");
+    u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player = {0};
     state->player.renderer = &state->sprite_renderer;
     state->player.texture = player_tex;
@@ -169,6 +169,7 @@ void init_example_state(ExampleState* state)
 void delete_example_state(ExampleState* state)
 {
     delete_font_renderer(&state->font_renderer);
+    delete_font_renderer(&state->frame_time_renderer);
     delete_sprite_renderer(&state->sprite_renderer);
     delete_texture(state->logo.texture);
     delete_texture(state->player.texture);
@@ -207,11 +208,13 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     draw_sprite(state->logo);
     draw_sprite(state->player);
 
-    vec3 font_color = {0.6f, 0.2f, 0.2f};
+    vec4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     vec2 engine_text_pos = {500.0f, 50.0f};
-    vec2 ms_text_pos = {750.0f, 650.0f};
-    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 1.0f, font_color);
+    vec2 ms_text_pos = {10.0f, window_height - 10.0f};
+    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
     char buffer[512];
-    sprintf_s(buffer, sizeof(buffer), "MS per frame: %f", delta_time * 1000.0f);
-    render_text(&state->font_renderer, buffer, ms_text_pos, 1.0f, font_color);
+
+    FontRenderer frame_time_renderer = {0};
+    sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
 }

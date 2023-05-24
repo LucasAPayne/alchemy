@@ -11,6 +11,7 @@ typedef struct ExampleState
     Input input;
     SpriteRenderer sprite_renderer;
     FontRenderer font_renderer;
+    FontRenderer frame_time_renderer;
     Sprite logo;
     f32 logo_x_direction;
     f32 logo_y_direction;
