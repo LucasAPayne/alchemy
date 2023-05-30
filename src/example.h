@@ -15,9 +15,7 @@ typedef struct ExampleState
     Sprite logo;
     f32 logo_x_direction;
     f32 logo_y_direction;
-    vec3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-                       {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
-                       {0.0f, 1.0f, 1.0f}};
+    vec3* colors;
     int last_color_index;
 
     Sprite player;

@@ -1,21 +1,19 @@
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 project(alchemy)
 
 add_executable(${PROJECT_NAME} WIN32
-               ${PROJECT_SOURCE_DIR}/src/win32_alchemy.cpp
-               ${PROJECT_SOURCE_DIR}/src/example.cpp
+               ${PROJECT_SOURCE_DIR}/src/win32_alchemy.c
+               ${PROJECT_SOURCE_DIR}/src/example.c
                ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
                ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/font.cpp
-               ${PROJECT_SOURCE_DIR}/src/renderer/shader.cpp
-               ${PROJECT_SOURCE_DIR}/src/renderer/sprite.cpp
-               ${PROJECT_SOURCE_DIR}/src/renderer/texture.cpp
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.cpp
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.cpp)
+               ${PROJECT_SOURCE_DIR}/src/renderer/font.c
+               ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
+               ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
+               ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
             ${PROJECT_SOURCE_DIR}/src

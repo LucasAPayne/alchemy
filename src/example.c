@@ -11,6 +11,10 @@
 #include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
 
+global_variable vec3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+                          {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
+                          {0.0f, 1.0f, 1.0f}};
+
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
@@ -28,7 +32,7 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        glm_vec3_copy(state->colors[color_index], state->logo.color);
+        glm_vec3_copy(colors[color_index], state->logo.color);
         state->last_color_index = color_index;
     }
     if (state->logo.position[1] > (window_height - state->logo.size[1]) || state->logo.position[1] < 0)
@@ -39,7 +43,7 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        glm_vec3_copy(state->colors[color_index], state->logo.color);
+        glm_vec3_copy(colors[color_index], state->logo.color);
         state->last_color_index = color_index;
     }
 }
@@ -114,10 +118,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 void init_example_state(ExampleState* state)
 {
     srand(0);
-    state->input.keyboard = {0};
-    state->input.mouse = {0};
-    for (int i = 0; i < MAX_GAMEPADS; ++i)
-        state->input.gamepads[i] = {0};
+    *state = (ExampleState){0};
 
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
@@ -131,10 +132,9 @@ void init_example_state(ExampleState* state)
     vec3 clear_color = {0.2f, 0.2f, 0.2f};
 
     u32 logo_tex = generate_texture_from_file("textures/dvd.png");
-    state->logo = {0};
     state->logo.renderer = &state->sprite_renderer;
     state->logo.texture = logo_tex;
-    glm_vec3_copy(state->colors[0], state->logo.color);
+    glm_vec3_copy(colors[0], state->logo.color);
     glm_vec2_zero(state->logo.position);
     glm_vec2_copy(logo_size, state->logo.size);
     state->logo.rotation = 0.0f;
@@ -145,7 +145,6 @@ void init_example_state(ExampleState* state)
     vec2 player_size = {50.0f, 50.0f};
 
     u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
-    state->player = {0};
     state->player.renderer = &state->sprite_renderer;
     state->player.texture = player_tex;
     glm_vec3_one(state->player.color);
@@ -186,7 +185,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     glClearColor(state->clear_color[0], state->clear_color[1], state->clear_color[1], 1.0f);
 
     // if (is_key_released(&state->keyboard, Key::A))
-    if (is_mouse_button_pressed(&state->input.mouse, MouseButton::MOUSE_X2))
+    if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     state->sound_output.should_play = false;

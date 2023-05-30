@@ -16,39 +16,39 @@ typedef struct ButtonState
 */ 
 enum Key
 {
-    UNKNOWN = 0,
-    A, B, C,
-    D, E, F, G,
-    H, I, J, K,
-    L, M, N, O,
-    P, Q, R, S,
-    T, U, V, W,
-    X, Y, Z,
+    KEY_UNKNOWN = 0,
+    KEY_A, KEY_B, KEY_C,
+    KEY_D, KEY_E, KEY_F, KEY_G,
+    KEY_H, KEY_I, KEY_J, KEY_K,
+    KEY_L, KEY_M, KEY_N, KEY_O,
+    KEY_P, KEY_Q, KEY_R, KEY_S,
+    KEY_T, KEY_U, KEY_V, KEY_W,
+    KEY_X, KEY_Y, KEY_Z,
 
-    NUM0, NUM1, NUM2, NUM3, NUM4,
-    NUM5, NUM6, NUM7, NUM8, NUM9,
+    KEY_NUM0, KEY_NUM1, KEY_NUM2, KEY_NUM3, KEY_NUM4,
+    KEY_NUM5, KEY_NUM6, KEY_NUM7, KEY_NUM8, KEY_NUM9,
 
-    LBRACKET, RBRACKET, SEMICOLON, QUOTE, COMMA,
-    PERIOD, SLASH, BACKSLASH, TILDE, EQUAL, HYPHEN,
+    KEY_LBRACKET, KEY_RBRACKET, KEY_SEMICOLON, KEY_QUOTE, KEY_COMMA,
+    KEY_PERIOD, KEY_SLASH, KEY_BACKSLASH, KEY_TILDE, KEY_EQUAL, KEY_HYPHEN,
 
-    SPACE, ENTER, ESCAPE, BACKSPACE, TAB,
-    LSHIFT, RSHIFT, LCONTROL, RCONTROL,
-    LALT, RALT, LSYSTEM, RSYSTEM, MENU,
-    PAGEUP, PAGEDOWN, END, HOME, INSERT, DEL,
-    UP, DOWN, LEFT, RIGHT,
+    KEY_SPACE, KEY_ENTER, KEY_ESCAPE, KEY_BACKSPACE, KEY_TAB,
+    KEY_LSHIFT, KEY_RSHIFT, KEY_LCONTROL, KEY_RCONTROL,
+    KEY_LALT, KEY_RALT, KEY_LSYSTEM, KEY_RSYSTEM, KEY_MENU,
+    KEY_PAGEUP, KEY_PAGEDOWN, KEY_END, KEY_HOME, KEY_INSERT, KEY_DEL,
+    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
 
-    NUMPAD0, NUMPAD1, NUMPAD2, NUMPAD3, NUMPAD4,
-    NUMPAD5, NUMPAD6, NUMPAD7, NUMPAD8, NUMPAD9,
+    KEY_NUMPAD0, KEY_NUMPAD1, KEY_NUMPAD2, KEY_NUMPAD3, KEY_NUMPAD4,
+    KEY_NUMPAD5, KEY_NUMPAD6, KEY_NUMPAD7, KEY_NUMPAD8, KEY_NUMPAD9,
 
-    F1, F2, F3, F4, F5, F6, 
-    F7, F8, F9, F10, F11, F12,
+    KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, 
+    KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12,
 
-    NUM_KEYS
+    KEY_NUM_KEYS
 };
 
 typedef struct Keyboard
 {
-    ButtonState keys[Key::NUM_KEYS];
+    ButtonState keys[KEY_NUM_KEYS];
 } Keyboard;
 
 inline bool is_key_pressed(Keyboard* input, int key)
@@ -67,20 +67,20 @@ inline bool is_key_released(Keyboard* input, int key)
 */ 
 enum MouseButton
 {
-    UNKONWN = 0,
+    MOUSE_UNKONWN = 0,
     MOUSE_LEFT,
     MOUSE_MIDDLE,
     MOUSE_RIGHT,
     MOUSE_X1,
     MOUSE_X2,
-    NUM_BUTTONS
+    MOUSE_NUM_BUTTONS
 };
 
 typedef struct Mouse
 {
     i32 x;
     i32 y;
-    ButtonState buttons[MouseButton::NUM_BUTTONS];
+    ButtonState buttons[MOUSE_NUM_BUTTONS];
 } Mouse;
 
 inline bool is_mouse_button_pressed(Mouse* mouse, int button)
