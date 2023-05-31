@@ -15,7 +15,7 @@ typedef struct ExampleState
     Sprite logo;
     f32 logo_x_direction;
     f32 logo_y_direction;
-    vec3* colors;
+    vec3s* colors;
     int last_color_index;
 
     Sprite player;
@@ -24,7 +24,7 @@ typedef struct ExampleState
     f32 dash_direction; // -1: left, 1: right
     f32 dash_distance;
 
-    vec3 clear_color;
+    vec3s clear_color;
 
     SoundOutput sound_output;
     b32 is_shooting;

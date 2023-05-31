@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/cglm.h>
+#include <cglm/struct.h>
 
 #include <stdint.h>
 

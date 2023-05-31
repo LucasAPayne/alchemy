@@ -62,7 +62,7 @@ void delete_font_renderer(FontRenderer* font_renderer)
     glDeleteProgram(font_renderer->shader);
 }
 
-void render_text(FontRenderer* font_renderer, const char* text, vec2 position, u32 pt, vec4 color)
+void render_text(FontRenderer* font_renderer, const char* text, vec2s position, u32 pt, vec4s color)
 {
     // Set font size in pt
     FT_Set_Pixel_Sizes(font_renderer->face, 0, pt);
@@ -94,8 +94,8 @@ void render_text(FontRenderer* font_renderer, const char* text, vec2 position, u
                      GL_UNSIGNED_BYTE,
                      glyph->bitmap.buffer);
 
-        f32 x2 =  position[0] + glyph->bitmap_left;
-        f32 y2 = position[1] - glyph->bitmap_top;
+        f32 x2 =  position.x + glyph->bitmap_left;
+        f32 y2 = position.y - glyph->bitmap_top;
         f32 w = (f32)glyph->bitmap.width;
         f32 h = (f32)glyph->bitmap.rows;
     
@@ -113,8 +113,8 @@ void render_text(FontRenderer* font_renderer, const char* text, vec2 position, u
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Advance cursor for next glyph
-        position[0] += glyph->advance.x/64;
-        position[1] += glyph->advance.y/64;
+        position.x += glyph->advance.x/64;
+        position.y += glyph->advance.y/64;
     }
 
     glBindVertexArray(0);

@@ -17,9 +17,9 @@ typedef struct Sprite
 {
     SpriteRenderer* renderer;
     u32 texture;
-    vec3 color;
-    vec2 position;
-    vec2 size;
+    vec3s color;
+    vec2s position;
+    vec2s size;
     f32 rotation; // Rotation in degrees
 } Sprite;
 

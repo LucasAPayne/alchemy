@@ -17,4 +17,4 @@ typedef struct FontRenderer
 
 void init_font_renderer(FontRenderer* font_renderer, u32 shader, const char* filename);
 void delete_font_renderer(FontRenderer* font_renderer);
-void render_text(FontRenderer* font_renderer, const char* text, vec2 position, u32 pt, vec4 color);
+void render_text(FontRenderer* font_renderer, const char* text, vec2s position, u32 pt, vec4s color);

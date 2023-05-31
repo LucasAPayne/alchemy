@@ -122,16 +122,16 @@ void delete_shader(u32 id)
     glDeleteProgram(id);
 }
 
-void shader_set_vec3f(u32 shader, const char* name, vec3 value)
+void shader_set_vec3f(u32 shader, const char* name, vec3s value)
 {
     bind_shader(shader);
-    glUniform3f(glGetUniformLocation(shader, name), value[0], value[1], value[2]);
+    glUniform3f(glGetUniformLocation(shader, name), value.x, value.y, value.z);
 }
 
-void shader_set_vec4f(u32 shader, const char* name, vec4 value)
+void shader_set_vec4f(u32 shader, const char* name, vec4s value)
 {
     bind_shader(shader);
-    glUniform4f(glGetUniformLocation(shader, name), value[0], value[1], value[2], value[3]);
+    glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
 void shader_set_int(u32 shader, const char* name, int value)
@@ -140,8 +140,8 @@ void shader_set_int(u32 shader, const char* name, int value)
     glUniform1i(glGetUniformLocation(shader, name), value);
 }
 
-void shader_set_mat4f(u32 shader, const char* name, mat4 value, b32 transpose)
+void shader_set_mat4f(u32 shader, const char* name, mat4s value, b32 transpose)
 {
     bind_shader(shader);
-    glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value[0]);
+    glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
 }
