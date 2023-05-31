@@ -5,8 +5,6 @@
 #include "types.h"
 
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
 {
@@ -21,8 +19,8 @@ void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
 
     u32 indices[] = 
     {
-      0, 1, 3,
-      1, 2, 3  
+    0, 1, 3,
+    1, 2, 3  
     };
 
     u32 vao;
@@ -62,32 +60,28 @@ void delete_sprite_renderer(SpriteRenderer* sprite_renderer)
 
 // TODO(lucas): Allow using only color and no texture
 // Note that texture could not be set to 0 for no texture since that is OpenGL's error case
-void draw_sprite(SpriteRenderer* sprite_renderer, u32 texture, glm::vec2 position, glm::vec2 size, f32 rotation,
-                 glm::vec3 color)
+void draw_sprite(Sprite sprite)
 {
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(position, 0.0f));
+    mat4s model = glms_mat4_identity();
+    model = glms_translate(model, (vec3s){sprite.position.x, sprite.position.y, 0.0f});
 
     // NOTE(lucas): The origin of a quad is at the top left, but we want the origin to appear in the center of the quad
     // for rotation. So, before rotation, translate the quad right and down by half its size. After the rotation, undo
     // this translation.
-    model = glm::translate(model, glm::vec3(0.5f * size.x, 0.5f * size.y, 0.0f));
-    model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::translate(model, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
+    model = glms_translate(model, (vec3s){0.5f * sprite.size.x, 0.5f * sprite.size.y, 0.0f});
+    model = glms_rotate(model, glm_rad(sprite.rotation), (vec3s){0.0f, 0.0f, 1.0f});
+    model = glms_translate(model, (vec3s){-0.5f * sprite.size.x, -0.5f * sprite.size.y, 0.0f});
 
-    model = glm::scale(model, glm::vec3(size, 1.0f));
+    // Scale sprite to appropriate size
+    model = glms_scale(model, (vec3s){sprite.size.x, sprite.size.y, 1.0f});
 
-    shader_set_mat4f(sprite_renderer->shader, "model", model);
-    shader_set_vec3f(sprite_renderer->shader, "color", color);
+    // Set model matrix and color shader values
+    shader_set_mat4f(sprite.renderer->shader, "model", model, 0);
+    shader_set_vec3f(sprite.renderer->shader, "color", sprite.color);
 
-    bind_texture(texture, 0);
+    bind_texture(sprite.texture, 0);
 
-    glBindVertexArray(sprite_renderer->vao);
+    glBindVertexArray(sprite.renderer->vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-}
-
-void draw_sprite(Sprite sprite)
-{
-    draw_sprite(sprite.renderer, sprite.texture, sprite.position, sprite.size, sprite.rotation, sprite.color);
 }

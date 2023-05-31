@@ -1,21 +1,20 @@
 #include "shader.h"
+#include "types.h"
 
 // TODO(lucas): Insert logging and remove Windows dependency
 #include <windows.h>
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <stdio.h>  // File I/O
 #include <stdlib.h> // malloc()
 
 // NOTE(lucas): This is a temporary file loading function that will probably be changed or replaced
 /*
- * Reads the file 'path' into a string 'buf'. If 'add_null' is true, terminates string with '\0'.
- * If successful, returns file size.
- * If unsuccessful, returns -1.
- * WARNING: Remember to free 'buf' after calling this function.
- */
+* Reads the file 'path' into a string 'buf'. If 'add_null' is true, terminates string with '\0'.
+* If successful, returns file size.
+* If unsuccessful, returns -1.
+* WARNING: Remember to free 'buf' after calling this function.
+*/
 internal char* file_to_string(const char* path)
 {
     char* buf = NULL;
@@ -123,26 +122,16 @@ void delete_shader(u32 id)
     glDeleteProgram(id);
 }
 
-void shader_set_vec3f(u32 shader, const char* name, f32 value1, f32 value2, f32 value3)
+void shader_set_vec3f(u32 shader, const char* name, vec3s value)
 {
     bind_shader(shader);
-    glUniform3f(glGetUniformLocation(shader, name), value1, value2, value3);
+    glUniform3f(glGetUniformLocation(shader, name), value.x, value.y, value.z);
 }
 
-void shader_set_vec3f(u32 shader, const char* name, glm::vec3 value)
-{
-    shader_set_vec3f(shader, name, value.x, value.y, value.z);
-}
-
-void shader_set_vec4f(u32 shader, const char* name, f32 value1, f32 value2, f32 value3, f32 value4)
+void shader_set_vec4f(u32 shader, const char* name, vec4s value)
 {
     bind_shader(shader);
-    glUniform4f(glGetUniformLocation(shader, name), value1, value2, value3, value4);
-}
-
-void shader_set_vec4f(u32 shader, const char* name, glm::vec4 value)
-{
-    shader_set_vec4f(shader, name, value.x, value.y, value.z, value.w);
+    glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
 void shader_set_int(u32 shader, const char* name, int value)
@@ -151,8 +140,8 @@ void shader_set_int(u32 shader, const char* name, int value)
     glUniform1i(glGetUniformLocation(shader, name), value);
 }
 
-void shader_set_mat4f(u32 shader, const char* name, glm::mat4 value, bool transpose)
+void shader_set_mat4f(u32 shader, const char* name, mat4s value, b32 transpose)
 {
     bind_shader(shader);
-    glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, transpose, glm::value_ptr(value));
+    glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
 }

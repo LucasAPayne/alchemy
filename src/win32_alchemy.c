@@ -11,7 +11,6 @@
 
 #include <windows.h>
 
-#include <stb_image/stb_image.h>
 #include <glad/glad.h>
 
 #include <stdio.h>
@@ -22,11 +21,11 @@
 
 global_variable b32 global_running;
 
-struct Win32WindowDimensions
+typedef struct Win32WindowDimensions
 {
     int width;
     int height;
-};
+} Win32WindowDimensions;
 
 internal Win32WindowDimensions win32_get_window_dimensions(HWND window)
 {
@@ -281,7 +280,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     win32_init_opengl(window);
 
-    Win32Xaudio2State xaudio2_state;
+    Win32XAudio2State xaudio2_state;
     win32_init_xaudio2(&xaudio2_state);
     
     ExampleState state;

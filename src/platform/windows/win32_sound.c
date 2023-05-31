@@ -13,14 +13,39 @@
 #define FOURCC_XWMA 'AMWX'
 #define FOURCC_DPDS 'sdpd'
 
-void win32_init_xaudio2(Win32Xaudio2State* xaudio2_state)
+// NOTE(lucas): Callback handling comes from https://github.com/tsherif/xaudio2-c-demo/blob/master/xaudio2-c-demo.c
+// Set up function callbacks
+void OnBufferEnd(IXAudio2VoiceCallback* This, void* pBufferContext) { }
+void OnStreamEnd(IXAudio2VoiceCallback* This) { }
+void OnVoiceProcessingPassEnd(IXAudio2VoiceCallback* This) { }
+void OnVoiceProcessingPassStart(IXAudio2VoiceCallback* This, UINT32 SamplesRequired) { }
+void OnBufferStart(IXAudio2VoiceCallback* This, void* pBufferContext) { }
+void OnLoopEnd(IXAudio2VoiceCallback* This, void* pBufferContext) { }
+void OnVoiceError(IXAudio2VoiceCallback* This, void* pBufferContext, HRESULT Error) { }
+
+// Callbacks are set up by adding them to the lpVtbl, which is type IXAudio2VoiceCallbackVtbl*
+global_variable IXAudio2VoiceCallback xaudio_callbacks = {
+    .lpVtbl = &(IXAudio2VoiceCallbackVtbl) {
+        .OnStreamEnd = OnStreamEnd,
+        .OnVoiceProcessingPassEnd = OnVoiceProcessingPassEnd,
+        .OnVoiceProcessingPassStart = OnVoiceProcessingPassStart,
+        .OnBufferEnd = OnBufferEnd,
+        .OnBufferStart = OnBufferStart,
+        .OnLoopEnd = OnLoopEnd,
+        .OnVoiceError = OnVoiceError
+    }
+};
+
+void win32_init_xaudio2(Win32XAudio2State* xaudio2_state)
 {
     xaudio2_state->xaudio2 = NULL;
     if (FAILED(XAudio2Create(&xaudio2_state->xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
 
     xaudio2_state->master_voice = NULL;
-    if (FAILED(xaudio2_state->xaudio2->CreateMasteringVoice(&xaudio2_state->master_voice)))
+    if (FAILED(IXAudio2_CreateMasteringVoice(xaudio2_state->xaudio2, &xaudio2_state->master_voice,
+                                             XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_SAMPLERATE,
+                                             0, NULL, NULL, AudioCategory_GameEffects)))
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
 }
 
@@ -110,7 +135,7 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-void win32_process_sound_output(SoundOutput* sound_output, Win32Xaudio2State* xaudio2_state)
+void win32_process_sound_output(SoundOutput* sound_output, Win32XAudio2State* xaudio2_state)
 {
     WAVEFORMATEX wave = {0};
     XAUDIO2_BUFFER buffer = {0};
@@ -150,26 +175,28 @@ void win32_process_sound_output(SoundOutput* sound_output, Win32Xaudio2State* xa
     buffer.AudioBytes = chunk_size;
     buffer.pAudioData = data_buffer;
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source void not to expect data after this buffer
+    
     IXAudio2SourceVoice* source_voice;
-    if (FAILED(xaudio2_state->xaudio2->CreateSourceVoice(&source_voice, &wave)))
+    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state->xaudio2, &source_voice, &wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
+                                          &xaudio_callbacks, NULL, NULL)))
     {
         // TODO(lucas): Diagnostic
     }
     
-    if (FAILED(source_voice->SubmitSourceBuffer(&buffer)))
+    if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(source_voice, &buffer, NULL)))
     {
         // TODO(lucas): Diagnostic
     }
 
     if (sound_output->should_play)
     {
-        if (FAILED(source_voice->Start(0)))
+        if (FAILED(IXAudio2SourceVoice_Start(source_voice, 0, XAUDIO2_COMMIT_NOW)))
         {
             // TODO(lucas): Diagnostic
         }
     }
 
-    if (FAILED(source_voice->SetVolume(sound_output->volume, 0)))
+    if (FAILED(IXAudio2SourceVoice_SetVolume(source_voice, sound_output->volume, 0)))
     {
         // TODO(lucas): Diagnostic
     }

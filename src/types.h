@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <cglm/struct.h>
 
 #include <stdint.h>
 

@@ -4,7 +4,7 @@
 
 #include <stb_image/stb_image.h>
 
-u32 generate_texture(const char* filename)
+u32 generate_texture_from_file(const char* filename)
 {
     // Load image for texture
     int tex_width;
@@ -47,14 +47,12 @@ u32 generate_texture(const char* filename)
     return tex;
 }
 
-// TODO(lucas): Can this be a part of the more general generate_texture function?
-u32 generate_font_texture(u32 width, u32 height, ubyte* data)
+u32 generate_texture()
 {
     // Generate texture
     u32 texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
     
     // Texture options
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

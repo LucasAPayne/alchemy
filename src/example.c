@@ -5,14 +5,15 @@
 #include "renderer/sprite.h"
 #include "renderer/texture.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
 #include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
+
+global_variable vec3s colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+                          {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
+                          {0.0f, 1.0f, 1.0f}};
 
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
@@ -31,7 +32,7 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        state->logo.color = state->colors[color_index];
+        state->logo.color = colors[color_index];
         state->last_color_index = color_index;
     }
     if (state->logo.position.y > (window_height - state->logo.size.y) || state->logo.position.y < 0)
@@ -42,7 +43,7 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
         // Make sure new color is different. Incredibly efficient
         while (color_index == state->last_color_index)
             color_index = rand() % 7;
-        state->logo.color = state->colors[color_index];
+        state->logo.color = colors[color_index];
         state->last_color_index = color_index;
     }
 }
@@ -105,7 +106,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
             state->player.rotation -= 2.0f;
         if (state->player.rotation < 0.0f)
             state->player.rotation += 2.0f;
-        if (abs(state->player.rotation - 0.0f) < 2.0f)
+        if (fabs(state->player.rotation - 0.0f) < 2.0f)
             state->player.rotation = 0.0f;
     }
 
@@ -117,38 +118,33 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 void init_example_state(ExampleState* state)
 {
     srand(0);
-    state->input.keyboard = {0};
-    state->input.mouse = {0};
-    for (int i = 0; i < MAX_GAMEPADS; ++i)
-        state->input.gamepads[i] = {0};
+    *state = (ExampleState){0};
 
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
 
     init_sprite_renderer(&state->sprite_renderer, sprite_shader);
-    init_font_renderer(&state->font_renderer, font_shader);
-    load_font(&state->font_renderer, "fonts/cardinal.ttf", 24);
+    init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
-    u32 logo_tex = generate_texture("textures/dvd.png");
-    state->logo = {0};
+    u32 logo_tex = generate_texture_from_file("textures/dvd.png");
     state->logo.renderer = &state->sprite_renderer;
+    state->logo.position = (vec2s){0.0f, 0.0f};
     state->logo.texture = logo_tex;
-    state->logo.color = glm::vec3(1.0f);
-    state->logo.position = glm::vec2(0.0f, 0.0f);
-    state->logo.size = glm::vec2(300.0f, 150.0f);
+    state->logo.color = colors[0];
+    state->logo.size = (vec2s){300.0f, 150.0f};
     state->logo.rotation = 0.0f;
     state->logo_x_direction = 1.0f;
     state->logo_y_direction = 1.0f;
-    state->clear_color = glm::vec3(0.2f, 0.2f, 0.2f);
+    state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
 
-    u32 player_tex = generate_texture("textures/white_pixel.png");
-    state->player = {0};
+    u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player.renderer = &state->sprite_renderer;
+    state->player.position = (vec2s){0.0f, 0.0f};
     state->player.texture = player_tex;
-    state->player.color = glm::vec3(1.0f);
-    state->player.position = glm::vec2(0.0f, 0.0f);
-    state->player.size = glm::vec2(50.0f, 50.0f);
+    state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
+    state->player.size = (vec2s){50.0f, 50.0f};
     state->player.rotation = 0.0f;
     state->dash_counter = 0;
     state->dash_frames = 15;
@@ -167,6 +163,7 @@ void init_example_state(ExampleState* state)
 void delete_example_state(ExampleState* state)
 {
     delete_font_renderer(&state->font_renderer);
+    delete_font_renderer(&state->frame_time_renderer);
     delete_sprite_renderer(&state->sprite_renderer);
     delete_texture(state->logo.texture);
     delete_texture(state->player.texture);
@@ -180,10 +177,10 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     glViewport(0, 0, window_width, window_height);
-    glClearColor(state->clear_color.x, state->clear_color.y, state->clear_color.z, 1.0f);
+    glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
 
     // if (is_key_released(&state->keyboard, Key::A))
-    if (is_mouse_button_pressed(&state->input.mouse, MouseButton::MOUSE_X2))
+    if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
         glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     state->sound_output.should_play = false;
@@ -197,16 +194,20 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glm::mat4 projection = glm::ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f);
-    shader_set_mat4f(state->font_renderer.shader, "projection", projection);
-    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection);
+    mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
+    shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
+    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
 
     draw_sprite(state->logo);
     draw_sprite(state->player);
 
-    glm::vec3 font_color = glm::vec3(0.6f, 0.2f, 0.2f);
-    render_text(&state->font_renderer, "Alchemy Engine", glm::vec2(500.0f, 50.0f), 1.0f, font_color);
+    vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
+    vec2s engine_text_pos = {500.0f, 50.0f};
+    vec2s ms_text_pos = {10.0f, window_height - 10.0f};
+    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
     char buffer[512];
-    sprintf_s(buffer, sizeof(buffer), "MS per frame: %f", delta_time * 1000.0f);
-    render_text(&state->font_renderer, buffer, glm::vec2(750.0f, 650.0f), 1.0f, font_color);
+
+    FontRenderer frame_time_renderer = {0};
+    sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
 }
