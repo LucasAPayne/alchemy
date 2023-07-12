@@ -5,7 +5,7 @@
 
 #include "example.h"
 #include "input.h"
-#include "types.h"
+#include "util/types.h"
 #include "platform/windows/win32_input.h"
 #include "platform/windows/win32_sound.h"
 

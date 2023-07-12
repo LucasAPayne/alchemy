@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sound.h"
-#include "types.h"
+#include "util/types.h"
 
 #include <xaudio2.h>
 

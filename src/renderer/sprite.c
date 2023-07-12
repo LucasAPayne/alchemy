@@ -2,7 +2,7 @@
 
 #include "shader.h"
 #include "texture.h"
-#include "types.h"
+#include "util/types.h"
 
 #include <glad/glad.h>
 

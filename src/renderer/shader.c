@@ -1,5 +1,5 @@
 #include "shader.h"
-#include "types.h"
+#include "util/types.h"
 
 // TODO(lucas): Insert logging and remove Windows dependency
 #include <windows.h>

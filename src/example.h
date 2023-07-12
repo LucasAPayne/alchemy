@@ -2,7 +2,8 @@
 
 #include "input.h"
 #include "sound.h"
-#include "types.h"
+#include "util/types.h"
+#include "util/timer.h"
 #include "renderer/font.h"
 #include "renderer/sprite.h"
 
@@ -23,11 +24,13 @@ typedef struct ExampleState
     int dash_frames;
     f32 dash_direction; // -1: left, 1: right
     f32 dash_distance;
+    Timer dash_cooldown;
 
     vec3s clear_color;
 
     SoundOutput sound_output;
     b32 is_shooting;
+
 } ExampleState;
 
 void init_example_state(ExampleState* state);
