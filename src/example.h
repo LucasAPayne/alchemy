@@ -3,7 +3,7 @@
 #include "input.h"
 #include "sound.h"
 #include "util/types.h"
-#include "util/timer.h"
+#include "util/time.h"
 #include "renderer/font.h"
 #include "renderer/sprite.h"
 
@@ -31,6 +31,7 @@ typedef struct ExampleState
     SoundOutput sound_output;
     b32 is_shooting;
 
+    Stopwatch stopwatch;
 } ExampleState;
 
 void init_example_state(ExampleState* state);

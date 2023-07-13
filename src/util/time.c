@@ -1,4 +1,4 @@
-#include "timer.h"
+#include "time.h"
 
 void timer_init(Timer* timer, f32 start_seconds, b32 start_active)
 {
@@ -45,4 +45,41 @@ void timer_stop(Timer* timer)
 void timer_reset(Timer* timer)
 {
     timer->ms_left = timer->start_seconds * 1000.0f;
+}
+
+void stopwatch_init(Stopwatch* stopwatch, b32 start_active)
+{
+    stopwatch->ms_elapsed = 0.0f;
+    stopwatch->is_active = start_active;
+}
+
+f32  stopwatch_milliseconds(const Stopwatch* stopwatch)
+{
+    return stopwatch->ms_elapsed;
+}
+
+f32  stopwatch_seconds(const Stopwatch* stopwatch)
+{
+    return stopwatch->ms_elapsed / 1000.0f;
+}
+
+void stopwatch_start(Stopwatch* stopwatch)
+{
+    stopwatch->is_active = true;
+}
+
+void stopwatch_update(Stopwatch* stopwatch, f32 delta_time)
+{
+    if (stopwatch->is_active)
+        stopwatch->ms_elapsed += delta_time*1000.0f;
+}
+
+void stopwatch_stop(Stopwatch* stopwatch)
+{
+    stopwatch->is_active = false;
+}
+
+void stopwatch_reset(Stopwatch* stopwatch)
+{
+    stopwatch->ms_elapsed = 0.0f;
 }
