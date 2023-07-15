@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.h"
 
 u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path);
 void bind_shader(u32 id);

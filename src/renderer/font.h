@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

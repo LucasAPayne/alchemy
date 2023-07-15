@@ -1,6 +1,6 @@
 #include "platform/windows/win32_sound.h"
 #include "sound.h"
-#include "types.h"
+#include "util/types.h"
 
 #include <windows.h>
 #include <xaudio2.h>

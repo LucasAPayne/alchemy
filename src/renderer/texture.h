@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.h"
 
 u32 generate_texture();
 u32 generate_texture_from_file(const char* filename);

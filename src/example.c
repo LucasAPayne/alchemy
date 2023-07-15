@@ -1,9 +1,9 @@
 #include "example.h"
-#include "types.h"
 #include "renderer/font.h"
 #include "renderer/shader.h"
 #include "renderer/sprite.h"
 #include "renderer/texture.h"
+#include "util/types.h"
 
 #include <glad/glad.h>
 
@@ -50,6 +50,8 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
 
 internal void update_player(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
+    timer_update(&state->dash_cooldown, delta_time, true);
+
     Gamepad* gamepad = &state->input.gamepads[0];
     f32 speed = 250.0f; // pixels per second
     // Update player position
@@ -57,15 +59,20 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     state->player.position.y += speed * delta_time * gamepad->left_stick_y;
 
     // Dash
-    if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
+    if (!state->dash_cooldown.is_active)
     {
-        state->dash_counter = state->dash_frames;
-        state->dash_direction = -1.0f;
-    }
-    if (is_gamepad_button_released(gamepad->right_shoulder) && state->dash_counter == 0)
-    {
-        state->dash_counter = state->dash_frames;
-        state->dash_direction = 1.0f;
+        if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
+        {
+            state->dash_counter = state->dash_frames;
+            state->dash_direction = -1.0f;
+            timer_start(&state->dash_cooldown);
+        }
+        if (is_gamepad_button_released(gamepad->right_shoulder) && state->dash_counter == 0)
+        {
+            state->dash_counter = state->dash_frames;
+            state->dash_direction = 1.0f;
+            timer_start(&state->dash_cooldown);
+        }
     }
     if (state->dash_counter > 0)
     {
@@ -158,6 +165,9 @@ void init_example_state(ExampleState* state)
     set_volume(&state->sound_output, 0.5f);
     state->sound_output.should_play = false;
     state->is_shooting = false;
+
+    timer_init(&state->dash_cooldown, 2.0f, false);
+    stopwatch_init(&state->stopwatch, false);
 }
 
 void delete_example_state(ExampleState* state)
@@ -171,6 +181,8 @@ void delete_example_state(ExampleState* state)
 
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
+    stopwatch_update(&state->stopwatch, delta_time);
+    
     Gamepad* gamepad = &state->input.gamepads[0];
     update_dvd(state, delta_time, window_width, window_height);
     update_player(state, delta_time, window_width, window_height);  
@@ -192,6 +204,17 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     if (is_gamepad_button_released(gamepad->a_button))
         state->is_shooting = false;
     
+    if (is_gamepad_button_released(gamepad->y_button))
+    {
+        if (state->stopwatch.is_active)
+            stopwatch_stop(&state->stopwatch);
+        else
+            stopwatch_start(&state->stopwatch);
+    }
+
+    if (is_gamepad_button_released(gamepad->b_button))
+        stopwatch_reset(&state->stopwatch);
+    
     glClear(GL_COLOR_BUFFER_BIT);
 
     mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
@@ -203,11 +226,22 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
 
     vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     vec2s engine_text_pos = {500.0f, 50.0f};
-    vec2s ms_text_pos = {10.0f, window_height - 10.0f};
     render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
     char buffer[512];
 
     FontRenderer frame_time_renderer = {0};
+    vec2s ms_text_pos = {10.0f, window_height - 10.0f};
     sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
     render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
+
+    char cooldown_buffer[512];
+    vec2s cooldown_text_pos = {1050.0f, window_height - 10.0f};
+    sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
+    if (state->dash_cooldown.is_active)
+        render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
+    
+    char stopwatch_buffer[512];
+    vec2s stopwatch_text_pos = {10.0f, 40.0f};
+    sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
+    render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 }

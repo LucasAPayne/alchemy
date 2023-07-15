@@ -1,6 +1,6 @@
 #include "win32_input.h"
 #include "input.h"
-#include "types.h"
+#include "util/types.h"
 
 #include <windows.h>
 #include <Xinput.h>
