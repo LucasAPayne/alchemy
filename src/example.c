@@ -11,9 +11,51 @@
 #include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
 
+#define INCLUDE_OVERVIEW
+#ifdef INCLUDE_OVERVIEW
+  #include "nuklear_overview.c"
+#endif
+
+static void error_callback(int e, const char *d)
+{printf("Error %d: %s\n", e, d);}
+
 global_variable vec3s colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
                           {0.0f, 1.0f, 1.0f}};
+
+// Calculate width of a string
+// f32 calculate_text_width(nk_handle handle, f32 height, const char* text, int len)
+// {
+//     FontRenderer* font = handle.ptr;
+//     f32 text_width = 0.0f;
+
+//     const char *c;
+//     for (c = text; *c; ++c)
+//     {
+//         if (!FT_Load_Char(font->face, *c, FT_LOAD_RENDER))
+//         {
+//             // TODO(lucas): Diagnostic, could not load character
+//         }
+
+//         text_width += (f32)font->face->glyph->bitmap.width;
+//     }
+
+//     return text_width;
+// }
+
+// void query_font_glyph(nk_handle handle, f32 font_height, nk_user_font_glyph* glyph, nk_rune codepoint, nk_rune next_codepoint)
+// {
+//     FontRenderer* font = handle.ptr;
+//     glyph->width = (f32)font->face->glyph->bitmap.width;
+//     glyph->height = (f32)font->face->glyph->bitmap.rows;
+//     glyph->xadvance = (f32)font->face->glyph->advance.x/64;
+//     glyph->uv[0].x = 0.0f;
+//     glyph->uv[0].y = 0.0f;
+//     glyph->uv[1].x = 1.0f;
+//     glyph->uv[1].y = 1.0f;
+//     // glyph->offset.x = font->face->glyph->bitmap_left;
+//     // glyph->offset.y = font->face->glyph->bitmap_top;
+// }
 
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
@@ -168,6 +210,8 @@ void init_example_state(ExampleState* state)
 
     timer_init(&state->dash_cooldown, 2.0f, false);
     stopwatch_init(&state->stopwatch, false);
+
+    state->alchemy_state = (nk_alchemy_state){0};
 }
 
 void delete_example_state(ExampleState* state)

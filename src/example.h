@@ -7,6 +7,22 @@
 #include "renderer/font.h"
 #include "renderer/sprite.h"
 
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+// #define NK_GLFW_GL3_IMPLEMENTATION
+// #define NK_IMPLEMENTATION
+#define NK_KEYSTATE_BASED_INPUT
+#pragma warning(push, 0)
+#include <nuklear/nuklear.h>
+#pragma warning(pop)
+
+#include "nuklear_example.h"
+
 typedef struct ExampleState
 {
     Input input;
@@ -32,6 +48,13 @@ typedef struct ExampleState
     b32 is_shooting;
 
     Stopwatch stopwatch;
+
+    // nk_user_font debug_panel_font;
+    // nk_context debug_panel;
+
+    struct nk_alchemy_state alchemy_state;
+    struct nk_context* ctx;
+    struct nk_colorf bg;
 } ExampleState;
 
 void init_example_state(ExampleState* state);
