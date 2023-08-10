@@ -1,6 +1,9 @@
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable: 4996)
 #include <cglm/struct.h>
+#pragma warning(pop)
 
 #include <stdint.h>
 

@@ -27,8 +27,7 @@ typedef struct nk_alchemy_vertex {
   #define NK_SHADER_VERSION "#version 300 es\n"
 #endif
 
-NK_API void
-nk_alchemy_device_create(nk_alchemy_state* state)
+void nk_alchemy_device_create(nk_alchemy_state* state)
 {
     GLint status;
     static const GLchar *vertex_shader =
@@ -110,8 +109,7 @@ nk_alchemy_device_create(nk_alchemy_state* state)
     glBindVertexArray(0);
 }
 
-NK_INTERN void
-nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
+void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
 {
     nk_alchemy_device *dev = &state->ogl;
     glGenTextures(1, &dev->font_tex);
@@ -122,8 +120,7 @@ nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int w
                 GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
 
-NK_API void
-nk_alchemy_device_destroy(nk_alchemy_state* state)
+void nk_alchemy_device_destroy(nk_alchemy_state* state)
 {
     nk_alchemy_device *dev = &state->ogl;
     glDetachShader(dev->prog, dev->vert_shdr);
@@ -137,8 +134,7 @@ nk_alchemy_device_destroy(nk_alchemy_state* state)
     nk_buffer_free(&dev->cmds);
 }
 
-NK_API void
-nk_glfw3_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
+void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
 {
     nk_alchemy_device *dev = &state->ogl;
     struct nk_buffer vbuf, ebuf;
@@ -237,8 +233,7 @@ nk_glfw3_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int max_verte
     glDisable(GL_SCISSOR_TEST);
 }
 
-NK_API void
-nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint)
+void nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 {
     // nk_alchemy_state* state = glfwGetWindowUserPointer(win);
     if (state->text_len < NK_ALCHEMY_TEXT_MAX)
@@ -256,7 +251,7 @@ nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 
 // TODO(lucas): get delta time
 // NK_API void
-// nk_glfw3_mouse_button_callback(Mouse* mouse, int button, int action, int mods)
+// nk_alchemy_mouse_button_callback(Mouse* mouse, int button, int action, int mods)
 // {
 //     NK_UNUSED(mods);
 //     if (is_mouse_button_pressed(mouse, MOUSE_LEFT))  {
@@ -271,7 +266,7 @@ nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 
 // TODO(lucas): Clipboard
 // NK_INTERN void
-// nk_glfw3_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
+// nk_alchemy_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 // {
 //     nk_alchemy_state* glfw = (nk_alchemy_state*)usr.ptr;
 //     const char *text = glfwGetClipboardString(glfw->win);
@@ -280,7 +275,7 @@ nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 // }
 
 // NK_INTERN void
-// nk_glfw3_clipboard_copy(nk_handle usr, const char *text, int len)
+// nk_alchemy_clipboard_copy(nk_handle usr, const char *text, int len)
 // {
 //     nk_alchemy_state* glfw = (nk_alchemy_state*)usr.ptr;
 //     char *str = 0;
@@ -293,51 +288,47 @@ nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 //     free(str);
 // }
 
-NK_API struct nk_context*
-nk_glfw3_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state)
+struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state)
 {
     // glfw->win = win;
     // if (init_state == NK_ALCHEMY_INSTALL_CALLBACKS) {
     //     glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
-    //     glfwSetCharCallback(win, nk_glfw3_char_callback);
-    //     glfwSetMouseButtonCallback(win, nk_glfw3_mouse_button_callback);
+    //     glfwSetCharCallback(win, nk_alchemy_char_callback);
+    //     glfwSetMouseButtonCallback(win, nk_alchemy_mouse_button_callback);
     // }
     nk_init_default(&state->ctx, 0);
-    // state->ctx.clip.copy = nk_glfw3_clipboard_copy;
-    // state->ctx.clip.paste = nk_glfw3_clipboard_paste;
+    // state->ctx.clip.copy = nk_alchemy_clipboard_copy;
+    // state->ctx.clip.paste = nk_alchemy_clipboard_paste;
     state->ctx.clip.copy = 0;
     state->ctx.clip.paste = 0;
     state->ctx.clip.userdata = nk_handle_ptr(&state);
     state->last_button_click = 0;
-    nk_glfw3_device_create(state);
+    nk_alchemy_device_create(state);
 
     state->is_double_click_down = nk_false;
     state->double_click_pos = nk_vec2(0, 0);
 
-    return &state->ctx;
+    return state->ctx;
 }
 
-NK_API void
-nk_glfw3_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas)
+void nk_alchemy_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas)
 {
     nk_font_atlas_init_default(&state->atlas);
     nk_font_atlas_begin(&state->atlas);
     *atlas = &state->atlas;
 }
 
-// NK_API void
-// nk_glfw3_font_stash_end(nk_alchemy_state* state)
-// {
-//     const void *image; int w, h;
-//     image = nk_font_atlas_bake(&state->atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
-//     nk_glfw3_device_upload_atlas(state, image, w, h);
-//     nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->ogl.font_tex), &state->ogl.tex_null);
-//     if (state->atlas.default_font)
-//         nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
-// }
+void nk_alchemy_font_stash_end(nk_alchemy_state* state)
+{
+    const void *image; int w, h;
+    image = nk_font_atlas_bake(&state->atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
+    nk_alchemy_device_upload_atlas(state, image, w, h);
+    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->ogl.font_tex), &state->ogl.tex_null);
+    if (state->atlas.default_font)
+        nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
+}
 
-NK_API void
-nk_glfw3_new_frame(nk_alchemy_state* state)
+void nk_alchemy_new_frame(nk_alchemy_state* state)
 {
     int i;
     struct nk_context *ctx = &state->ctx;
@@ -414,11 +405,10 @@ nk_glfw3_new_frame(nk_alchemy_state* state)
     state->scroll = nk_vec2(0,0);
 }
 
-NK_API
-void nk_glfw3_shutdown(nk_alchemy_state* state)
+void nk_alchemy_shutdown(nk_alchemy_state* state)
 {
     nk_font_atlas_clear(&state->atlas);
     nk_free(&state->ctx);
-    nk_glfw3_device_destroy(state);
+    nk_alchemy_device_destroy(state);
     memset(state, 0, sizeof(*state));
 }

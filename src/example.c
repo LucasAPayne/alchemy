@@ -11,10 +11,13 @@
 #include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
 
-#define INCLUDE_OVERVIEW
-#ifdef INCLUDE_OVERVIEW
-  #include "nuklear_overview.c"
-#endif
+// #define INCLUDE_OVERVIEW
+// #ifdef INCLUDE_OVERVIEW
+//   #include "nuklear_overview.c"
+// #endif
+
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
 
 static void error_callback(int e, const char *d)
 {printf("Error %d: %s\n", e, d);}
@@ -211,7 +214,16 @@ void init_example_state(ExampleState* state)
     timer_init(&state->dash_cooldown, 2.0f, false);
     stopwatch_init(&state->stopwatch, false);
 
+    // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
+    state->bg = (struct nk_colorf){0.10f, 0.18f, 0.24f, 1.0f};
+    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, NK_ALCHEMY_INSTALL_CALLBACKS);
+    struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
+    nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
+    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 13, 0);
+    nk_alchemy_font_stash_end(&state->alchemy_state);
+    nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
+    nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
 }
 
 void delete_example_state(ExampleState* state)
@@ -221,71 +233,134 @@ void delete_example_state(ExampleState* state)
     delete_sprite_renderer(&state->sprite_renderer);
     delete_texture(state->logo.texture);
     delete_texture(state->player.texture);
+    nk_alchemy_shutdown(&state->alchemy_state);
 }
 
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
-    stopwatch_update(&state->stopwatch, delta_time);
-    
-    Gamepad* gamepad = &state->input.gamepads[0];
-    update_dvd(state, delta_time, window_width, window_height);
-    update_player(state, delta_time, window_width, window_height);  
-    
-    // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
-    glViewport(0, 0, window_width, window_height);
-    glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
+    nk_alchemy_new_frame(&state->alchemy_state);
+    struct nk_context* ctx = &state->alchemy_state.ctx;
 
-    // if (is_key_released(&state->keyboard, Key::A))
-    if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
-        glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    
-    state->sound_output.should_play = false;
-    if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
+    /* GUI */
+    if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+        NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
     {
-        state->is_shooting = true;
-        state->sound_output.should_play = true;
+        enum {EASY, HARD};
+        static int op = EASY;
+        static int property = 20;
+        nk_layout_row_static(ctx, 30, 80, 1);
+        if (nk_button_label(ctx, "button"))
+            fprintf(stdout, "button pressed\n");
+
+        nk_layout_row_dynamic(ctx, 30, 2);
+        if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
+        if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+
+        nk_layout_row_dynamic(ctx, 20, 1);
+        nk_label(ctx, "background:", NK_TEXT_LEFT);
+        nk_layout_row_dynamic(ctx, 25, 1);
+        if (nk_combo_begin_color(ctx, nk_rgb_cf(state->bg), nk_vec2(nk_widget_width(ctx),400))) {
+            nk_layout_row_dynamic(ctx, 120, 1);
+            state->bg = nk_color_picker(ctx, state->bg, NK_RGBA);
+            nk_layout_row_dynamic(ctx, 25, 1);
+            state->bg.r = nk_propertyf(ctx, "#R:", 0, state->bg.r, 1.0f, 0.01f,0.005f);
+            state->bg.g = nk_propertyf(ctx, "#G:", 0, state->bg.g, 1.0f, 0.01f,0.005f);
+            state->bg.b = nk_propertyf(ctx, "#B:", 0, state->bg.b, 1.0f, 0.01f,0.005f);
+            state->bg.a = nk_propertyf(ctx, "#A:", 0, state->bg.a, 1.0f, 0.01f,0.005f);
+            nk_combo_end(ctx);
+        }
     }
-    if (is_gamepad_button_released(gamepad->a_button))
-        state->is_shooting = false;
+    nk_end(ctx);
+
+    /* -------------- EXAMPLES ---------------- */
+    #ifdef INCLUDE_CALCULATOR
+        calculator(ctx);
+    #endif
+    #ifdef INCLUDE_CANVAS
+        canvas(ctx);
+    #endif
+    #ifdef INCLUDE_OVERVIEW
+        overview(ctx);
+    #endif
+    #ifdef INCLUDE_NODE_EDITOR
+        node_editor(ctx);
+    #endif
+    /* ----------------------------------------- */
+
+    /* Draw */
+    glClearColor(state->bg.r, state->bg.g, state->bg.b, state->bg.a);
+    /* IMPORTANT: `nk_glfw_render` modifies some global OpenGL state
+        * with blending, scissor, face culling, depth test and viewport and
+        * defaults everything back into a default state.
+        * Make sure to either a.) save and restore or b.) reset your own state after
+        * rendering the UI. */
+    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+
+    // stopwatch_update(&state->stopwatch, delta_time);
     
-    if (is_gamepad_button_released(gamepad->y_button))
-    {
-        if (state->stopwatch.is_active)
-            stopwatch_stop(&state->stopwatch);
-        else
-            stopwatch_start(&state->stopwatch);
-    }
-
-    if (is_gamepad_button_released(gamepad->b_button))
-        stopwatch_reset(&state->stopwatch);
+    // Gamepad* gamepad = &state->input.gamepads[0];
+    // update_dvd(state, delta_time, window_width, window_height);
+    // update_player(state, delta_time, window_width, window_height);  
     
-    glClear(GL_COLOR_BUFFER_BIT);
+    // // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
+    // glViewport(0, 0, window_width, window_height);
+    // glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
 
-    mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
-    shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
-    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
-
-    draw_sprite(state->logo);
-    draw_sprite(state->player);
-
-    vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    vec2s engine_text_pos = {500.0f, 50.0f};
-    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
-    char buffer[512];
-
-    FontRenderer frame_time_renderer = {0};
-    vec2s ms_text_pos = {10.0f, window_height - 10.0f};
-    sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
-
-    char cooldown_buffer[512];
-    vec2s cooldown_text_pos = {1050.0f, window_height - 10.0f};
-    sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
-    if (state->dash_cooldown.is_active)
-        render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
+    // // if (is_key_released(&state->keyboard, Key::A))
+    // if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
+    //     glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
-    char stopwatch_buffer[512];
-    vec2s stopwatch_text_pos = {10.0f, 40.0f};
-    sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
+    // state->sound_output.should_play = false;
+    // if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
+    // {
+    //     state->is_shooting = true;
+    //     state->sound_output.should_play = true;
+    // }
+    // if (is_gamepad_button_released(gamepad->a_button))
+    //     state->is_shooting = false;
+    
+    // if (is_gamepad_button_released(gamepad->y_button))
+    // {
+    //     if (state->stopwatch.is_active)
+    //         stopwatch_stop(&state->stopwatch);
+    //     else
+    //         stopwatch_start(&state->stopwatch);
+    // }
+
+    // if (is_gamepad_button_released(gamepad->b_button))
+    //     stopwatch_reset(&state->stopwatch);
+    
+    // glClear(GL_COLOR_BUFFER_BIT);
+
+    // mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
+    // shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
+    // shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
+
+    // draw_sprite(state->logo);
+    // draw_sprite(state->player);
+
+    // vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
+    // vec2s engine_text_pos = {500.0f, 50.0f};
+    // render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
+    // char buffer[512];
+
+    // FontRenderer frame_time_renderer = {0};
+    // vec2s ms_text_pos = {10.0f, window_height - 10.0f};
+    // sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    // render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
+
+    // char cooldown_buffer[512];
+    // vec2s cooldown_text_pos = {1050.0f, window_height - 10.0f};
+    // sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
+    // if (state->dash_cooldown.is_active)
+    //     render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
+    
+    // char stopwatch_buffer[512];
+    // vec2s stopwatch_text_pos = {10.0f, 40.0f};
+    // sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
+    // render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 }

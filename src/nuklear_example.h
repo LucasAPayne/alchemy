@@ -14,18 +14,15 @@
 
 #include "glad/include/glad/glad.h"
 
-// #define NK_INCLUDE_FIXED_TYPES
-// #define NK_INCLUDE_STANDARD_IO
-// #define NK_INCLUDE_STANDARD_VARARGS
-// #define NK_INCLUDE_DEFAULT_ALLOCATOR
-// #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-// #define NK_INCLUDE_FONT_BAKING
-// #define NK_INCLUDE_DEFAULT_FONT
-// // #define NK_GLFW_GL3_IMPLEMENTATION
-// #define NK_KEYSTATE_BASED_INPUT
-// #pragma warning(push, 0)
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_KEYSTATE_BASED_INPUT
 #include <nuklear/nuklear.h>
-// #pragma warning(pop)
 
 #include "input.h"
 
@@ -73,16 +70,16 @@ typedef struct nk_alchemy_state {
     Mouse mouse;
 } nk_alchemy_state;
 
-NK_API struct nk_context*   nk_glfw3_init(nk_alchemy_state* state, enum nk_alchemy_init_state);
-NK_API void                 nk_glfw3_shutdown(nk_alchemy_state* state);
-NK_API void                 nk_glfw3_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas);
-NK_API void                 nk_glfw3_font_stash_end(nk_alchemy_state* state);
-NK_API void                 nk_glfw3_new_frame(nk_alchemy_state* state);
-NK_API void                 nk_glfw3_render(nk_alchemy_state* state, enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
+struct nk_context    nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state);
+void                 nk_alchemy_shutdown(nk_alchemy_state* state);
+void                 nk_alchemy_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas);
+void                 nk_alchemy_font_stash_end(nk_alchemy_state* state);
+void                 nk_alchemy_new_frame(nk_alchemy_state* state);
+void                 nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
 
-NK_API void                 nk_glfw3_device_destroy(nk_alchemy_state* state);
-NK_API void                 nk_glfw3_device_create(nk_alchemy_state* state);
+void                 nk_alchemy_device_destroy(nk_alchemy_state* state);
+void                 nk_alchemy_device_create(nk_alchemy_state* state);
 
-NK_API void                 nk_glfw3_char_callback(nk_alchemy_state* state, unsigned int codepoint);
-NK_API void                 nk_gflw3_scroll_callback(Mouse* mouse, double xoff, double yoff);
-NK_API void                 nk_glfw3_mouse_button_callback(Mouse* mouse, int button, int action, int mods);
+void                 nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint);
+void                 nk_alchemy_scroll_callback(Mouse* mouse, double xoff, double yoff);
+void                 nk_alchemy_mouse_button_callback(Mouse* mouse, int button, int action, int mods);
