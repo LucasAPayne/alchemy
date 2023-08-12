@@ -11,10 +11,12 @@
 #include <stdio.h>  // sprintf_s
 #include <string.h> // Temporary
 
-// #define INCLUDE_OVERVIEW
-// #ifdef INCLUDE_OVERVIEW
-//   #include "nuklear_overview.c"
-// #endif
+#include <windows.h>
+
+#define INCLUDE_OVERVIEW
+#ifdef INCLUDE_OVERVIEW
+  #include "nuklear_overview.c"
+#endif
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -169,50 +171,50 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 
 void init_example_state(ExampleState* state)
 {
-    srand(0);
-    *state = (ExampleState){0};
+    // srand(0);
+    // *state = (ExampleState){0};
 
-    // Compile and Load shaders
-    u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
-    u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
+    // // Compile and Load shaders
+    // u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
+    // u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
 
-    init_sprite_renderer(&state->sprite_renderer, sprite_shader);
-    init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
-    init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
+    // init_sprite_renderer(&state->sprite_renderer, sprite_shader);
+    // init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    // init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
-    u32 logo_tex = generate_texture_from_file("textures/dvd.png");
-    state->logo.renderer = &state->sprite_renderer;
-    state->logo.position = (vec2s){0.0f, 0.0f};
-    state->logo.texture = logo_tex;
-    state->logo.color = colors[0];
-    state->logo.size = (vec2s){300.0f, 150.0f};
-    state->logo.rotation = 0.0f;
-    state->logo_x_direction = 1.0f;
-    state->logo_y_direction = 1.0f;
-    state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
+    // u32 logo_tex = generate_texture_from_file("textures/dvd.png");
+    // state->logo.renderer = &state->sprite_renderer;
+    // state->logo.position = (vec2s){0.0f, 0.0f};
+    // state->logo.texture = logo_tex;
+    // state->logo.color = colors[0];
+    // state->logo.size = (vec2s){300.0f, 150.0f};
+    // state->logo.rotation = 0.0f;
+    // state->logo_x_direction = 1.0f;
+    // state->logo_y_direction = 1.0f;
+    // state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
 
-    u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
-    state->player.renderer = &state->sprite_renderer;
-    state->player.position = (vec2s){0.0f, 0.0f};
-    state->player.texture = player_tex;
-    state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
-    state->player.size = (vec2s){50.0f, 50.0f};
-    state->player.rotation = 0.0f;
-    state->dash_counter = 0;
-    state->dash_frames = 15;
-    state->dash_direction = 0.0f;
-    state->dash_distance = 300.0f;
+    // u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
+    // state->player.renderer = &state->sprite_renderer;
+    // state->player.position = (vec2s){0.0f, 0.0f};
+    // state->player.texture = player_tex;
+    // state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
+    // state->player.size = (vec2s){50.0f, 50.0f};
+    // state->player.rotation = 0.0f;
+    // state->dash_counter = 0;
+    // state->dash_frames = 15;
+    // state->dash_direction = 0.0f;
+    // state->dash_distance = 300.0f;
 
-    shader_set_int(state->sprite_renderer.shader, "image", 0);
-    const char* test_sound_filename = "sounds/pew.wav";
-    strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
-              strlen(test_sound_filename));
-    set_volume(&state->sound_output, 0.5f);
-    state->sound_output.should_play = false;
-    state->is_shooting = false;
+    // shader_set_int(state->sprite_renderer.shader, "image", 0);
+    // const char* test_sound_filename = "sounds/pew.wav";
+    // strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
+    //           strlen(test_sound_filename));
+    // set_volume(&state->sound_output, 0.5f);
+    // state->sound_output.should_play = false;
+    // state->is_shooting = false;
 
-    timer_init(&state->dash_cooldown, 2.0f, false);
-    stopwatch_init(&state->stopwatch, false);
+    // timer_init(&state->dash_cooldown, 2.0f, false);
+    // stopwatch_init(&state->stopwatch, false);
 
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
@@ -224,82 +226,22 @@ void init_example_state(ExampleState* state)
     nk_alchemy_font_stash_end(&state->alchemy_state);
     nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
     nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
+    state->alchemy_state.keyboard = &state->input.keyboard;
+    state->alchemy_state.mouse = &state->input.mouse;
 }
 
 void delete_example_state(ExampleState* state)
 {
-    delete_font_renderer(&state->font_renderer);
-    delete_font_renderer(&state->frame_time_renderer);
-    delete_sprite_renderer(&state->sprite_renderer);
-    delete_texture(state->logo.texture);
-    delete_texture(state->player.texture);
+    // delete_font_renderer(&state->font_renderer);
+    // delete_font_renderer(&state->frame_time_renderer);
+    // delete_sprite_renderer(&state->sprite_renderer);
+    // delete_texture(state->logo.texture);
+    // delete_texture(state->player.texture);
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
-    nk_alchemy_new_frame(&state->alchemy_state);
-    struct nk_context* ctx = &state->alchemy_state.ctx;
-
-    /* GUI */
-    if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-        NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-    {
-        enum {EASY, HARD};
-        static int op = EASY;
-        static int property = 20;
-        nk_layout_row_static(ctx, 30, 80, 1);
-        if (nk_button_label(ctx, "button"))
-            fprintf(stdout, "button pressed\n");
-
-        nk_layout_row_dynamic(ctx, 30, 2);
-        if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-        if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-
-        nk_layout_row_dynamic(ctx, 25, 1);
-        nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-
-        nk_layout_row_dynamic(ctx, 20, 1);
-        nk_label(ctx, "background:", NK_TEXT_LEFT);
-        nk_layout_row_dynamic(ctx, 25, 1);
-        if (nk_combo_begin_color(ctx, nk_rgb_cf(state->bg), nk_vec2(nk_widget_width(ctx),400))) {
-            nk_layout_row_dynamic(ctx, 120, 1);
-            state->bg = nk_color_picker(ctx, state->bg, NK_RGBA);
-            nk_layout_row_dynamic(ctx, 25, 1);
-            state->bg.r = nk_propertyf(ctx, "#R:", 0, state->bg.r, 1.0f, 0.01f,0.005f);
-            state->bg.g = nk_propertyf(ctx, "#G:", 0, state->bg.g, 1.0f, 0.01f,0.005f);
-            state->bg.b = nk_propertyf(ctx, "#B:", 0, state->bg.b, 1.0f, 0.01f,0.005f);
-            state->bg.a = nk_propertyf(ctx, "#A:", 0, state->bg.a, 1.0f, 0.01f,0.005f);
-            nk_combo_end(ctx);
-        }
-    }
-    nk_end(ctx);
-
-    /* -------------- EXAMPLES ---------------- */
-    #ifdef INCLUDE_CALCULATOR
-        calculator(ctx);
-    #endif
-    #ifdef INCLUDE_CANVAS
-        canvas(ctx);
-    #endif
-    #ifdef INCLUDE_OVERVIEW
-        overview(ctx);
-    #endif
-    #ifdef INCLUDE_NODE_EDITOR
-        node_editor(ctx);
-    #endif
-    /* ----------------------------------------- */
-
-    /* Draw */
-    glClearColor(state->bg.r, state->bg.g, state->bg.b, state->bg.a);
-    /* IMPORTANT: `nk_glfw_render` modifies some global OpenGL state
-        * with blending, scissor, face culling, depth test and viewport and
-        * defaults everything back into a default state.
-        * Make sure to either a.) save and restore or b.) reset your own state after
-        * rendering the UI. */
-    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
-
     // stopwatch_update(&state->stopwatch, delta_time);
     
     // Gamepad* gamepad = &state->input.gamepads[0];
@@ -363,4 +305,70 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     // vec2s stopwatch_text_pos = {10.0f, 40.0f};
     // sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     // render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
+
+    nk_alchemy_new_frame(&state->alchemy_state, window_width, window_height);
+    struct nk_context* ctx = &state->alchemy_state.ctx;
+
+    /* GUI */
+    if (ctx->input.mouse.buttons[NK_BUTTON_LEFT].down)
+        OutputDebugStringA("Click\n");
+    if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+        NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+    {
+        enum {EASY, HARD};
+        static int op = EASY;
+        static int property = 20;
+        nk_layout_row_static(ctx, 30, 80, 1);
+        if (nk_button_label(ctx, "button"))
+            fprintf(stdout, "button pressed\n");
+
+        nk_layout_row_dynamic(ctx, 30, 2);
+        if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
+        if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+
+        nk_layout_row_dynamic(ctx, 20, 1);
+        nk_label(ctx, "background:", NK_TEXT_LEFT);
+        nk_layout_row_dynamic(ctx, 25, 1);
+        if (nk_combo_begin_color(ctx, nk_rgb_cf(state->bg), nk_vec2(nk_widget_width(ctx),400))) {
+            nk_layout_row_dynamic(ctx, 120, 1);
+            state->bg = nk_color_picker(ctx, state->bg, NK_RGBA);
+            nk_layout_row_dynamic(ctx, 25, 1);
+            state->bg.r = nk_propertyf(ctx, "#R:", 0, state->bg.r, 1.0f, 0.01f,0.005f);
+            state->bg.g = nk_propertyf(ctx, "#G:", 0, state->bg.g, 1.0f, 0.01f,0.005f);
+            state->bg.b = nk_propertyf(ctx, "#B:", 0, state->bg.b, 1.0f, 0.01f,0.005f);
+            state->bg.a = nk_propertyf(ctx, "#A:", 0, state->bg.a, 1.0f, 0.01f,0.005f);
+            nk_combo_end(ctx);
+        }
+    }
+    nk_end(ctx);
+
+    /* -------------- EXAMPLES ---------------- */
+    #ifdef INCLUDE_CALCULATOR
+        calculator(ctx);
+    #endif
+    #ifdef INCLUDE_CANVAS
+        canvas(ctx);
+    #endif
+    #ifdef INCLUDE_OVERVIEW
+        overview(ctx);
+    #endif
+    #ifdef INCLUDE_NODE_EDITOR
+        node_editor(ctx);
+    #endif
+    /* ----------------------------------------- */
+
+    /* Draw */
+    glViewport(0, 0, window_width, window_height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(state->bg.r, state->bg.g, state->bg.b, state->bg.a);
+    /* IMPORTANT: `nk_glfw_render` modifies some global OpenGL state
+        * with blending, scissor, face culling, depth test and viewport and
+        * defaults everything back into a default state.
+        * Make sure to either a.) save and restore or b.) reset your own state after
+        * rendering the UI. */
+    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }

@@ -249,20 +249,17 @@ void nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 //     mouse->scroll.y += (float)yoff;
 // }
 
-// TODO(lucas): get delta time
-// NK_API void
-// nk_alchemy_mouse_button_callback(Mouse* mouse, int button, int action, int mods)
-// {
-//     NK_UNUSED(mods);
-//     if (is_mouse_button_pressed(mouse, MOUSE_LEFT))  {
-//         double dt = glfwGetTime() - glfw->last_button_click;
-//         if (dt > NK_GLFW_DOUBLE_CLICK_LO && dt < NK_GLFW_DOUBLE_CLICK_HI) {
-//             glfw->is_double_click_down = nk_true;
-//             glfw->double_click_pos = nk_vec2((float)x, (float)y);
-//         }
-//         glfw->last_button_click = glfwGetTime();
-//     } else glfw->is_double_click_down = nk_false;
-// }
+NK_API void
+nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods)
+{
+    NK_UNUSED(mods);
+    if (is_mouse_button_pressed(mouse, MOUSE_LEFT))  {
+        if (dt > NK_ALCHEMY_DOUBLE_CLICK_LO && dt < NK_ALCHEMY_DOUBLE_CLICK_HI) {
+            state->is_double_click_down = nk_true;
+            state->double_click_pos = nk_vec2((float)mouse->x, (float)mouse->y);
+        }
+    } else state->is_double_click_down = nk_false;
+}
 
 // TODO(lucas): Clipboard
 // NK_INTERN void
@@ -292,9 +289,9 @@ struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_
 {
     // glfw->win = win;
     // if (init_state == NK_ALCHEMY_INSTALL_CALLBACKS) {
-    //     glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
-    //     glfwSetCharCallback(win, nk_alchemy_char_callback);
-    //     glfwSetMouseButtonCallback(win, nk_alchemy_mouse_button_callback);
+    //     // glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
+    //     // glfwSetCharCallback(win, nk_alchemy_char_callback);
+    //     glfwSetMouseButtonCallback(nk_alchemy_mouse_button_callback);
     // }
     nk_init_default(&state->ctx, 0);
     // state->ctx.clip.copy = nk_alchemy_clipboard_copy;
@@ -302,7 +299,6 @@ struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_
     state->ctx.clip.copy = 0;
     state->ctx.clip.paste = 0;
     state->ctx.clip.userdata = nk_handle_ptr(&state);
-    state->last_button_click = 0;
     nk_alchemy_device_create(state);
 
     state->is_double_click_down = nk_false;
@@ -328,14 +324,16 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
         nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
 }
 
-void nk_alchemy_new_frame(nk_alchemy_state* state)
+void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height)
 {
     int i;
     struct nk_context *ctx = &state->ctx;
-    // struct GLFWwindow *win = state->win;
 
-    // glfwGetWindowSize(win, &glfw->width, &glfw->height);
-    // glfwGetFramebufferSize(win, &glfw->display_width, &glfw->display_height);
+    // TODO(lucas): For now, window and framebuffer sizes are the same
+    state->width = window_width;
+    state->height = window_height;
+    state->display_width = window_width;
+    state->display_height = window_height;
     state->fb_scale.x = (float)state->display_width/(float)state->width;
     state->fb_scale.y = (float)state->display_height/(float)state->height;
 
@@ -345,59 +343,59 @@ void nk_alchemy_new_frame(nk_alchemy_state* state)
 
 #ifdef NK_GLFW_GL3_MOUSE_GRABBING
     /* optional grabbing behavior */
-    if (ctx->input.mouse.grab)
+    if (ctx->input.mouse->grab)
         glfwSetInputMode(glfw.win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    else if (ctx->input.mouse.ungrab)
+    else if (ctx->input.mouse->ungrab)
         glfwSetInputMode(glfw->win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 #endif
 
-    nk_input_key(ctx, NK_KEY_DEL, is_key_pressed(&state->keyboard, KEY_DEL));
-    nk_input_key(ctx, NK_KEY_ENTER, is_key_pressed(&state->keyboard, KEY_ENTER));
-    nk_input_key(ctx, NK_KEY_TAB, is_key_pressed(&state->keyboard, KEY_TAB));
-    nk_input_key(ctx, NK_KEY_BACKSPACE, is_key_pressed(&state->keyboard, KEY_BACKSPACE));
-    nk_input_key(ctx, NK_KEY_UP, is_key_pressed(&state->keyboard, KEY_UP));
-    nk_input_key(ctx, NK_KEY_DOWN, is_key_pressed(&state->keyboard, KEY_DOWN));
-    nk_input_key(ctx, NK_KEY_TEXT_START, is_key_pressed(&state->keyboard, KEY_HOME));
-    nk_input_key(ctx, NK_KEY_TEXT_END, is_key_pressed(&state->keyboard, KEY_END));
-    nk_input_key(ctx, NK_KEY_SCROLL_START, is_key_pressed(&state->keyboard, KEY_HOME));
-    nk_input_key(ctx, NK_KEY_SCROLL_END, is_key_pressed(&state->keyboard, KEY_END));
-    nk_input_key(ctx, NK_KEY_SCROLL_DOWN, is_key_pressed(&state->keyboard, KEY_PAGEDOWN));
-    nk_input_key(ctx, NK_KEY_SCROLL_UP, is_key_pressed(&state->keyboard, KEY_PAGEUP));
-    nk_input_key(ctx, NK_KEY_SHIFT, is_key_pressed(&state->keyboard, KEY_LSHIFT) || is_key_pressed(&state->keyboard, KEY_RSHIFT));
+    nk_input_key(ctx, NK_KEY_DEL, is_key_pressed(state->keyboard, KEY_DEL));
+    nk_input_key(ctx, NK_KEY_ENTER, is_key_pressed(state->keyboard, KEY_ENTER));
+    nk_input_key(ctx, NK_KEY_TAB, is_key_pressed(state->keyboard, KEY_TAB));
+    nk_input_key(ctx, NK_KEY_BACKSPACE, is_key_pressed(state->keyboard, KEY_BACKSPACE));
+    nk_input_key(ctx, NK_KEY_UP, is_key_pressed(state->keyboard, KEY_UP));
+    nk_input_key(ctx, NK_KEY_DOWN, is_key_pressed(state->keyboard, KEY_DOWN));
+    nk_input_key(ctx, NK_KEY_TEXT_START, is_key_pressed(state->keyboard, KEY_HOME));
+    nk_input_key(ctx, NK_KEY_TEXT_END, is_key_pressed(state->keyboard, KEY_END));
+    nk_input_key(ctx, NK_KEY_SCROLL_START, is_key_pressed(state->keyboard, KEY_HOME));
+    nk_input_key(ctx, NK_KEY_SCROLL_END, is_key_pressed(state->keyboard, KEY_END));
+    nk_input_key(ctx, NK_KEY_SCROLL_DOWN, is_key_pressed(state->keyboard, KEY_PAGEDOWN));
+    nk_input_key(ctx, NK_KEY_SCROLL_UP, is_key_pressed(state->keyboard, KEY_PAGEUP));
+    nk_input_key(ctx, NK_KEY_SHIFT, is_key_pressed(state->keyboard, KEY_LSHIFT) || is_key_pressed(state->keyboard, KEY_RSHIFT));
 
-    if (is_key_pressed(&state->keyboard, KEY_LCONTROL) || is_key_pressed(&state->keyboard, KEY_RCONTROL))
+    if (is_key_pressed(state->keyboard, KEY_LCONTROL) || is_key_pressed(state->keyboard, KEY_RCONTROL))
     {
-        nk_input_key(ctx, NK_KEY_COPY, is_key_pressed(&state->keyboard, KEY_C));
-        nk_input_key(ctx, NK_KEY_PASTE, is_key_pressed(&state->keyboard, KEY_V));
-        nk_input_key(ctx, NK_KEY_CUT, is_key_pressed(&state->keyboard, KEY_X));
-        nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(&state->keyboard, KEY_Z));
-        nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(&state->keyboard, KEY_Y));
-        nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, is_key_pressed(&state->keyboard, KEY_LEFT));
-        nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, is_key_pressed(&state->keyboard, KEY_RIGHT));
-        nk_input_key(ctx, NK_KEY_TEXT_LINE_START, is_key_pressed(&state->keyboard, KEY_B));
-        nk_input_key(ctx, NK_KEY_TEXT_LINE_END, is_key_pressed(&state->keyboard, KEY_E));
+        nk_input_key(ctx, NK_KEY_COPY, is_key_pressed(state->keyboard, KEY_C));
+        nk_input_key(ctx, NK_KEY_PASTE, is_key_pressed(state->keyboard, KEY_V));
+        nk_input_key(ctx, NK_KEY_CUT, is_key_pressed(state->keyboard, KEY_X));
+        nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
+        nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
+        nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
+        nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
+        nk_input_key(ctx, NK_KEY_TEXT_LINE_START, is_key_pressed(state->keyboard, KEY_B));
+        nk_input_key(ctx, NK_KEY_TEXT_LINE_END, is_key_pressed(state->keyboard, KEY_E));
     }
     else
     {
-        nk_input_key(ctx, NK_KEY_LEFT, is_key_pressed(&state->keyboard, KEY_LEFT));
-        nk_input_key(ctx, NK_KEY_RIGHT, is_key_pressed(&state->keyboard, KEY_RIGHT));
+        nk_input_key(ctx, NK_KEY_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
+        nk_input_key(ctx, NK_KEY_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
         nk_input_key(ctx, NK_KEY_COPY, 0);
         nk_input_key(ctx, NK_KEY_PASTE, 0);
         nk_input_key(ctx, NK_KEY_CUT, 0);
         nk_input_key(ctx, NK_KEY_SHIFT, 0);
     }
 
-    nk_input_motion(ctx, state->mouse.x, state->mouse.y);
+    nk_input_motion(ctx, state->mouse->x, state->mouse->y);
 #ifdef NK_GLFW_GL3_MOUSE_GRABBING
-    if (ctx->input.mouse.grabbed) {
-        glfwSetCursorPos(glfw->win, ctx->input.mouse.prev.x, ctx->input.mouse.prev.y);
-        ctx->input.mouse.pos.x = ctx->input.mouse.prev.x;
-        ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
+    if (ctx->input.mouse->grabbed) {
+        glfwSetCursorPos(glfw->win, ctx->input.mouse->prev.x, ctx->input.mouse->prev.y);
+        ctx->input.mouse->pos.x = ctx->input.mouse->prev.x;
+        ctx->input.mouse->pos.y = ctx->input.mouse->prev.y;
     }
 #endif
-    nk_input_button(ctx, NK_BUTTON_LEFT, state->mouse.x, state->mouse.y, is_mouse_button_pressed(&state->mouse, MOUSE_LEFT));
-    nk_input_button(ctx, NK_BUTTON_MIDDLE, state->mouse.x, state->mouse.y, is_mouse_button_pressed(&state->mouse, MOUSE_MIDDLE));
-    nk_input_button(ctx, NK_BUTTON_RIGHT, state->mouse.x, state->mouse.y, is_mouse_button_pressed(&state->mouse, MOUSE_RIGHT));
+    nk_input_button(ctx, NK_BUTTON_LEFT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_LEFT));
+    nk_input_button(ctx, NK_BUTTON_MIDDLE, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_MIDDLE));
+    nk_input_button(ctx, NK_BUTTON_RIGHT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_RIGHT));
     nk_input_button(ctx, NK_BUTTON_DOUBLE, (int)state->double_click_pos.x, (int)state->double_click_pos.y, state->is_double_click_down);
     nk_input_scroll(ctx, state->scroll);
     nk_input_end(&state->ctx);

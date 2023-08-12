@@ -208,7 +208,7 @@ internal void win32_process_mouse_button(ButtonState* button, bool is_down)
         button->is_pressed = is_down;
 }
 
-void win32_process_mouse_input(Mouse* mouse)
+void win32_process_mouse_input(HWND window, Mouse* mouse)
 {
     // Release tate should not persist, so set it to false
     for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
@@ -216,7 +216,15 @@ void win32_process_mouse_input(Mouse* mouse)
 
     // TODO(lucas): Support mouse scrolling
     POINT mouse_pos = {0};
-    GetCursorPos(&mouse_pos);
+    if (GetCursorPos(&mouse_pos))
+    {
+        // TODO(lucas): Logging
+    }
+    if (ScreenToClient(window, &mouse_pos))
+    {
+        // TODO(lucas): Logging
+    }
+
     mouse->x = mouse_pos.x;
     mouse->y = mouse_pos.y;
 

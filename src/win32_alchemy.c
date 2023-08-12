@@ -93,16 +93,16 @@ void GLAPIENTRY opengl_error_callback(GLenum source,
 
     switch (type)
     {
-        case GL_DEBUG_TYPE_ERROR:               OutputDebugStringA("Type: Error"); break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: OutputDebugStringA("Type: Deprecated Behavior"); break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  OutputDebugStringA("Type: Undefined Behavior"); break; 
-        case GL_DEBUG_TYPE_PORTABILITY:         OutputDebugStringA("Type: Portability"); break;
-        case GL_DEBUG_TYPE_PERFORMANCE:         OutputDebugStringA("Type: Performance"); break;
-        case GL_DEBUG_TYPE_MARKER:              OutputDebugStringA("Type: Marker"); break;
-        case GL_DEBUG_TYPE_PUSH_GROUP:          OutputDebugStringA("Type: Push Group"); break;
-        case GL_DEBUG_TYPE_POP_GROUP:           OutputDebugStringA("Type: Pop Group"); break;
-        case GL_DEBUG_TYPE_OTHER:               OutputDebugStringA("Type: Other"); break;
-        default:                                OutputDebugStringA("Type: Unknown"); break;
+        case GL_DEBUG_TYPE_ERROR:               OutputDebugStringA("Type: Error\n"); break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: OutputDebugStringA("Type: Deprecated Behavior\n"); break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  OutputDebugStringA("Type: Undefined Behavior\n"); break; 
+        case GL_DEBUG_TYPE_PORTABILITY:         OutputDebugStringA("Type: Portability\n"); break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         OutputDebugStringA("Type: Performance\n"); break;
+        case GL_DEBUG_TYPE_MARKER:              OutputDebugStringA("Type: Marker\n"); break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          OutputDebugStringA("Type: Push Group\n"); break;
+        case GL_DEBUG_TYPE_POP_GROUP:           OutputDebugStringA("Type: Pop Group\n"); break;
+        case GL_DEBUG_TYPE_OTHER:               OutputDebugStringA("Type: Other\n"); break;
+        default:                                OutputDebugStringA("Type: Unknown\n"); break;
     }
     
     switch (severity)
@@ -294,7 +294,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         // Double buffer input to detect buttons held
         Input old_input = state.input;
         win32_process_keyboard_input(window, &state.input.keyboard);
-        win32_process_mouse_input(&state.input.mouse);
+        win32_process_mouse_input(window, &state.input.mouse);
         win32_process_xinput_gamepad_input(&state.input);
 
         HDC device_context = GetDC(window);

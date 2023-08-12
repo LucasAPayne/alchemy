@@ -62,19 +62,18 @@ typedef struct nk_alchemy_state {
     unsigned int text[NK_ALCHEMY_TEXT_MAX];
     int text_len;
     struct nk_vec2 scroll;
-    double last_button_click;
     int is_double_click_down;
     struct nk_vec2 double_click_pos;
 
-    Keyboard keyboard;
-    Mouse mouse;
+    Keyboard* keyboard;
+    Mouse* mouse;
 } nk_alchemy_state;
 
 struct nk_context    nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state);
 void                 nk_alchemy_shutdown(nk_alchemy_state* state);
 void                 nk_alchemy_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas);
 void                 nk_alchemy_font_stash_end(nk_alchemy_state* state);
-void                 nk_alchemy_new_frame(nk_alchemy_state* state);
+void                 nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height);
 void                 nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
 
 void                 nk_alchemy_device_destroy(nk_alchemy_state* state);
@@ -82,4 +81,4 @@ void                 nk_alchemy_device_create(nk_alchemy_state* state);
 
 void                 nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint);
 void                 nk_alchemy_scroll_callback(Mouse* mouse, double xoff, double yoff);
-void                 nk_alchemy_mouse_button_callback(Mouse* mouse, int button, int action, int mods);
+void                 nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods);
