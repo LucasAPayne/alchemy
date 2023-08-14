@@ -43,6 +43,9 @@ internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
 // TODO(lucas): Support for non-US keyboard layouts
 void win32_process_keyboard_input(HWND window, Keyboard* key_input)
 {
+    // Reset any character that was entered last frame
+    key_input->current_char = 0;
+
     // Release state should not persist, so make sure it is false for each button
     for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
         key_input->keys[key].is_released = false;
@@ -74,8 +77,8 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
                 b32 is_down = (msg.lParam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
 
                 // Disregard key repeats
-                if (was_down == is_down)
-                    break;
+                // if (was_down == is_down)
+                //     break;
 
                 // NOTE(lucas): Most keycodes map directly to their ANSI equivalent (letters are capital)
                 // For keys that have no ANSI equivalent, Windows provides defines for virtual keycodes
@@ -186,6 +189,13 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
                 b32 alt_key_down = msg.lParam & (1 << 29);
                 if ((virtual_key_code == VK_F4) && alt_key_down)
                     PostQuitMessage(0);
+
+                TranslateMessage(&msg);
+            } break;
+
+            case WM_CHAR:
+            {
+                key_input->current_char = msg.wParam;
             } break;
 
             default:

@@ -46,9 +46,12 @@ enum Key
     KEY_NUM_KEYS
 };
 
+// typedef void (*char_callback_func)(void* state, u64 code);
 typedef struct Keyboard
 {
     ButtonState keys[KEY_NUM_KEYS];
+    u64 current_char;
+    // char_callback_func char_callback;
 } Keyboard;
 
 inline bool is_key_pressed(Keyboard* input, int key)

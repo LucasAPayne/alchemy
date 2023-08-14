@@ -5,13 +5,12 @@
 #include "renderer/texture.h"
 #include "util/types.h"
 
+// TODO(lucas): Move raw OpenGL code to separate layer
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
-#include <stdio.h>  // sprintf_s
+#include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
-
-#include <windows.h>
 
 #define INCLUDE_OVERVIEW
 #ifdef INCLUDE_OVERVIEW
@@ -222,9 +221,9 @@ void init_example_state(ExampleState* state)
     state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, NK_ALCHEMY_INSTALL_CALLBACKS);
     struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
-    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 13, 0);
+    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
     nk_alchemy_font_stash_end(&state->alchemy_state);
-    nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
+    // nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
     nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
     state->alchemy_state.keyboard = &state->input.keyboard;
     state->alchemy_state.mouse = &state->input.mouse;
@@ -310,8 +309,6 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
     /* GUI */
-    if (ctx->input.mouse.buttons[NK_BUTTON_LEFT].down)
-        OutputDebugStringA("Click\n");
     if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
         NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))

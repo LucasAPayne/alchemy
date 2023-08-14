@@ -59,7 +59,7 @@ typedef struct nk_alchemy_state {
     struct nk_context ctx;
     struct nk_font_atlas atlas;
     struct nk_vec2 fb_scale;
-    unsigned int text[NK_ALCHEMY_TEXT_MAX];
+    u32 text[NK_ALCHEMY_TEXT_MAX];
     int text_len;
     struct nk_vec2 scroll;
     int is_double_click_down;
@@ -79,6 +79,6 @@ void                 nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_ali
 void                 nk_alchemy_device_destroy(nk_alchemy_state* state);
 void                 nk_alchemy_device_create(nk_alchemy_state* state);
 
-void                 nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint);
+// LPARAM CALLBACK                 nk_alchemy_char_callback(int code, WPARAM w_param, LPARAM l_param);
 void                 nk_alchemy_scroll_callback(Mouse* mouse, double xoff, double yoff);
 void                 nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods);

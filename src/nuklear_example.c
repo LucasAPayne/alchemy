@@ -233,11 +233,13 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     glDisable(GL_SCISSOR_TEST);
 }
 
-void nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint)
+internal void nk_alchemy_enter_char(nk_alchemy_state* state, u64 code)
 {
     // nk_alchemy_state* state = glfwGetWindowUserPointer(win);
-    if (state->text_len < NK_ALCHEMY_TEXT_MAX)
-        state->text[state->text_len++] = codepoint;
+    // NOTE(lucas): Make sure character code is not 0 (NULL) or 8 (backspace)
+    // If backspace is not disregarded here, it will replace the previous character with a question mark
+    if (state->text_len < NK_ALCHEMY_TEXT_MAX && code != 0 && code != 8)
+        state->text[state->text_len++] = (u32)code;
 }
 
 // TODO(lucas): Mouse scrolling
@@ -249,8 +251,7 @@ void nk_alchemy_char_callback(nk_alchemy_state* state, unsigned int codepoint)
 //     mouse->scroll.y += (float)yoff;
 // }
 
-NK_API void
-nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods)
+void nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods)
 {
     NK_UNUSED(mods);
     if (is_mouse_button_pressed(mouse, MOUSE_LEFT))  {
@@ -291,7 +292,8 @@ struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_
     // if (init_state == NK_ALCHEMY_INSTALL_CALLBACKS) {
     //     // glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
     //     // glfwSetCharCallback(win, nk_alchemy_char_callback);
-    //     glfwSetMouseButtonCallback(nk_alchemy_mouse_button_callback);
+    //     // glfwSetMouseButtonCallback(nk_alchemy_mouse_button_callback);
+    //     state->keyboard->char_callback = nk_alchemy_char_callback;
     // }
     nk_init_default(&state->ctx, 0);
     // state->ctx.clip.copy = nk_alchemy_clipboard_copy;
@@ -338,6 +340,7 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     state->fb_scale.y = (float)state->display_height/(float)state->height;
 
     nk_input_begin(ctx);
+    nk_alchemy_enter_char(state, state->keyboard->current_char);
     for (i = 0; i < state->text_len; ++i)
         nk_input_unicode(ctx, state->text[i]);
 
@@ -386,6 +389,8 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     }
 
     nk_input_motion(ctx, state->mouse->x, state->mouse->y);
+
+    // TODO(lucas): Mouse grabbing
 #ifdef NK_GLFW_GL3_MOUSE_GRABBING
     if (ctx->input.mouse->grabbed) {
         glfwSetCursorPos(glfw->win, ctx->input.mouse->prev.x, ctx->input.mouse->prev.y);
