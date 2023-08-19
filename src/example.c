@@ -251,9 +251,8 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     // glViewport(0, 0, window_width, window_height);
     // glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
 
-    // // if (is_key_released(&state->keyboard, Key::A))
-    // if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
-    //     glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+    // // if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
+    // //     glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     
     // state->sound_output.should_play = false;
     // if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)

@@ -176,6 +176,7 @@ internal void win32_init_opengl(HWND window)
 internal LRESULT CALLBACK win32_main_window_callback(HWND window, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LRESULT result = 0;
+
     switch(msg)
     {
         case WM_QUIT:
@@ -234,7 +235,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         WNDCLASSEXW window_class = {0};
         window_class.cbSize = sizeof(WNDCLASSEXW);
-        window_class.style = CS_HREDRAW | CS_VREDRAW |CS_OWNDC;
+        window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC | CS_DBLCLKS;
         window_class.lpfnWndProc = &win32_main_window_callback;
         window_class.hInstance = instance;
         window_class.hIcon = LoadIconW(0, IDI_APPLICATION);
@@ -282,7 +283,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     Win32XAudio2State xaudio2_state;
     win32_init_xaudio2(&xaudio2_state);
-    
+
     ExampleState state;
     init_example_state(&state);
 
@@ -293,8 +294,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         // Double buffer input to detect buttons held
         Input old_input = state.input;
-        win32_process_keyboard_input(window, &state.input.keyboard);
-        win32_process_mouse_input(window, &state.input.mouse);
+        win32_process_keyboard_mouse_input(window, &state.input.keyboard, &state.input.mouse);
         win32_process_xinput_gamepad_input(&state.input);
 
         HDC device_context = GetDC(window);

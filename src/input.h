@@ -8,6 +8,7 @@ typedef struct ButtonState
 {
     bool is_pressed;
     bool is_released;
+    bool is_double_clicked;
 } ButtonState;
 
 /* IMPORTANT(lucas): This enum is used for array indexing.
@@ -83,6 +84,7 @@ typedef struct Mouse
 {
     i32 x;
     i32 y;
+    i32 scroll;
     ButtonState buttons[MOUSE_NUM_BUTTONS];
 } Mouse;
 
@@ -94,6 +96,11 @@ inline bool is_mouse_button_pressed(Mouse* mouse, int button)
 inline bool is_mouse_button_released(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_released;
+}
+
+inline bool is_mouse_button_double_clicked(Mouse* mouse, int button)
+{
+    return mouse->buttons[button].is_double_clicked;
 }
 
 // TODO(lucas): Add support for multiple gamepads

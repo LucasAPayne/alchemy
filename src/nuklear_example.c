@@ -8,13 +8,6 @@
  * ===============================================================
  */
 
-#ifndef NK_ALCHEMY_DOUBLE_CLICK_LO
-#define NK_ALCHEMY_DOUBLE_CLICK_LO 0.02
-#endif
-#ifndef NK_ALCHEMY_DOUBLE_CLICK_HI
-#define NK_ALCHEMY_DOUBLE_CLICK_HI 0.2
-#endif
-
 typedef struct nk_alchemy_vertex {
     float position[2];
     float uv[2];
@@ -242,26 +235,6 @@ internal void nk_alchemy_enter_char(nk_alchemy_state* state, u64 code)
         state->text[state->text_len++] = (u32)code;
 }
 
-// TODO(lucas): Mouse scrolling
-// NK_API void
-// nk_gflw3_scroll_callback(Mouse* mouse, double xoff, double yoff)
-// {
-//     (void)xoff;
-//     mouse->scroll.x += (float)xoff;
-//     mouse->scroll.y += (float)yoff;
-// }
-
-void nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32 dt, int button, int action, int mods)
-{
-    NK_UNUSED(mods);
-    if (is_mouse_button_pressed(mouse, MOUSE_LEFT))  {
-        if (dt > NK_ALCHEMY_DOUBLE_CLICK_LO && dt < NK_ALCHEMY_DOUBLE_CLICK_HI) {
-            state->is_double_click_down = nk_true;
-            state->double_click_pos = nk_vec2((float)mouse->x, (float)mouse->y);
-        }
-    } else state->is_double_click_down = nk_false;
-}
-
 // TODO(lucas): Clipboard
 // NK_INTERN void
 // nk_alchemy_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
@@ -288,13 +261,6 @@ void nk_alchemy_mouse_button_callback(nk_alchemy_state* state, Mouse* mouse, f32
 
 struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state)
 {
-    // glfw->win = win;
-    // if (init_state == NK_ALCHEMY_INSTALL_CALLBACKS) {
-    //     // glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
-    //     // glfwSetCharCallback(win, nk_alchemy_char_callback);
-    //     // glfwSetMouseButtonCallback(nk_alchemy_mouse_button_callback);
-    //     state->keyboard->char_callback = nk_alchemy_char_callback;
-    // }
     nk_init_default(&state->ctx, 0);
     // state->ctx.clip.copy = nk_alchemy_clipboard_copy;
     // state->ctx.clip.paste = nk_alchemy_clipboard_paste;
@@ -302,9 +268,6 @@ struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_
     state->ctx.clip.paste = 0;
     state->ctx.clip.userdata = nk_handle_ptr(&state);
     nk_alchemy_device_create(state);
-
-    state->is_double_click_down = nk_false;
-    state->double_click_pos = nk_vec2(0, 0);
 
     return state->ctx;
 }
@@ -340,6 +303,8 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     state->fb_scale.y = (float)state->display_height/(float)state->height;
 
     nk_input_begin(ctx);
+
+    // text input
     nk_alchemy_enter_char(state, state->keyboard->current_char);
     for (i = 0; i < state->text_len; ++i)
         nk_input_unicode(ctx, state->text[i]);
@@ -389,6 +354,7 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     }
 
     nk_input_motion(ctx, state->mouse->x, state->mouse->y);
+    nk_input_scroll(ctx, nk_vec2(0.0f, (f32)state->mouse->scroll));
 
     // TODO(lucas): Mouse grabbing
 #ifdef NK_GLFW_GL3_MOUSE_GRABBING
@@ -401,7 +367,7 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     nk_input_button(ctx, NK_BUTTON_LEFT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_LEFT));
     nk_input_button(ctx, NK_BUTTON_MIDDLE, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_MIDDLE));
     nk_input_button(ctx, NK_BUTTON_RIGHT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_RIGHT));
-    nk_input_button(ctx, NK_BUTTON_DOUBLE, (int)state->double_click_pos.x, (int)state->double_click_pos.y, state->is_double_click_down);
+    nk_input_button(ctx, NK_BUTTON_DOUBLE, state->mouse->x, state->mouse->y, is_mouse_button_double_clicked(state->mouse, MOUSE_LEFT));
     nk_input_scroll(ctx, state->scroll);
     nk_input_end(&state->ctx);
     state->text_len = 0;
