@@ -560,7 +560,7 @@ overview(struct nk_context *ctx)
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
                 nk_label(ctx, "Default:", NK_TEXT_LEFT);
 
-                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[0], &text_len[0], 64, nk_filter_default);
+                nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_default);
                 nk_label(ctx, "Int:", NK_TEXT_LEFT);
                 nk_edit_string(ctx, NK_EDIT_SIMPLE, text[1], &text_len[1], 64, nk_filter_decimal);
                 nk_label(ctx, "Float:", NK_TEXT_LEFT);

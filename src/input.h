@@ -11,6 +11,7 @@ typedef struct ButtonState
     bool is_double_clicked;
 } ButtonState;
 
+/* Keyboard */
 /* IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
@@ -65,6 +66,7 @@ inline bool is_key_released(Keyboard* input, int key)
     return input->keys[key].is_released;
 }
 
+/* Mouse */
 /* IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
@@ -103,6 +105,11 @@ inline bool is_mouse_button_double_clicked(Mouse* mouse, int button)
     return mouse->buttons[button].is_double_clicked;
 }
 
+/* Wrappers for platform-specific functions */
+void show_cursor(bool show);
+// TODO(lucas): load_cursor, set_cursor
+
+/* Gamepad */
 // TODO(lucas): Add support for multiple gamepads
 typedef struct Gamepad
 {
@@ -188,9 +195,14 @@ inline void gamepad_set_vibration(Gamepad* pad, u16 left_vibration, u16 right_vi
     pad->right_vibration = right_vibration;
 }
 
+/* Struct containing collection of input devices */
 typedef struct Input
 {
     Gamepad gamepads[MAX_GAMEPADS];
     Keyboard keyboard;
     Mouse mouse;
 } Input;
+
+/* Clipboard */
+bool clipboard_write_string(char* text);
+char* clipboard_read_string(void);

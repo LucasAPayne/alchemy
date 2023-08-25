@@ -26,8 +26,6 @@
 
 #include "input.h"
 
-#include <assert.h>
-
 enum nk_alchemy_init_state{
     NK_ALCHEMY_DEFAULT=0,
     NK_ALCHEMY_INSTALL_CALLBACKS

@@ -15,10 +15,6 @@
 
 #include <stdio.h>
 
-#if ALCHEMY_DEBUG
-    #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
-#endif
-
 global_variable b32 global_running;
 
 typedef struct Win32WindowDimensions

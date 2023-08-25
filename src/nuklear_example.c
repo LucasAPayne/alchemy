@@ -57,14 +57,14 @@ void nk_alchemy_device_create(nk_alchemy_state* state)
     glCompileShader(dev->vert_shdr);
     glCompileShader(dev->frag_shdr);
     glGetShaderiv(dev->vert_shdr, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
+    ASSERT(status == GL_TRUE);
     glGetShaderiv(dev->frag_shdr, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
+    ASSERT(status == GL_TRUE);
     glAttachShader(dev->prog, dev->vert_shdr);
     glAttachShader(dev->prog, dev->frag_shdr);
     glLinkProgram(dev->prog);
     glGetProgramiv(dev->prog, GL_LINK_STATUS, &status);
-    assert(status == GL_TRUE);
+    ASSERT(status == GL_TRUE);
 
     dev->uniform_tex = glGetUniformLocation(dev->prog, "Texture");
     dev->uniform_proj = glGetUniformLocation(dev->prog, "ProjMtx");
@@ -228,44 +228,39 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
 
 internal void nk_alchemy_enter_char(nk_alchemy_state* state, u64 code)
 {
-    // nk_alchemy_state* state = glfwGetWindowUserPointer(win);
-    // NOTE(lucas): Make sure character code is not 0 (NULL) or 8 (backspace)
-    // If backspace is not disregarded here, it will replace the previous character with a question mark
-    if (state->text_len < NK_ALCHEMY_TEXT_MAX && code != 0 && code != 8)
+    /* NOTE(lucas): Make sure character code is at least 32, which excludes the NULL character, backspace, and so on.
+     * If these keys are not disregarded here, they may perform their other functions, but they will also
+     * place a question mark in the text box.
+     */
+    if (state->text_len < NK_ALCHEMY_TEXT_MAX && code >= 32)
         state->text[state->text_len++] = (u32)code;
 }
 
 // TODO(lucas): Clipboard
-// NK_INTERN void
-// nk_alchemy_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
-// {
-//     nk_alchemy_state* glfw = (nk_alchemy_state*)usr.ptr;
-//     const char *text = glfwGetClipboardString(glfw->win);
-//     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
-//     (void)usr;
-// }
+internal void nk_alchemy_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
+{
+    char *text = clipboard_read_string();
+    if (text)
+        nk_textedit_paste(edit, text, nk_strlen(text));
+}
 
-// NK_INTERN void
-// nk_alchemy_clipboard_copy(nk_handle usr, const char *text, int len)
-// {
-//     nk_alchemy_state* glfw = (nk_alchemy_state*)usr.ptr;
-//     char *str = 0;
-//     if (!len) return;
-//     str = (char*)malloc((size_t)len+1);
-//     if (!str) return;
-//     memcpy(str, text, (size_t)len);
-//     str[len] = '\0';
-//     glfwSetClipboardString(glfw->win, str);
-//     free(str);
-// }
+internal void nk_alchemy_clipboard_copy(nk_handle usr, const char *text, int len)
+{
+    char *str = 0;
+    if (!len) return;
+    str = (char*)malloc((size_t)len+1);
+    if (!str) return;
+    memcpy(str, text, (size_t)len);
+    str[len] = '\0';
+    clipboard_write_string(str);
+    free(str);
+}
 
 struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state)
 {
     nk_init_default(&state->ctx, 0);
-    // state->ctx.clip.copy = nk_alchemy_clipboard_copy;
-    // state->ctx.clip.paste = nk_alchemy_clipboard_paste;
-    state->ctx.clip.copy = 0;
-    state->ctx.clip.paste = 0;
+    state->ctx.clip.copy = nk_alchemy_clipboard_copy;
+    state->ctx.clip.paste = nk_alchemy_clipboard_paste;
     state->ctx.clip.userdata = nk_handle_ptr(&state);
     nk_alchemy_device_create(state);
 
@@ -292,7 +287,7 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
 void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height)
 {
     int i;
-    struct nk_context *ctx = &state->ctx;
+    struct nk_context* ctx = &state->ctx;
 
     // TODO(lucas): For now, window and framebuffer sizes are the same
     state->width = window_width;
@@ -308,14 +303,6 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     nk_alchemy_enter_char(state, state->keyboard->current_char);
     for (i = 0; i < state->text_len; ++i)
         nk_input_unicode(ctx, state->text[i]);
-
-#ifdef NK_GLFW_GL3_MOUSE_GRABBING
-    /* optional grabbing behavior */
-    if (ctx->input.mouse->grab)
-        glfwSetInputMode(glfw.win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    else if (ctx->input.mouse->ungrab)
-        glfwSetInputMode(glfw->win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-#endif
 
     nk_input_key(ctx, NK_KEY_DEL, is_key_pressed(state->keyboard, KEY_DEL));
     nk_input_key(ctx, NK_KEY_ENTER, is_key_pressed(state->keyboard, KEY_ENTER));
@@ -336,8 +323,8 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
         nk_input_key(ctx, NK_KEY_COPY, is_key_pressed(state->keyboard, KEY_C));
         nk_input_key(ctx, NK_KEY_PASTE, is_key_pressed(state->keyboard, KEY_V));
         nk_input_key(ctx, NK_KEY_CUT, is_key_pressed(state->keyboard, KEY_X));
-        nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
-        nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
+        // nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
+        // nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
         nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
         nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
         nk_input_key(ctx, NK_KEY_TEXT_LINE_START, is_key_pressed(state->keyboard, KEY_B));

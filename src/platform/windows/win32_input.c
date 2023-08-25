@@ -280,6 +280,11 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
     }
 }
 
+void show_cursor(bool show)
+{
+    ShowCursor(show);
+}
+
 internal void win32_xinput_button_release(ButtonState* button)
 {
     button->is_released = true;
@@ -346,37 +351,37 @@ internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* 
             case VK_PAD_X: win32_xinput_button_release(&gamepad->x_button); break;
             case VK_PAD_Y: win32_xinput_button_release(&gamepad->y_button); break;
 
-            case VK_PAD_LSHOULDER: win32_xinput_button_release(&gamepad->left_shoulder); break;
+            case VK_PAD_LSHOULDER: win32_xinput_button_release(&gamepad->left_shoulder);  break;
             case VK_PAD_RSHOULDER: win32_xinput_button_release(&gamepad->right_shoulder); break;
-            case VK_PAD_LTRIGGER:  win32_xinput_button_release(&gamepad->left_trigger); break;
-            case VK_PAD_RTRIGGER:  win32_xinput_button_release(&gamepad->right_trigger); break;
+            case VK_PAD_LTRIGGER:  win32_xinput_button_release(&gamepad->left_trigger);   break;
+            case VK_PAD_RTRIGGER:  win32_xinput_button_release(&gamepad->right_trigger);  break;
 
-            case VK_PAD_DPAD_UP:    win32_xinput_button_release(&gamepad->dpad_up); break;
-            case VK_PAD_DPAD_DOWN:  win32_xinput_button_release(&gamepad->dpad_down); break;
-            case VK_PAD_DPAD_LEFT:  win32_xinput_button_release(&gamepad->dpad_left); break;
+            case VK_PAD_DPAD_UP:    win32_xinput_button_release(&gamepad->dpad_up);    break;
+            case VK_PAD_DPAD_DOWN:  win32_xinput_button_release(&gamepad->dpad_down);  break;
+            case VK_PAD_DPAD_LEFT:  win32_xinput_button_release(&gamepad->dpad_left);  break;
             case VK_PAD_DPAD_RIGHT: win32_xinput_button_release(&gamepad->dpad_right); break;
 
             case VK_PAD_START: win32_xinput_button_release(&gamepad->start_button); break;
-            case VK_PAD_BACK:  win32_xinput_button_release(&gamepad->back_button); break;
+            case VK_PAD_BACK:  win32_xinput_button_release(&gamepad->back_button);  break;
 
-            case VK_PAD_LTHUMB_PRESS:     win32_xinput_button_release(&gamepad->left_stick_press); break;
-            case VK_PAD_LTHUMB_UP:        win32_xinput_button_release(&gamepad->left_stick_up); break;
-            case VK_PAD_LTHUMB_DOWN:      win32_xinput_button_release(&gamepad->left_stick_down); break;
-            case VK_PAD_LTHUMB_LEFT:      win32_xinput_button_release(&gamepad->left_stick_left); break;
-            case VK_PAD_LTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->left_stick_right); break;
-            case VK_PAD_LTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->left_stick_upleft); break;
-            case VK_PAD_LTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->left_stick_upright); break;
-            case VK_PAD_LTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->left_stick_downleft); break;
+            case VK_PAD_LTHUMB_PRESS:     win32_xinput_button_release(&gamepad->left_stick_press);     break;
+            case VK_PAD_LTHUMB_UP:        win32_xinput_button_release(&gamepad->left_stick_up);        break;
+            case VK_PAD_LTHUMB_DOWN:      win32_xinput_button_release(&gamepad->left_stick_down);      break;
+            case VK_PAD_LTHUMB_LEFT:      win32_xinput_button_release(&gamepad->left_stick_left);      break;
+            case VK_PAD_LTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->left_stick_right);     break;
+            case VK_PAD_LTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->left_stick_upleft);    break;
+            case VK_PAD_LTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->left_stick_upright);   break;
+            case VK_PAD_LTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->left_stick_downleft);  break;
             case VK_PAD_LTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->left_stick_downright); break;
 
-            case VK_PAD_RTHUMB_PRESS:     win32_xinput_button_release(&gamepad->right_stick_press); break;
-            case VK_PAD_RTHUMB_UP:        win32_xinput_button_release(&gamepad->right_stick_up); break;
-            case VK_PAD_RTHUMB_DOWN:      win32_xinput_button_release(&gamepad->right_stick_down); break;
-            case VK_PAD_RTHUMB_LEFT:      win32_xinput_button_release(&gamepad->right_stick_left); break;
-            case VK_PAD_RTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->right_stick_right); break;
-            case VK_PAD_RTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->right_stick_upleft); break;
-            case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright); break;
-            case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft); break;
+            case VK_PAD_RTHUMB_PRESS:     win32_xinput_button_release(&gamepad->right_stick_press);     break;
+            case VK_PAD_RTHUMB_UP:        win32_xinput_button_release(&gamepad->right_stick_up);        break;
+            case VK_PAD_RTHUMB_DOWN:      win32_xinput_button_release(&gamepad->right_stick_down);      break;
+            case VK_PAD_RTHUMB_LEFT:      win32_xinput_button_release(&gamepad->right_stick_left);      break;
+            case VK_PAD_RTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->right_stick_right);     break;
+            case VK_PAD_RTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->right_stick_upleft);    break;
+            case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright);   break;
+            case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft);  break;
             case VK_PAD_RTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->right_stick_downright); break;
             
             default: break;
@@ -491,4 +496,66 @@ void win32_process_xinput_gamepad_input(Input* input)
         XInputSetState(0, &vibration);
         gamepad->left_vibration = gamepad->right_vibration = 0;
     }
+}
+
+bool clipboard_write_string(char* text)
+{
+    // Before clipboard can be written to, it first needs to be opened and emptied
+    HWND window = GetActiveWindow();
+    if (!OpenClipboard(window))
+        return false;
+    EmptyClipboard();
+
+    // Allocate global memory for the text
+    int string_length = lstrlenA(text);
+    HGLOBAL string_handle = GlobalAlloc(GMEM_MOVEABLE, string_length+1);
+    if (string_handle == NULL)
+    {
+        CloseClipboard();
+        return false;
+    }
+    LPSTR string_copy = GlobalLock(string_handle);
+    memcpy(string_copy, text, string_length+1);
+    string_copy[string_length+1] = '\0';
+    GlobalUnlock(string_handle);
+
+    // Write to clipboard and close
+    SetClipboardData(CF_TEXT, string_handle);
+    CloseClipboard();
+    return true;
+}
+
+char* clipboard_read_string(void)
+{
+    char* result = NULL;
+
+    // Before clipboard can be written to, it first needs to be opened and emptied
+    // Also, check that the desired format is available
+    HWND window = GetActiveWindow();
+    if (!IsClipboardFormatAvailable(CF_TEXT))
+        return NULL;
+    if (!OpenClipboard(window))
+        return NULL;
+
+    // Get clipboard data
+    HGLOBAL clipboard_handle = GetClipboardData(CF_TEXT);
+    LPCSTR clipboard_string = NULL;
+    if (clipboard_handle != NULL)
+    {
+        // Get string from clipboard data
+        clipboard_string = GlobalLock(clipboard_handle);
+        if (clipboard_string != NULL)
+        {
+            // If string is not NULL, allocate a new one to return and copy
+            usize string_length = lstrlenA(clipboard_string)+1;
+            result = calloc(string_length, sizeof(TCHAR));
+            memcpy(result, clipboard_string, string_length);
+            result[string_length+1] = '\0';
+
+            GlobalUnlock(clipboard_handle);
+        }
+    }
+
+    CloseClipboard();
+    return result;
 }

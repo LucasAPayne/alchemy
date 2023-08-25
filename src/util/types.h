@@ -9,6 +9,10 @@
 
 #define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
 
+#if ALCHEMY_DEBUG
+    #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
+#endif
+
 #define internal        static
 #define local_persist   static
 #define global_variable static

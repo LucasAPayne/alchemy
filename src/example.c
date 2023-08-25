@@ -27,40 +27,6 @@ global_variable vec3s colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
                           {0.0f, 1.0f, 1.0f}};
 
-// Calculate width of a string
-// f32 calculate_text_width(nk_handle handle, f32 height, const char* text, int len)
-// {
-//     FontRenderer* font = handle.ptr;
-//     f32 text_width = 0.0f;
-
-//     const char *c;
-//     for (c = text; *c; ++c)
-//     {
-//         if (!FT_Load_Char(font->face, *c, FT_LOAD_RENDER))
-//         {
-//             // TODO(lucas): Diagnostic, could not load character
-//         }
-
-//         text_width += (f32)font->face->glyph->bitmap.width;
-//     }
-
-//     return text_width;
-// }
-
-// void query_font_glyph(nk_handle handle, f32 font_height, nk_user_font_glyph* glyph, nk_rune codepoint, nk_rune next_codepoint)
-// {
-//     FontRenderer* font = handle.ptr;
-//     glyph->width = (f32)font->face->glyph->bitmap.width;
-//     glyph->height = (f32)font->face->glyph->bitmap.rows;
-//     glyph->xadvance = (f32)font->face->glyph->advance.x/64;
-//     glyph->uv[0].x = 0.0f;
-//     glyph->uv[0].y = 0.0f;
-//     glyph->uv[1].x = 1.0f;
-//     glyph->uv[1].y = 1.0f;
-//     // glyph->offset.x = font->face->glyph->bitmap_left;
-//     // glyph->offset.y = font->face->glyph->bitmap_top;
-// }
-
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
@@ -170,50 +136,50 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 
 void init_example_state(ExampleState* state)
 {
-    // srand(0);
-    // *state = (ExampleState){0};
+    srand(0);
+    *state = (ExampleState){0};
 
-    // // Compile and Load shaders
-    // u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
-    // u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
+    // Compile and Load shaders
+    u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
+    u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
 
-    // init_sprite_renderer(&state->sprite_renderer, sprite_shader);
-    // init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
-    // init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
+    init_sprite_renderer(&state->sprite_renderer, sprite_shader);
+    init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
-    // u32 logo_tex = generate_texture_from_file("textures/dvd.png");
-    // state->logo.renderer = &state->sprite_renderer;
-    // state->logo.position = (vec2s){0.0f, 0.0f};
-    // state->logo.texture = logo_tex;
-    // state->logo.color = colors[0];
-    // state->logo.size = (vec2s){300.0f, 150.0f};
-    // state->logo.rotation = 0.0f;
-    // state->logo_x_direction = 1.0f;
-    // state->logo_y_direction = 1.0f;
-    // state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
+    u32 logo_tex = generate_texture_from_file("textures/dvd.png");
+    state->logo.renderer = &state->sprite_renderer;
+    state->logo.position = (vec2s){0.0f, 0.0f};
+    state->logo.texture = logo_tex;
+    state->logo.color = colors[0];
+    state->logo.size = (vec2s){300.0f, 150.0f};
+    state->logo.rotation = 0.0f;
+    state->logo_x_direction = 1.0f;
+    state->logo_y_direction = 1.0f;
+    state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
 
-    // u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
-    // state->player.renderer = &state->sprite_renderer;
-    // state->player.position = (vec2s){0.0f, 0.0f};
-    // state->player.texture = player_tex;
-    // state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
-    // state->player.size = (vec2s){50.0f, 50.0f};
-    // state->player.rotation = 0.0f;
-    // state->dash_counter = 0;
-    // state->dash_frames = 15;
-    // state->dash_direction = 0.0f;
-    // state->dash_distance = 300.0f;
+    u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
+    state->player.renderer = &state->sprite_renderer;
+    state->player.position = (vec2s){0.0f, 0.0f};
+    state->player.texture = player_tex;
+    state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
+    state->player.size = (vec2s){50.0f, 50.0f};
+    state->player.rotation = 0.0f;
+    state->dash_counter = 0;
+    state->dash_frames = 15;
+    state->dash_direction = 0.0f;
+    state->dash_distance = 300.0f;
 
-    // shader_set_int(state->sprite_renderer.shader, "image", 0);
-    // const char* test_sound_filename = "sounds/pew.wav";
-    // strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
-    //           strlen(test_sound_filename));
-    // set_volume(&state->sound_output, 0.5f);
-    // state->sound_output.should_play = false;
-    // state->is_shooting = false;
+    shader_set_int(state->sprite_renderer.shader, "image", 0);
+    const char* test_sound_filename = "sounds/pew.wav";
+    strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
+              strlen(test_sound_filename));
+    set_volume(&state->sound_output, 0.5f);
+    state->sound_output.should_play = false;
+    state->is_shooting = false;
 
-    // timer_init(&state->dash_cooldown, 2.0f, false);
-    // stopwatch_init(&state->stopwatch, false);
+    timer_init(&state->dash_cooldown, 2.0f, false);
+    stopwatch_init(&state->stopwatch, false);
 
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
@@ -231,11 +197,11 @@ void init_example_state(ExampleState* state)
 
 void delete_example_state(ExampleState* state)
 {
-    // delete_font_renderer(&state->font_renderer);
-    // delete_font_renderer(&state->frame_time_renderer);
-    // delete_sprite_renderer(&state->sprite_renderer);
-    // delete_texture(state->logo.texture);
-    // delete_texture(state->player.texture);
+    delete_font_renderer(&state->font_renderer);
+    delete_font_renderer(&state->frame_time_renderer);
+    delete_sprite_renderer(&state->sprite_renderer);
+    delete_texture(state->logo.texture);
+    delete_texture(state->player.texture);
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
