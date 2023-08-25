@@ -71,7 +71,7 @@ inline bool is_key_released(Keyboard* input, int key)
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
 */ 
-enum MouseButton
+typedef enum MouseButton
 {
     MOUSE_UNKONWN = 0,
     MOUSE_LEFT,
@@ -80,7 +80,7 @@ enum MouseButton
     MOUSE_X1,
     MOUSE_X2,
     MOUSE_NUM_BUTTONS
-};
+} MouseButton;
 
 typedef struct Mouse
 {
@@ -105,8 +105,36 @@ inline bool is_mouse_button_double_clicked(Mouse* mouse, int button)
     return mouse->buttons[button].is_double_clicked;
 }
 
+/* Cursor */
+typedef enum CursorType
+{
+    CURSOR_ARROW = 0,
+    CURSOR_ARROW_WAIT,
+    CURSOR_WAIT,
+    CURSOR_TEXT,
+    CURSOR_HAND,
+    CURSOR_SIZE_HORIZONTAL,
+    CURSOR_SIZE_VERTICAL,
+    CURSOR_SIZE_TOP_LEFT_BOTTOM_RIGHT,
+    CURSOR_SIZE_TOP_RIGHT_BOTTOM_LEFT,
+    CURSOR_SIZE_LEFT,
+    CURSOR_SIZE_RIGHT,
+    CURSOR_SIZE_TOP,
+    CURSOR_SIZE_BOTTOM,
+    CURSOR_SIZE_TOP_LEFT,
+    CURSOR_SIZE_TOP_RIGHT,
+    CURSOR_SIZE_BOTTOM_LEFT,
+    CURSOR_SIZE_BOTTOM_RIGHT,
+    CURSOR_SIZE_ALL,
+    CURSOR_CROSS,
+    CURSOR_HELP,
+    CURSOR_NOT_ALLOWED
+} CursorType;
+
 /* Wrappers for platform-specific functions */
-void show_cursor(bool show);
+void cursor_show(bool show);
+void cursor_set_from_system(CursorType type);
+
 // TODO(lucas): load_cursor, set_cursor
 
 /* Gamepad */

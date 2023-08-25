@@ -280,9 +280,45 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
     }
 }
 
-void show_cursor(bool show)
+void cursor_show(bool show)
 {
     ShowCursor(show);
+}
+
+void cursor_set_from_system(CursorType type)
+{
+    // NOTE(lucas): Horizontal, left, and right are all the same on Windows.
+    // Linux has single arrow cursors for each direction.
+    // The same goes for vertical, up, and down and the diagonals.
+    HCURSOR cursor = {0};
+    switch(type)
+    {
+        case CURSOR_ARROW:                      cursor = LoadCursorA(NULL, IDC_ARROW);       break;
+        case CURSOR_ARROW_WAIT:                 cursor = LoadCursorA(NULL, IDC_APPSTARTING); break;
+        case CURSOR_WAIT:                       cursor = LoadCursorA(NULL, IDC_WAIT);        break;
+        case CURSOR_TEXT:                       cursor = LoadCursorA(NULL, IDC_IBEAM);       break;
+        case CURSOR_HAND:                       cursor = LoadCursorA(NULL, IDC_HAND);        break;
+        case CURSOR_SIZE_HORIZONTAL:            cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_VERTICAL:              cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_TOP_LEFT_BOTTOM_RIGHT: cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_TOP_RIGHT_BOTTOM_LEFT: cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_LEFT:                  cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_RIGHT:                 cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_TOP:                   cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_BOTTOM:                cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_TOP_LEFT:              cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_TOP_RIGHT:             cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_BOTTOM_LEFT:           cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_BOTTOM_RIGHT:          cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_ALL:                   cursor = LoadCursorA(NULL, IDC_SIZEALL);     break;
+        case CURSOR_CROSS:                      cursor = LoadCursorA(NULL, IDC_CROSS);       break;
+        case CURSOR_HELP:                       cursor = LoadCursorA(NULL, IDC_HELP);        break;
+        case CURSOR_NOT_ALLOWED:                cursor = LoadCursorA(NULL, IDC_NO);          break;
+
+        // TODO(lucas): Logging, invalid type value
+        default: break;
+    }
+    SetCursor(cursor);
 }
 
 internal void win32_xinput_button_release(ButtonState* button)
