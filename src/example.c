@@ -142,6 +142,7 @@ void init_example_state(ExampleState* state)
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
+    u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
     init_sprite_renderer(&state->sprite_renderer, sprite_shader);
     init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
@@ -184,7 +185,7 @@ void init_example_state(ExampleState* state)
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
     state->bg = (struct nk_colorf){0.10f, 0.18f, 0.24f, 1.0f};
-    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, NK_ALCHEMY_INSTALL_CALLBACKS);
+    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, NK_ALCHEMY_INSTALL_CALLBACKS, ui_shader);
     struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
     state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);

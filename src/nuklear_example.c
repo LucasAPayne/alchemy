@@ -1,12 +1,7 @@
 #include "nuklear_example.h"
 
-/*
- * ==============================================================
- *
- *                          IMPLEMENTATION
- *
- * ===============================================================
- */
+#include "renderer/shader.h"
+#include "util/types.h"
 
 typedef struct nk_alchemy_vertex {
     float position[2];
@@ -14,63 +9,15 @@ typedef struct nk_alchemy_vertex {
     nk_byte col[4];
 } nk_alchemy_vertex;
 
-#ifdef __APPLE__
-  #define NK_SHADER_VERSION "#version 150\n"
-#else
-  #define NK_SHADER_VERSION "#version 300 es\n"
-#endif
-
-void nk_alchemy_device_create(nk_alchemy_state* state)
+void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
 {
-    GLint status;
-    static const GLchar *vertex_shader =
-        NK_SHADER_VERSION
-        "uniform mat4 ProjMtx;\n"
-        "in vec2 Position;\n"
-        "in vec2 TexCoord;\n"
-        "in vec4 Color;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main() {\n"
-        "   Frag_UV = TexCoord;\n"
-        "   Frag_Color = Color;\n"
-        "   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
-        "}\n";
-    static const GLchar *fragment_shader =
-        NK_SHADER_VERSION
-        "precision mediump float;\n"
-        "uniform sampler2D Texture;\n"
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "out vec4 Out_Color;\n"
-        "void main(){\n"
-        "   Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    nk_alchemy_device *dev = &state->ogl;
+    nk_alchemy_device *dev = &state->device;
     nk_buffer_init_default(&dev->cmds);
-    dev->prog = glCreateProgram();
-    dev->vert_shdr = glCreateShader(GL_VERTEX_SHADER);
-    dev->frag_shdr = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(dev->vert_shdr, 1, &vertex_shader, 0);
-    glShaderSource(dev->frag_shdr, 1, &fragment_shader, 0);
-    glCompileShader(dev->vert_shdr);
-    glCompileShader(dev->frag_shdr);
-    glGetShaderiv(dev->vert_shdr, GL_COMPILE_STATUS, &status);
-    ASSERT(status == GL_TRUE);
-    glGetShaderiv(dev->frag_shdr, GL_COMPILE_STATUS, &status);
-    ASSERT(status == GL_TRUE);
-    glAttachShader(dev->prog, dev->vert_shdr);
-    glAttachShader(dev->prog, dev->frag_shdr);
-    glLinkProgram(dev->prog);
-    glGetProgramiv(dev->prog, GL_LINK_STATUS, &status);
-    ASSERT(status == GL_TRUE);
+    dev->shader = ui_shader;
 
-    dev->uniform_tex = glGetUniformLocation(dev->prog, "Texture");
-    dev->uniform_proj = glGetUniformLocation(dev->prog, "ProjMtx");
-    dev->attrib_pos = glGetAttribLocation(dev->prog, "Position");
-    dev->attrib_uv = glGetAttribLocation(dev->prog, "TexCoord");
-    dev->attrib_col = glGetAttribLocation(dev->prog, "Color");
+    dev->attrib_pos = glGetAttribLocation(dev->shader, "position");
+    dev->attrib_uv = glGetAttribLocation(dev->shader, "tex_coord");
+    dev->attrib_col = glGetAttribLocation(dev->shader, "color");
 
     {
         /* buffer setup */
@@ -104,7 +51,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state)
 
 void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
 {
-    nk_alchemy_device *dev = &state->ogl;
+    nk_alchemy_device *dev = &state->device;
     glGenTextures(1, &dev->font_tex);
     glBindTexture(GL_TEXTURE_2D, dev->font_tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -115,12 +62,8 @@ void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, 
 
 void nk_alchemy_device_destroy(nk_alchemy_state* state)
 {
-    nk_alchemy_device *dev = &state->ogl;
-    glDetachShader(dev->prog, dev->vert_shdr);
-    glDetachShader(dev->prog, dev->frag_shdr);
-    glDeleteShader(dev->vert_shdr);
-    glDeleteShader(dev->frag_shdr);
-    glDeleteProgram(dev->prog);
+    nk_alchemy_device *dev = &state->device;
+    delete_shader(dev->shader);
     glDeleteTextures(1, &dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
@@ -129,16 +72,18 @@ void nk_alchemy_device_destroy(nk_alchemy_state* state)
 
 void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
 {
-    nk_alchemy_device *dev = &state->ogl;
+    nk_alchemy_device *dev = &state->device;
     struct nk_buffer vbuf, ebuf;
-    GLfloat ortho[4][4] = {
-        {2.0f, 0.0f, 0.0f, 0.0f},
-        {0.0f,-2.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f,-1.0f, 0.0f},
-        {-1.0f,1.0f, 0.0f, 1.0f},
+
+    mat4s ortho = (mat4s)
+    {
+        2.0f,  0.0f,  0.0f, 0.0f,
+        0.0f, -2.0f,  0.0f, 0.0f,
+        0.0f,  0.0f, -1.0f, 0.0f,
+       -1.0f,  1.0f,  0.0f, 1.0f,
     };
-    ortho[0][0] /= (GLfloat)state->width;
-    ortho[1][1] /= (GLfloat)state->height;
+    ortho.m00 /= (f32)state->width;
+    ortho.m11 /= (f32)state->height;
 
     /* setup global state */
     glEnable(GL_BLEND);
@@ -150,9 +95,10 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     glActiveTexture(GL_TEXTURE0);
 
     /* setup program */
-    glUseProgram(dev->prog);
-    glUniform1i(dev->uniform_tex, 0);
-    glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
+    bind_shader(dev->shader);
+    // glUseProgram(dev->prog);
+    shader_set_int(dev->shader, "tex", 0);
+    shader_set_mat4f(dev->shader, "projection", ortho, false);
     glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
     {
         /* convert from command queue into draw list and draw to screen */
@@ -256,13 +202,13 @@ internal void nk_alchemy_clipboard_copy(nk_handle usr, const char *text, int len
     free(str);
 }
 
-struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state)
+struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state, u32 ui_shader)
 {
     nk_init_default(&state->ctx, 0);
     state->ctx.clip.copy = nk_alchemy_clipboard_copy;
     state->ctx.clip.paste = nk_alchemy_clipboard_paste;
     state->ctx.clip.userdata = nk_handle_ptr(&state);
-    nk_alchemy_device_create(state);
+    nk_alchemy_device_create(state, ui_shader);
 
     return state->ctx;
 }
@@ -279,7 +225,7 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
     const void *image; int w, h;
     image = nk_font_atlas_bake(&state->atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     nk_alchemy_device_upload_atlas(state, image, w, h);
-    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->ogl.font_tex), &state->ogl.tex_null);
+    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->device.font_tex), &state->device.tex_null);
     if (state->atlas.default_font)
         nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
 }
