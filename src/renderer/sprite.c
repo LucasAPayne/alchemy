@@ -19,8 +19,8 @@ void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
 
     u32 indices[] = 
     {
-    0, 1, 3,
-    1, 2, 3  
+        0, 1, 3,
+        1, 2, 3  
     };
 
     u32 vao;

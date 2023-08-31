@@ -32,8 +32,6 @@ typedef struct nk_alchemy_device {
     GLint attrib_pos;
     GLint attrib_uv;
     GLint attrib_col;
-    GLint uniform_tex;
-    GLint uniform_proj;
     GLuint font_tex;
 } nk_alchemy_device;
 

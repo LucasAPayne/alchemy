@@ -1,6 +1,7 @@
 #include "nuklear_example.h"
 
 #include "renderer/shader.h"
+#include "renderer/texture.h"
 #include "util/types.h"
 
 typedef struct nk_alchemy_vertex {
@@ -43,7 +44,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
         glVertexAttribPointer((GLuint)dev->attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
     }
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    unbind_texture();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -52,10 +53,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
 void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
 {
     nk_alchemy_device *dev = &state->device;
-    glGenTextures(1, &dev->font_tex);
-    glBindTexture(GL_TEXTURE_2D, dev->font_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    dev->font_tex = generate_texture();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
@@ -64,7 +62,7 @@ void nk_alchemy_device_destroy(nk_alchemy_state* state)
 {
     nk_alchemy_device *dev = &state->device;
     delete_shader(dev->shader);
-    glDeleteTextures(1, &dev->font_tex);
+    delete_texture(dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
     nk_buffer_free(&dev->cmds);
@@ -150,7 +148,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
         nk_draw_foreach(cmd, &state->ctx, &dev->cmds)
         {
             if (!cmd->elem_count) continue;
-            glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
+            bind_texture((u32)cmd->texture.id, 0);
             glScissor(
                 (GLint)(cmd->clip_rect.x * state->fb_scale.x),
                 (GLint)((state->height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * state->fb_scale.y),
@@ -164,7 +162,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     }
 
     /* default OpenGL state */
-    glUseProgram(0);
+    unbind_shader();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -269,8 +267,8 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
         nk_input_key(ctx, NK_KEY_COPY, is_key_pressed(state->keyboard, KEY_C));
         nk_input_key(ctx, NK_KEY_PASTE, is_key_pressed(state->keyboard, KEY_V));
         nk_input_key(ctx, NK_KEY_CUT, is_key_pressed(state->keyboard, KEY_X));
-        // nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
-        // nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
+        nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
+        nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
         nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
         nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
         nk_input_key(ctx, NK_KEY_TEXT_LINE_START, is_key_pressed(state->keyboard, KEY_B));
@@ -289,14 +287,6 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     nk_input_motion(ctx, state->mouse->x, state->mouse->y);
     nk_input_scroll(ctx, nk_vec2(0.0f, (f32)state->mouse->scroll));
 
-    // TODO(lucas): Mouse grabbing
-#ifdef NK_GLFW_GL3_MOUSE_GRABBING
-    if (ctx->input.mouse->grabbed) {
-        glfwSetCursorPos(glfw->win, ctx->input.mouse->prev.x, ctx->input.mouse->prev.y);
-        ctx->input.mouse->pos.x = ctx->input.mouse->prev.x;
-        ctx->input.mouse->pos.y = ctx->input.mouse->prev.y;
-    }
-#endif
     nk_input_button(ctx, NK_BUTTON_LEFT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_LEFT));
     nk_input_button(ctx, NK_BUTTON_MIDDLE, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_MIDDLE));
     nk_input_button(ctx, NK_BUTTON_RIGHT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_RIGHT));
