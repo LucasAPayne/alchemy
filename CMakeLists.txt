@@ -16,7 +16,8 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
                ${PROJECT_SOURCE_DIR}/src/util/time.c
-               ${PROJECT_SOURCE_DIR}/src/nuklear_example.c)
+               ${PROJECT_SOURCE_DIR}/src/ui.c
+               ${PROJECT_SOURCE_DIR}/src/ui_overview.c)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
             ${PROJECT_SOURCE_DIR}/src)

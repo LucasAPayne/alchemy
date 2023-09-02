@@ -5,17 +5,14 @@
 #include "renderer/texture.h"
 #include "util/types.h"
 
+#include "ui_overview.h"
+
 // TODO(lucas): Move raw OpenGL code to separate layer
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
 #include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
-
-#define INCLUDE_OVERVIEW
-#ifdef INCLUDE_OVERVIEW
-  #include "nuklear_overview.c"
-#endif
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -185,7 +182,7 @@ void init_example_state(ExampleState* state)
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
     state->bg = (struct nk_colorf){0.10f, 0.18f, 0.24f, 1.0f};
-    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, NK_ALCHEMY_INSTALL_CALLBACKS, ui_shader);
+    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
     struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
     state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
@@ -216,6 +213,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     
     // // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     // glViewport(0, 0, window_width, window_height);
+    // glClear(GL_COLOR_BUFFER_BIT);
     // glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
 
     // // if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
@@ -240,8 +238,6 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
 
     // if (is_gamepad_button_released(gamepad->b_button))
     //     stopwatch_reset(&state->stopwatch);
-    
-    // glClear(GL_COLOR_BUFFER_BIT);
 
     // mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
     // shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
@@ -274,55 +270,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     nk_alchemy_new_frame(&state->alchemy_state, window_width, window_height);
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
-    /* GUI */
-    if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-        NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-    {
-        enum {EASY, HARD};
-        static int op = EASY;
-        static int property = 20;
-        nk_layout_row_static(ctx, 30, 80, 1);
-        if (nk_button_label(ctx, "button"))
-            fprintf(stdout, "button pressed\n");
-
-        nk_layout_row_dynamic(ctx, 30, 2);
-        if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-        if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-
-        nk_layout_row_dynamic(ctx, 25, 1);
-        nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-
-        nk_layout_row_dynamic(ctx, 20, 1);
-        nk_label(ctx, "background:", NK_TEXT_LEFT);
-        nk_layout_row_dynamic(ctx, 25, 1);
-        if (nk_combo_begin_color(ctx, nk_rgb_cf(state->bg), nk_vec2(nk_widget_width(ctx),400))) {
-            nk_layout_row_dynamic(ctx, 120, 1);
-            state->bg = nk_color_picker(ctx, state->bg, NK_RGBA);
-            nk_layout_row_dynamic(ctx, 25, 1);
-            state->bg.r = nk_propertyf(ctx, "#R:", 0, state->bg.r, 1.0f, 0.01f,0.005f);
-            state->bg.g = nk_propertyf(ctx, "#G:", 0, state->bg.g, 1.0f, 0.01f,0.005f);
-            state->bg.b = nk_propertyf(ctx, "#B:", 0, state->bg.b, 1.0f, 0.01f,0.005f);
-            state->bg.a = nk_propertyf(ctx, "#A:", 0, state->bg.a, 1.0f, 0.01f,0.005f);
-            nk_combo_end(ctx);
-        }
-    }
-    nk_end(ctx);
-
-    /* -------------- EXAMPLES ---------------- */
-    #ifdef INCLUDE_CALCULATOR
-        calculator(ctx);
-    #endif
-    #ifdef INCLUDE_CANVAS
-        canvas(ctx);
-    #endif
-    #ifdef INCLUDE_OVERVIEW
-        overview(ctx);
-    #endif
-    #ifdef INCLUDE_NODE_EDITOR
-        node_editor(ctx);
-    #endif
-    /* ----------------------------------------- */
+    ui_overview(ctx);
 
     /* Draw */
     glViewport(0, 0, window_width, window_height);

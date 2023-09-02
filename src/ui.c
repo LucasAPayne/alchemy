@@ -1,12 +1,12 @@
-#include "nuklear_example.h"
+#include "ui.h"
 
 #include "renderer/shader.h"
 #include "renderer/texture.h"
 #include "util/types.h"
 
 typedef struct nk_alchemy_vertex {
-    float position[2];
-    float uv[2];
+    f32 position[2];
+    f32 uv[2];
     nk_byte col[4];
 } nk_alchemy_vertex;
 
@@ -23,9 +23,9 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
     {
         /* buffer setup */
         GLsizei vs = sizeof(nk_alchemy_vertex);
-        size_t vp = offsetof(nk_alchemy_vertex, position);
-        size_t vt = offsetof(nk_alchemy_vertex, uv);
-        size_t vc = offsetof(nk_alchemy_vertex, col);
+        usize vp = offsetof(nk_alchemy_vertex, position);
+        usize vt = offsetof(nk_alchemy_vertex, uv);
+        usize vc = offsetof(nk_alchemy_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -94,7 +94,6 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
 
     /* setup program */
     bind_shader(dev->shader);
-    // glUseProgram(dev->prog);
     shader_set_int(dev->shader, "tex", 0);
     shader_set_mat4f(dev->shader, "projection", ortho, false);
     glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
@@ -118,7 +117,8 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
         {
             /* fill convert configuration */
             struct nk_convert_config config;
-            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+            local_persist const struct nk_draw_vertex_layout_element vertex_layout[] =
+            {
                 {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(nk_alchemy_vertex, position)},
                 {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(nk_alchemy_vertex, uv)},
                 {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(nk_alchemy_vertex, col)},
@@ -137,8 +137,8 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
             config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
-            nk_buffer_init_fixed(&vbuf, vertices, (size_t)max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (size_t)max_element_buffer);
+            nk_buffer_init_fixed(&vbuf, vertices, (usize)max_vertex_buffer);
+            nk_buffer_init_fixed(&ebuf, elements, (usize)max_element_buffer);
             nk_convert(&state->ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
@@ -180,7 +180,6 @@ internal void nk_alchemy_enter_char(nk_alchemy_state* state, u64 code)
         state->text[state->text_len++] = (u32)code;
 }
 
-// TODO(lucas): Clipboard
 internal void nk_alchemy_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     char *text = clipboard_read_string();
@@ -192,15 +191,15 @@ internal void nk_alchemy_clipboard_copy(nk_handle usr, const char *text, int len
 {
     char *str = 0;
     if (!len) return;
-    str = (char*)malloc((size_t)len+1);
+    str = (char*)malloc((usize)len+1);
     if (!str) return;
-    memcpy(str, text, (size_t)len);
+    memcpy(str, text, (usize)len);
     str[len] = '\0';
     clipboard_write_string(str);
     free(str);
 }
 
-struct nk_context nk_alchemy_init(nk_alchemy_state* state, enum nk_alchemy_init_state init_state, u32 ui_shader)
+struct nk_context nk_alchemy_init(nk_alchemy_state* state, u32 ui_shader)
 {
     nk_init_default(&state->ctx, 0);
     state->ctx.clip.copy = nk_alchemy_clipboard_copy;
@@ -230,22 +229,20 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
 
 void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height)
 {
-    int i;
     struct nk_context* ctx = &state->ctx;
 
-    // TODO(lucas): For now, window and framebuffer sizes are the same
     state->width = window_width;
     state->height = window_height;
     state->display_width = window_width;
     state->display_height = window_height;
-    state->fb_scale.x = (float)state->display_width/(float)state->width;
-    state->fb_scale.y = (float)state->display_height/(float)state->height;
+    state->fb_scale.x = (f32)state->display_width/(f32)state->width;
+    state->fb_scale.y = (f32)state->display_height/(f32)state->height;
 
     nk_input_begin(ctx);
 
     // text input
     nk_alchemy_enter_char(state, state->keyboard->current_char);
-    for (i = 0; i < state->text_len; ++i)
+    for (int i = 0; i < state->text_len; ++i)
         nk_input_unicode(ctx, state->text[i]);
 
     nk_input_key(ctx, NK_KEY_DEL, is_key_pressed(state->keyboard, KEY_DEL));
@@ -303,4 +300,41 @@ void nk_alchemy_shutdown(nk_alchemy_state* state)
     nk_free(&state->ctx);
     nk_alchemy_device_destroy(state);
     memset(state, 0, sizeof(*state));
+}
+
+b32 text_box(struct nk_context* ctx, const char* label, char* buffer, int* len, TextBoxConfig config)
+{
+    // NOTE(lucas): Only one of item_width, ratio may be used.
+    // TODO(lucas): Is there a better way to control this?
+    // The layout functions need to be called between the label and the edit_string
+    // to work correctly, which is why they have to be included in the config.
+
+    b32 active = false;
+    b32 ratios_nonzero = false;
+    if (config.ratios != NULL)
+    {
+        for (int i = 0; i < config.cols; ++i)
+        {
+            if (config.ratios[i] != 0.0f)
+            {
+                ratios_nonzero = true;
+            }
+        }
+    }
+    ASSERT(!((config.item_width != 0) && ratios_nonzero));
+
+    if (label && (label[0] != '\0'))
+        nk_label(ctx, label, config.label_align);
+
+    if (config.item_width != 0)
+        nk_layout_row_static(ctx, config.height, config.item_width, config.cols);
+    
+    if (ratios_nonzero)
+        nk_layout_row(ctx, NK_STATIC, config.height, config.cols, config.ratios);
+
+    if (nk_widget_is_hovered(ctx))
+        cursor_set_from_system(CURSOR_TEXT);
+
+    active = nk_edit_string(ctx, config.edit_type, buffer, len, config.max_len, config.filter);
+    return active;
 }

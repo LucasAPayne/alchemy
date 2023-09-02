@@ -2,12 +2,11 @@
 
 #include "input.h"
 #include "sound.h"
+#include "ui.h"
 #include "util/types.h"
 #include "util/time.h"
 #include "renderer/font.h"
 #include "renderer/sprite.h"
-
-#include "nuklear_example.h"
 
 typedef struct ExampleState
 {
