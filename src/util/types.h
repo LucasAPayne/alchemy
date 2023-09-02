@@ -39,7 +39,7 @@ typedef ivec2s iv2;
 typedef vec3s v3;
 typedef ivec3s iv3;
 typedef vec4s v4;
-typedef ivec4s v4;
+typedef ivec4s iv4;
 
 typedef mat2s m2;
 typedef mat3s m3;

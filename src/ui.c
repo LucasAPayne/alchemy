@@ -95,7 +95,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     /* setup program */
     bind_shader(dev->shader);
     shader_set_int(dev->shader, "tex", 0);
-    shader_set_mat4f(dev->shader, "projection", ortho, false);
+    shader_set_m4(dev->shader, "projection", ortho, false);
     glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
     {
         /* convert from command queue into draw list and draw to screen */

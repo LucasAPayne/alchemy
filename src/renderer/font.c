@@ -68,7 +68,7 @@ void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32
     FT_Set_Pixel_Sizes(font_renderer->face, 0, pt);
     FT_GlyphSlot glyph = font_renderer->face->glyph;
 
-    shader_set_vec4f(font_renderer->shader, "text_color", color);
+    shader_set_v4(font_renderer->shader, "text_color", color);
     glBindVertexArray(font_renderer->vao);
 
     // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
