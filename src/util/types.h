@@ -33,3 +33,14 @@ typedef float f32;
 typedef double f64;
 
 typedef unsigned char ubyte;
+
+typedef vec2s v2;
+typedef ivec2s iv2;
+typedef vec3s v3;
+typedef ivec3s iv3;
+typedef vec4s v4;
+typedef ivec4s v4;
+
+typedef mat2s m2;
+typedef mat3s m3;
+typedef mat4s m4;

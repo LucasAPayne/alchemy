@@ -20,7 +20,7 @@
 static void error_callback(int e, const char *d)
 {printf("Error %d: %s\n", e, d);}
 
-global_variable vec3s colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+global_variable v3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
                           {0.0f, 1.0f, 1.0f}};
 
@@ -147,21 +147,21 @@ void init_example_state(ExampleState* state)
 
     u32 logo_tex = generate_texture_from_file("textures/dvd.png");
     state->logo.renderer = &state->sprite_renderer;
-    state->logo.position = (vec2s){0.0f, 0.0f};
+    state->logo.position = (v2){0.0f, 0.0f};
     state->logo.texture = logo_tex;
     state->logo.color = colors[0];
-    state->logo.size = (vec2s){300.0f, 150.0f};
+    state->logo.size = (v2){300.0f, 150.0f};
     state->logo.rotation = 0.0f;
     state->logo_x_direction = 1.0f;
     state->logo_y_direction = 1.0f;
-    state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
+    state->clear_color = (v3){0.2f, 0.2f, 0.2f};
 
     u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player.renderer = &state->sprite_renderer;
-    state->player.position = (vec2s){0.0f, 0.0f};
+    state->player.position = (v2){0.0f, 0.0f};
     state->player.texture = player_tex;
-    state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
-    state->player.size = (vec2s){50.0f, 50.0f};
+    state->player.color = (v3){1.0f, 1.0f, 1.0f};
+    state->player.size = (v2){50.0f, 50.0f};
     state->player.rotation = 0.0f;
     state->dash_counter = 0;
     state->dash_frames = 15;
@@ -239,31 +239,31 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     // if (is_gamepad_button_released(gamepad->b_button))
     //     stopwatch_reset(&state->stopwatch);
 
-    // mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
+    // m4 projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
     // shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
     // shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
 
     // draw_sprite(state->logo);
     // draw_sprite(state->player);
 
-    // vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    // vec2s engine_text_pos = {500.0f, 50.0f};
+    // v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
+    // v2 engine_text_pos = {500.0f, 50.0f};
     // render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
     // char buffer[512];
 
     // FontRenderer frame_time_renderer = {0};
-    // vec2s ms_text_pos = {10.0f, window_height - 10.0f};
+    // v2 ms_text_pos = {10.0f, window_height - 10.0f};
     // sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
     // render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
 
     // char cooldown_buffer[512];
-    // vec2s cooldown_text_pos = {1050.0f, window_height - 10.0f};
+    // v2 cooldown_text_pos = {1050.0f, window_height - 10.0f};
     // sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
     // if (state->dash_cooldown.is_active)
     //     render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
     
     // char stopwatch_buffer[512];
-    // vec2s stopwatch_text_pos = {10.0f, 40.0f};
+    // v2 stopwatch_text_pos = {10.0f, 40.0f};
     // sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     // render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 

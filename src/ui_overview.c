@@ -90,7 +90,7 @@ int ui_overview(struct nk_context *ctx)
             }
 
             /* menu #2 */
-            nk_layout_row_push(ctx, 60.0f);
+            nk_layout_row_push(ctx, 75.0f);
             if (nk_menu_begin_label(ctx, "ADVANCED", NK_TEXT_LEFT, nk_vec2(200.0f, 600.0f)))
             {
                 local_persist MenuState menu_state = MENU_NONE;

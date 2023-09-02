@@ -73,7 +73,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     nk_alchemy_device *dev = &state->device;
     struct nk_buffer vbuf, ebuf;
 
-    mat4s ortho = (mat4s)
+    m4 ortho = (m4)
     {
         2.0f,  0.0f,  0.0f, 0.0f,
         0.0f, -2.0f,  0.0f, 0.0f,

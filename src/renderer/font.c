@@ -62,7 +62,7 @@ void delete_font_renderer(FontRenderer* font_renderer)
     glDeleteProgram(font_renderer->shader);
 }
 
-void render_text(FontRenderer* font_renderer, const char* text, vec2s position, u32 pt, vec4s color)
+void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32 pt, v4 color)
 {
     // Set font size in pt
     FT_Set_Pixel_Sizes(font_renderer->face, 0, pt);
