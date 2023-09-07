@@ -3,7 +3,9 @@
 #include "util/types.h"
 
 #include <windows.h>
+#include <Windowsx.h>
 #include <Xinput.h>
+
 
 internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
 {
@@ -40,18 +42,67 @@ internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
     key->is_released = was_down && !is_down;
 }
 
-// TODO(lucas): Support for non-US keyboard layouts
-void win32_process_keyboard_input(HWND window, Keyboard* key_input)
+internal int win32_get_mouse_xbutton(MSG msg)
 {
+    int result = 0;
+    int xbutton = GET_XBUTTON_WPARAM(msg.wParam);
+
+    if (xbutton == XBUTTON1)
+        result = MOUSE_X1;
+    else if (xbutton == XBUTTON2)
+        result = MOUSE_X2;
+
+    return result;
+}
+
+internal void win32_process_mouse_button(ButtonState* button, int clicks)
+{
+    // NOTE(lucas): Clicks is the number of times key was pressed:
+    // 0: released, 1: pressed, 2: double click
+    switch(clicks)
+    {
+        case 0: // released
+        {
+            button->is_released = true;
+            button->is_pressed = false;
+        } break;
+
+        case 1: // pressed
+        {
+            button->is_pressed = true;
+        } break;
+
+        case 2: // double clicked
+        {
+            button->is_double_clicked = true;
+        } break;
+    }
+}
+
+// TODO(lucas): Support for non-US keyboard layouts
+void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse* mouse)
+{
+    // Reset any character that was entered last frame
+    key_input->current_char = 0;
+
     // Release state should not persist, so make sure it is false for each button
     for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
         key_input->keys[key].is_released = false;
+
+    // Release and double click state should not persist, so set it to false
+    for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
+    {
+        mouse->buttons[button].is_released = false;
+        mouse->buttons[button].is_double_clicked = false;
+    }
+    mouse->scroll = 0;
 
     MSG msg;
     while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
     {
         switch(msg.message)
         {
+            /* Kyeboard Input */
             // Handle all key messages in the same block
             case WM_SYSKEYDOWN:
             case WM_SYSKEYUP:
@@ -74,8 +125,8 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
                 b32 is_down = (msg.lParam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
 
                 // Disregard key repeats
-                if (was_down == is_down)
-                    break;
+                // if (was_down == is_down)
+                //     break;
 
                 // NOTE(lucas): Most keycodes map directly to their ANSI equivalent (letters are capital)
                 // For keys that have no ANSI equivalent, Windows provides defines for virtual keycodes
@@ -167,15 +218,15 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
                     case VK_NUMPAD8:    win32_process_key(&key_input->keys[KEY_NUMPAD8], is_down, was_down); break;
                     case VK_NUMPAD9:    win32_process_key(&key_input->keys[KEY_NUMPAD9], is_down, was_down); break;
 
-                    case VK_F1:         win32_process_key(&key_input->keys[KEY_F1], is_down,  was_down); break;
-                    case VK_F2:         win32_process_key(&key_input->keys[KEY_F2], is_down,  was_down); break;
-                    case VK_F3:         win32_process_key(&key_input->keys[KEY_F3], is_down,  was_down); break;
-                    case VK_F4:         win32_process_key(&key_input->keys[KEY_F4], is_down,  was_down); break;
-                    case VK_F5:         win32_process_key(&key_input->keys[KEY_F5], is_down,  was_down); break;
-                    case VK_F6:         win32_process_key(&key_input->keys[KEY_F6], is_down,  was_down); break;
-                    case VK_F7:         win32_process_key(&key_input->keys[KEY_F7], is_down,  was_down); break;
-                    case VK_F8:         win32_process_key(&key_input->keys[KEY_F8], is_down,  was_down); break;
-                    case VK_F9:         win32_process_key(&key_input->keys[KEY_F9], is_down,  was_down); break;
+                    case VK_F1:         win32_process_key(&key_input->keys[KEY_F1],  is_down, was_down); break;
+                    case VK_F2:         win32_process_key(&key_input->keys[KEY_F2],  is_down, was_down); break;
+                    case VK_F3:         win32_process_key(&key_input->keys[KEY_F3],  is_down, was_down); break;
+                    case VK_F4:         win32_process_key(&key_input->keys[KEY_F4],  is_down, was_down); break;
+                    case VK_F5:         win32_process_key(&key_input->keys[KEY_F5],  is_down, was_down); break;
+                    case VK_F6:         win32_process_key(&key_input->keys[KEY_F6],  is_down, was_down); break;
+                    case VK_F7:         win32_process_key(&key_input->keys[KEY_F7],  is_down, was_down); break;
+                    case VK_F8:         win32_process_key(&key_input->keys[KEY_F8],  is_down, was_down); break;
+                    case VK_F9:         win32_process_key(&key_input->keys[KEY_F9],  is_down, was_down); break;
                     case VK_F10:        win32_process_key(&key_input->keys[KEY_F10], is_down, was_down); break;
                     case VK_F11:        win32_process_key(&key_input->keys[KEY_F11], is_down, was_down); break;
                     case VK_F12:        win32_process_key(&key_input->keys[KEY_F12], is_down, was_down); break;
@@ -186,7 +237,39 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
                 b32 alt_key_down = msg.lParam & (1 << 29);
                 if ((virtual_key_code == VK_F4) && alt_key_down)
                     PostQuitMessage(0);
+
+                TranslateMessage(&msg);
             } break;
+
+            case WM_CHAR:
+            {
+                key_input->current_char = msg.wParam;
+            } break;
+
+            /* Mouse Input */
+            case WM_MOUSEMOVE:
+            {
+                mouse->x = GET_X_LPARAM(msg.lParam);
+                mouse->y = GET_Y_LPARAM(msg.lParam);
+            } break;
+            case WM_MOUSEWHEEL: mouse->scroll = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA; break;
+
+            case WM_LBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0); break;
+            case WM_LBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 1); break;
+            case WM_LBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 2); break;
+
+            case WM_MBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0); break;
+            case WM_MBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 1); break;
+            case WM_MBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 2); break;
+
+            case WM_RBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 0); break;
+            case WM_RBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 1); break;
+            case WM_RBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 2); break;
+
+            case WM_XBUTTONUP:     win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 0); break;
+            case WM_XBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 1); break;
+            case WM_XBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 2); break;
+
 
             default:
             {
@@ -197,44 +280,45 @@ void win32_process_keyboard_input(HWND window, Keyboard* key_input)
     }
 }
 
-internal void win32_process_mouse_button(ButtonState* button, bool is_down)
+void cursor_show(bool show)
 {
-    // Detect release
-    if (button->is_pressed && !is_down)
-        button->is_released = true;
-
-    // Detect press
-    if (button->is_pressed != is_down)
-        button->is_pressed = is_down;
+    ShowCursor(show);
 }
 
-void win32_process_mouse_input(Mouse* mouse)
+void cursor_set_from_system(CursorType type)
 {
-    // Release tate should not persist, so set it to false
-    for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
-        mouse->buttons[button].is_released = false;
+    // NOTE(lucas): Horizontal, left, and right are all the same on Windows.
+    // Linux has single arrow cursors for each direction.
+    // The same goes for vertical, up, and down and the diagonals.
+    HCURSOR cursor = {0};
+    switch(type)
+    {
+        case CURSOR_ARROW:                      cursor = LoadCursorA(NULL, IDC_ARROW);       break;
+        case CURSOR_ARROW_WAIT:                 cursor = LoadCursorA(NULL, IDC_APPSTARTING); break;
+        case CURSOR_WAIT:                       cursor = LoadCursorA(NULL, IDC_WAIT);        break;
+        case CURSOR_TEXT:                       cursor = LoadCursorA(NULL, IDC_IBEAM);       break;
+        case CURSOR_HAND:                       cursor = LoadCursorA(NULL, IDC_HAND);        break;
+        case CURSOR_SIZE_HORIZONTAL:            cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_VERTICAL:              cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_TOP_LEFT_BOTTOM_RIGHT: cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_TOP_RIGHT_BOTTOM_LEFT: cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_LEFT:                  cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_RIGHT:                 cursor = LoadCursorA(NULL, IDC_SIZEWE);      break;
+        case CURSOR_SIZE_TOP:                   cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_BOTTOM:                cursor = LoadCursorA(NULL, IDC_SIZENS);      break;
+        case CURSOR_SIZE_TOP_LEFT:              cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_TOP_RIGHT:             cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_BOTTOM_LEFT:           cursor = LoadCursorA(NULL, IDC_SIZENESW);    break;
+        case CURSOR_SIZE_BOTTOM_RIGHT:          cursor = LoadCursorA(NULL, IDC_SIZENWSE);    break;
+        case CURSOR_SIZE_ALL:                   cursor = LoadCursorA(NULL, IDC_SIZEALL);     break;
+        case CURSOR_CROSS:                      cursor = LoadCursorA(NULL, IDC_CROSS);       break;
+        case CURSOR_HELP:                       cursor = LoadCursorA(NULL, IDC_HELP);        break;
+        case CURSOR_NOT_ALLOWED:                cursor = LoadCursorA(NULL, IDC_NO);          break;
 
-    // TODO(lucas): Support mouse scrolling
-    POINT mouse_pos = {0};
-    GetCursorPos(&mouse_pos);
-    mouse->x = mouse_pos.x;
-    mouse->y = mouse_pos.y;
-
-    // TODO(lucas): Revisit in the future and see if there is a better way to handle mouse input
-    // It can't be handled the same way as keyboard input since mouse input seems to always go
-    // through the window callback, and I do not want to pass the input struct to the callback.
-    int pressed = 0x80;
-    bool mouse_left_down   = (GetKeyState(VK_LBUTTON)  & pressed) != 0;
-    bool mouse_middle_down = (GetKeyState(VK_MBUTTON)  & pressed) != 0;
-    bool mouse_right_down  = (GetKeyState(VK_RBUTTON)  & pressed) != 0;
-    bool mouse_x1_down     = (GetKeyState(VK_XBUTTON1) & pressed) != 0;
-    bool mouse_x2_down     = (GetKeyState(VK_XBUTTON2) & pressed) != 0;
-
-    win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT],   mouse_left_down);
-    win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], mouse_middle_down);
-    win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT],  mouse_right_down);
-    win32_process_mouse_button(&mouse->buttons[MOUSE_X1],     mouse_x1_down);
-    win32_process_mouse_button(&mouse->buttons[MOUSE_X2],     mouse_x2_down);
+        // TODO(lucas): Logging, invalid type value
+        default: break;
+    }
+    SetCursor(cursor);
 }
 
 internal void win32_xinput_button_release(ButtonState* button)
@@ -303,37 +387,37 @@ internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* 
             case VK_PAD_X: win32_xinput_button_release(&gamepad->x_button); break;
             case VK_PAD_Y: win32_xinput_button_release(&gamepad->y_button); break;
 
-            case VK_PAD_LSHOULDER: win32_xinput_button_release(&gamepad->left_shoulder); break;
+            case VK_PAD_LSHOULDER: win32_xinput_button_release(&gamepad->left_shoulder);  break;
             case VK_PAD_RSHOULDER: win32_xinput_button_release(&gamepad->right_shoulder); break;
-            case VK_PAD_LTRIGGER:  win32_xinput_button_release(&gamepad->left_trigger); break;
-            case VK_PAD_RTRIGGER:  win32_xinput_button_release(&gamepad->right_trigger); break;
+            case VK_PAD_LTRIGGER:  win32_xinput_button_release(&gamepad->left_trigger);   break;
+            case VK_PAD_RTRIGGER:  win32_xinput_button_release(&gamepad->right_trigger);  break;
 
-            case VK_PAD_DPAD_UP:    win32_xinput_button_release(&gamepad->dpad_up); break;
-            case VK_PAD_DPAD_DOWN:  win32_xinput_button_release(&gamepad->dpad_down); break;
-            case VK_PAD_DPAD_LEFT:  win32_xinput_button_release(&gamepad->dpad_left); break;
+            case VK_PAD_DPAD_UP:    win32_xinput_button_release(&gamepad->dpad_up);    break;
+            case VK_PAD_DPAD_DOWN:  win32_xinput_button_release(&gamepad->dpad_down);  break;
+            case VK_PAD_DPAD_LEFT:  win32_xinput_button_release(&gamepad->dpad_left);  break;
             case VK_PAD_DPAD_RIGHT: win32_xinput_button_release(&gamepad->dpad_right); break;
 
             case VK_PAD_START: win32_xinput_button_release(&gamepad->start_button); break;
-            case VK_PAD_BACK:  win32_xinput_button_release(&gamepad->back_button); break;
+            case VK_PAD_BACK:  win32_xinput_button_release(&gamepad->back_button);  break;
 
-            case VK_PAD_LTHUMB_PRESS:     win32_xinput_button_release(&gamepad->left_stick_press); break;
-            case VK_PAD_LTHUMB_UP:        win32_xinput_button_release(&gamepad->left_stick_up); break;
-            case VK_PAD_LTHUMB_DOWN:      win32_xinput_button_release(&gamepad->left_stick_down); break;
-            case VK_PAD_LTHUMB_LEFT:      win32_xinput_button_release(&gamepad->left_stick_left); break;
-            case VK_PAD_LTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->left_stick_right); break;
-            case VK_PAD_LTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->left_stick_upleft); break;
-            case VK_PAD_LTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->left_stick_upright); break;
-            case VK_PAD_LTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->left_stick_downleft); break;
+            case VK_PAD_LTHUMB_PRESS:     win32_xinput_button_release(&gamepad->left_stick_press);     break;
+            case VK_PAD_LTHUMB_UP:        win32_xinput_button_release(&gamepad->left_stick_up);        break;
+            case VK_PAD_LTHUMB_DOWN:      win32_xinput_button_release(&gamepad->left_stick_down);      break;
+            case VK_PAD_LTHUMB_LEFT:      win32_xinput_button_release(&gamepad->left_stick_left);      break;
+            case VK_PAD_LTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->left_stick_right);     break;
+            case VK_PAD_LTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->left_stick_upleft);    break;
+            case VK_PAD_LTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->left_stick_upright);   break;
+            case VK_PAD_LTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->left_stick_downleft);  break;
             case VK_PAD_LTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->left_stick_downright); break;
 
-            case VK_PAD_RTHUMB_PRESS:     win32_xinput_button_release(&gamepad->right_stick_press); break;
-            case VK_PAD_RTHUMB_UP:        win32_xinput_button_release(&gamepad->right_stick_up); break;
-            case VK_PAD_RTHUMB_DOWN:      win32_xinput_button_release(&gamepad->right_stick_down); break;
-            case VK_PAD_RTHUMB_LEFT:      win32_xinput_button_release(&gamepad->right_stick_left); break;
-            case VK_PAD_RTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->right_stick_right); break;
-            case VK_PAD_RTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->right_stick_upleft); break;
-            case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright); break;
-            case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft); break;
+            case VK_PAD_RTHUMB_PRESS:     win32_xinput_button_release(&gamepad->right_stick_press);     break;
+            case VK_PAD_RTHUMB_UP:        win32_xinput_button_release(&gamepad->right_stick_up);        break;
+            case VK_PAD_RTHUMB_DOWN:      win32_xinput_button_release(&gamepad->right_stick_down);      break;
+            case VK_PAD_RTHUMB_LEFT:      win32_xinput_button_release(&gamepad->right_stick_left);      break;
+            case VK_PAD_RTHUMB_RIGHT:     win32_xinput_button_release(&gamepad->right_stick_right);     break;
+            case VK_PAD_RTHUMB_UPLEFT:    win32_xinput_button_release(&gamepad->right_stick_upleft);    break;
+            case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright);   break;
+            case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft);  break;
             case VK_PAD_RTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->right_stick_downright); break;
             
             default: break;
@@ -448,4 +532,66 @@ void win32_process_xinput_gamepad_input(Input* input)
         XInputSetState(0, &vibration);
         gamepad->left_vibration = gamepad->right_vibration = 0;
     }
+}
+
+bool clipboard_write_string(char* text)
+{
+    // Before clipboard can be written to, it first needs to be opened and emptied
+    HWND window = GetActiveWindow();
+    if (!OpenClipboard(window))
+        return false;
+    EmptyClipboard();
+
+    // Allocate global memory for the text
+    int string_length = lstrlenA(text);
+    HGLOBAL string_handle = GlobalAlloc(GMEM_MOVEABLE, string_length+1);
+    if (string_handle == NULL)
+    {
+        CloseClipboard();
+        return false;
+    }
+    LPSTR string_copy = GlobalLock(string_handle);
+    memcpy(string_copy, text, string_length+1);
+    string_copy[string_length+1] = '\0';
+    GlobalUnlock(string_handle);
+
+    // Write to clipboard and close
+    SetClipboardData(CF_TEXT, string_handle);
+    CloseClipboard();
+    return true;
+}
+
+char* clipboard_read_string(void)
+{
+    char* result = NULL;
+
+    // Before clipboard can be written to, it first needs to be opened and emptied
+    // Also, check that the desired format is available
+    HWND window = GetActiveWindow();
+    if (!IsClipboardFormatAvailable(CF_TEXT))
+        return NULL;
+    if (!OpenClipboard(window))
+        return NULL;
+
+    // Get clipboard data
+    HGLOBAL clipboard_handle = GetClipboardData(CF_TEXT);
+    LPCSTR clipboard_string = NULL;
+    if (clipboard_handle != NULL)
+    {
+        // Get string from clipboard data
+        clipboard_string = GlobalLock(clipboard_handle);
+        if (clipboard_string != NULL)
+        {
+            // If string is not NULL, allocate a new one to return and copy
+            usize string_length = lstrlenA(clipboard_string)+1;
+            result = calloc(string_length, sizeof(TCHAR));
+            memcpy(result, clipboard_string, string_length);
+            result[string_length+1] = '\0';
+
+            GlobalUnlock(clipboard_handle);
+        }
+    }
+
+    CloseClipboard();
+    return result;
 }

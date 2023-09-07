@@ -8,8 +8,10 @@ typedef struct ButtonState
 {
     bool is_pressed;
     bool is_released;
+    bool is_double_clicked;
 } ButtonState;
 
+/* Keyboard */
 /* IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
@@ -46,9 +48,12 @@ enum Key
     KEY_NUM_KEYS
 };
 
+// typedef void (*char_callback_func)(void* state, u64 code);
 typedef struct Keyboard
 {
     ButtonState keys[KEY_NUM_KEYS];
+    u64 current_char;
+    // char_callback_func char_callback;
 } Keyboard;
 
 inline bool is_key_pressed(Keyboard* input, int key)
@@ -61,11 +66,12 @@ inline bool is_key_released(Keyboard* input, int key)
     return input->keys[key].is_released;
 }
 
+/* Mouse */
 /* IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
 */ 
-enum MouseButton
+typedef enum MouseButton
 {
     MOUSE_UNKONWN = 0,
     MOUSE_LEFT,
@@ -74,12 +80,13 @@ enum MouseButton
     MOUSE_X1,
     MOUSE_X2,
     MOUSE_NUM_BUTTONS
-};
+} MouseButton;
 
 typedef struct Mouse
 {
     i32 x;
     i32 y;
+    i32 scroll;
     ButtonState buttons[MOUSE_NUM_BUTTONS];
 } Mouse;
 
@@ -93,6 +100,44 @@ inline bool is_mouse_button_released(Mouse* mouse, int button)
     return mouse->buttons[button].is_released;
 }
 
+inline bool is_mouse_button_double_clicked(Mouse* mouse, int button)
+{
+    return mouse->buttons[button].is_double_clicked;
+}
+
+/* Cursor */
+typedef enum CursorType
+{
+    CURSOR_ARROW = 0,
+    CURSOR_ARROW_WAIT,
+    CURSOR_WAIT,
+    CURSOR_TEXT,
+    CURSOR_HAND,
+    CURSOR_SIZE_HORIZONTAL,
+    CURSOR_SIZE_VERTICAL,
+    CURSOR_SIZE_TOP_LEFT_BOTTOM_RIGHT,
+    CURSOR_SIZE_TOP_RIGHT_BOTTOM_LEFT,
+    CURSOR_SIZE_LEFT,
+    CURSOR_SIZE_RIGHT,
+    CURSOR_SIZE_TOP,
+    CURSOR_SIZE_BOTTOM,
+    CURSOR_SIZE_TOP_LEFT,
+    CURSOR_SIZE_TOP_RIGHT,
+    CURSOR_SIZE_BOTTOM_LEFT,
+    CURSOR_SIZE_BOTTOM_RIGHT,
+    CURSOR_SIZE_ALL,
+    CURSOR_CROSS,
+    CURSOR_HELP,
+    CURSOR_NOT_ALLOWED
+} CursorType;
+
+/* Wrappers for platform-specific functions */
+void cursor_show(bool show);
+void cursor_set_from_system(CursorType type);
+
+// TODO(lucas): load_cursor, set_cursor
+
+/* Gamepad */
 // TODO(lucas): Add support for multiple gamepads
 typedef struct Gamepad
 {
@@ -178,9 +223,14 @@ inline void gamepad_set_vibration(Gamepad* pad, u16 left_vibration, u16 right_vi
     pad->right_vibration = right_vibration;
 }
 
+/* Struct containing collection of input devices */
 typedef struct Input
 {
     Gamepad gamepads[MAX_GAMEPADS];
     Keyboard keyboard;
     Mouse mouse;
 } Input;
+
+/* Clipboard */
+bool clipboard_write_string(char* text);
+char* clipboard_read_string(void);

@@ -5,13 +5,22 @@
 #include "renderer/texture.h"
 #include "util/types.h"
 
+#include "ui_overview.h"
+
+// TODO(lucas): Move raw OpenGL code to separate layer
 #include <glad/glad.h>
 
 #include <stdlib.h> // rand
-#include <stdio.h>  // sprintf_s
+#include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
 
-global_variable vec3s colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
+static void error_callback(int e, const char *d)
+{printf("Error %d: %s\n", e, d);}
+
+global_variable v3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
                           {0.0f, 1.0f, 1.0f}};
 
@@ -130,6 +139,7 @@ void init_example_state(ExampleState* state)
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
+    u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
     init_sprite_renderer(&state->sprite_renderer, sprite_shader);
     init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
@@ -137,21 +147,21 @@ void init_example_state(ExampleState* state)
 
     u32 logo_tex = generate_texture_from_file("textures/dvd.png");
     state->logo.renderer = &state->sprite_renderer;
-    state->logo.position = (vec2s){0.0f, 0.0f};
+    state->logo.position = (v2){0.0f, 0.0f};
     state->logo.texture = logo_tex;
     state->logo.color = colors[0];
-    state->logo.size = (vec2s){300.0f, 150.0f};
+    state->logo.size = (v2){300.0f, 150.0f};
     state->logo.rotation = 0.0f;
     state->logo_x_direction = 1.0f;
     state->logo_y_direction = 1.0f;
-    state->clear_color = (vec3s){0.2f, 0.2f, 0.2f};
+    state->clear_color = (v3){0.2f, 0.2f, 0.2f};
 
     u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player.renderer = &state->sprite_renderer;
-    state->player.position = (vec2s){0.0f, 0.0f};
+    state->player.position = (v2){0.0f, 0.0f};
     state->player.texture = player_tex;
-    state->player.color = (vec3s){1.0f, 1.0f, 1.0f};
-    state->player.size = (vec2s){50.0f, 50.0f};
+    state->player.color = (v3){1.0f, 1.0f, 1.0f};
+    state->player.size = (v2){50.0f, 50.0f};
     state->player.rotation = 0.0f;
     state->dash_counter = 0;
     state->dash_frames = 15;
@@ -168,6 +178,19 @@ void init_example_state(ExampleState* state)
 
     timer_init(&state->dash_cooldown, 2.0f, false);
     stopwatch_init(&state->stopwatch, false);
+
+    // nuklear example
+    state->alchemy_state = (nk_alchemy_state){0};
+    state->bg = (struct nk_colorf){0.10f, 0.18f, 0.24f, 1.0f};
+    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
+    struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
+    nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
+    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
+    nk_alchemy_font_stash_end(&state->alchemy_state);
+    // nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
+    nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
+    state->alchemy_state.keyboard = &state->input.keyboard;
+    state->alchemy_state.mouse = &state->input.mouse;
 }
 
 void delete_example_state(ExampleState* state)
@@ -177,71 +200,86 @@ void delete_example_state(ExampleState* state)
     delete_sprite_renderer(&state->sprite_renderer);
     delete_texture(state->logo.texture);
     delete_texture(state->player.texture);
+    nk_alchemy_shutdown(&state->alchemy_state);
 }
 
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
-    stopwatch_update(&state->stopwatch, delta_time);
+    // stopwatch_update(&state->stopwatch, delta_time);
     
-    Gamepad* gamepad = &state->input.gamepads[0];
-    update_dvd(state, delta_time, window_width, window_height);
-    update_player(state, delta_time, window_width, window_height);  
+    // Gamepad* gamepad = &state->input.gamepads[0];
+    // update_dvd(state, delta_time, window_width, window_height);
+    // update_player(state, delta_time, window_width, window_height);  
     
-    // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
+    // // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
+    // glViewport(0, 0, window_width, window_height);
+    // glClear(GL_COLOR_BUFFER_BIT);
+    // glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
+
+    // // if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
+    // //     glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+    
+    // state->sound_output.should_play = false;
+    // if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
+    // {
+    //     state->is_shooting = true;
+    //     state->sound_output.should_play = true;
+    // }
+    // if (is_gamepad_button_released(gamepad->a_button))
+    //     state->is_shooting = false;
+    
+    // if (is_gamepad_button_released(gamepad->y_button))
+    // {
+    //     if (state->stopwatch.is_active)
+    //         stopwatch_stop(&state->stopwatch);
+    //     else
+    //         stopwatch_start(&state->stopwatch);
+    // }
+
+    // if (is_gamepad_button_released(gamepad->b_button))
+    //     stopwatch_reset(&state->stopwatch);
+
+    // m4 projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
+    // shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
+    // shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
+
+    // draw_sprite(state->logo);
+    // draw_sprite(state->player);
+
+    // v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
+    // v2 engine_text_pos = {500.0f, 50.0f};
+    // render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
+    // char buffer[512];
+
+    // FontRenderer frame_time_renderer = {0};
+    // v2 ms_text_pos = {10.0f, window_height - 10.0f};
+    // sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    // render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
+
+    // char cooldown_buffer[512];
+    // v2 cooldown_text_pos = {1050.0f, window_height - 10.0f};
+    // sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
+    // if (state->dash_cooldown.is_active)
+    //     render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
+    
+    // char stopwatch_buffer[512];
+    // v2 stopwatch_text_pos = {10.0f, 40.0f};
+    // sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
+    // render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
+
+    nk_alchemy_new_frame(&state->alchemy_state, window_width, window_height);
+    struct nk_context* ctx = &state->alchemy_state.ctx;
+
+    ui_overview(ctx);
+
+    /* Draw */
     glViewport(0, 0, window_width, window_height);
-    glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, 1.0f);
-
-    // if (is_key_released(&state->keyboard, Key::A))
-    if (is_mouse_button_pressed(&state->input.mouse, MOUSE_X2))
-        glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    
-    state->sound_output.should_play = false;
-    if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
-    {
-        state->is_shooting = true;
-        state->sound_output.should_play = true;
-    }
-    if (is_gamepad_button_released(gamepad->a_button))
-        state->is_shooting = false;
-    
-    if (is_gamepad_button_released(gamepad->y_button))
-    {
-        if (state->stopwatch.is_active)
-            stopwatch_stop(&state->stopwatch);
-        else
-            stopwatch_start(&state->stopwatch);
-    }
-
-    if (is_gamepad_button_released(gamepad->b_button))
-        stopwatch_reset(&state->stopwatch);
-    
     glClear(GL_COLOR_BUFFER_BIT);
-
-    mat4s projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
-    shader_set_mat4f(state->font_renderer.shader, "projection", projection, 0);
-    shader_set_mat4f(state->sprite_renderer.shader, "projection", projection, 0);
-
-    draw_sprite(state->logo);
-    draw_sprite(state->player);
-
-    vec4s font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    vec2s engine_text_pos = {500.0f, 50.0f};
-    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
-    char buffer[512];
-
-    FontRenderer frame_time_renderer = {0};
-    vec2s ms_text_pos = {10.0f, window_height - 10.0f};
-    sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
-
-    char cooldown_buffer[512];
-    vec2s cooldown_text_pos = {1050.0f, window_height - 10.0f};
-    sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
-    if (state->dash_cooldown.is_active)
-        render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
-    
-    char stopwatch_buffer[512];
-    vec2s stopwatch_text_pos = {10.0f, 40.0f};
-    sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
+    glClearColor(state->bg.r, state->bg.g, state->bg.b, state->bg.a);
+    /* IMPORTANT: `nk_glfw_render` modifies some global OpenGL state
+        * with blending, scissor, face culling, depth test and viewport and
+        * defaults everything back into a default state.
+        * Make sure to either a.) save and restore or b.) reset your own state after
+        * rendering the UI. */
+    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }

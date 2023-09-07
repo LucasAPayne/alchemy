@@ -2,6 +2,7 @@
 
 #include "input.h"
 #include "sound.h"
+#include "ui.h"
 #include "util/types.h"
 #include "util/time.h"
 #include "renderer/font.h"
@@ -16,7 +17,7 @@ typedef struct ExampleState
     Sprite logo;
     f32 logo_x_direction;
     f32 logo_y_direction;
-    vec3s* colors;
+    v3* colors;
     int last_color_index;
 
     Sprite player;
@@ -26,12 +27,19 @@ typedef struct ExampleState
     f32 dash_distance;
     Timer dash_cooldown;
 
-    vec3s clear_color;
+    v3 clear_color;
 
     SoundOutput sound_output;
     b32 is_shooting;
 
     Stopwatch stopwatch;
+
+    // nk_user_font debug_panel_font;
+    // nk_context debug_panel;
+
+    struct nk_alchemy_state alchemy_state;
+    struct nk_colorf bg;
+    struct nk_font* immortal;
 } ExampleState;
 
 void init_example_state(ExampleState* state);

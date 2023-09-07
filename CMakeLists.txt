@@ -8,16 +8,21 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/src/example.c
                ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
                ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
+               ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
                ${PROJECT_SOURCE_DIR}/src/renderer/font.c
                ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
-               ${PROJECT_SOURCE_DIR}/src/util/time.c)
+               ${PROJECT_SOURCE_DIR}/src/util/time.c
+               ${PROJECT_SOURCE_DIR}/src/ui.c
+               ${PROJECT_SOURCE_DIR}/src/ui_overview.c)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-            ${PROJECT_SOURCE_DIR}/src
+            ${PROJECT_SOURCE_DIR}/src)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
             ${PROJECT_SOURCE_DIR}/lib
             ${PROJECT_SOURCE_DIR}/lib/glad/include
             ${PROJECT_SOURCE_DIR}/lib/cglm
@@ -41,8 +46,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 if (MSVC)
     # C4100 and C4189 are about unused parameters/variables and are not particularly useful
+    # C4116 is unnamed type definitions in parenthetical expressions. Disabled because of nuklear
     # /Oi: Generate intrinsic functions
-    target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005)
+    # LNK4099 is about linking without debug info. Disabled because of freetype
+    target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116)
+    target_link_options(${PROJECT_NAME} PRIVATE /ignore:4099)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL Debug)

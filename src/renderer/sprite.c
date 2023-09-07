@@ -19,8 +19,8 @@ void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
 
     u32 indices[] = 
     {
-    0, 1, 3,
-    1, 2, 3  
+        0, 1, 3,
+        1, 2, 3  
     };
 
     u32 vao;
@@ -62,22 +62,22 @@ void delete_sprite_renderer(SpriteRenderer* sprite_renderer)
 // Note that texture could not be set to 0 for no texture since that is OpenGL's error case
 void draw_sprite(Sprite sprite)
 {
-    mat4s model = glms_mat4_identity();
-    model = glms_translate(model, (vec3s){sprite.position.x, sprite.position.y, 0.0f});
+    m4 model = glms_mat4_identity();
+    model = glms_translate(model, (v3){sprite.position.x, sprite.position.y, 0.0f});
 
     // NOTE(lucas): The origin of a quad is at the top left, but we want the origin to appear in the center of the quad
     // for rotation. So, before rotation, translate the quad right and down by half its size. After the rotation, undo
     // this translation.
-    model = glms_translate(model, (vec3s){0.5f * sprite.size.x, 0.5f * sprite.size.y, 0.0f});
-    model = glms_rotate(model, glm_rad(sprite.rotation), (vec3s){0.0f, 0.0f, 1.0f});
-    model = glms_translate(model, (vec3s){-0.5f * sprite.size.x, -0.5f * sprite.size.y, 0.0f});
+    model = glms_translate(model, (v3){0.5f * sprite.size.x, 0.5f * sprite.size.y, 0.0f});
+    model = glms_rotate(model, glm_rad(sprite.rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = glms_translate(model, (v3){-0.5f * sprite.size.x, -0.5f * sprite.size.y, 0.0f});
 
     // Scale sprite to appropriate size
-    model = glms_scale(model, (vec3s){sprite.size.x, sprite.size.y, 1.0f});
+    model = glms_scale(model, (v3){sprite.size.x, sprite.size.y, 1.0f});
 
     // Set model matrix and color shader values
-    shader_set_mat4f(sprite.renderer->shader, "model", model, 0);
-    shader_set_vec3f(sprite.renderer->shader, "color", sprite.color);
+    shader_set_m4(sprite.renderer->shader, "model", model, 0);
+    shader_set_v3(sprite.renderer->shader, "color", sprite.color);
 
     bind_texture(sprite.texture, 0);
 

@@ -15,10 +15,6 @@
 
 #include <stdio.h>
 
-#if ALCHEMY_DEBUG
-    #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
-#endif
-
 global_variable b32 global_running;
 
 typedef struct Win32WindowDimensions
@@ -93,16 +89,16 @@ void GLAPIENTRY opengl_error_callback(GLenum source,
 
     switch (type)
     {
-        case GL_DEBUG_TYPE_ERROR:               OutputDebugStringA("Type: Error"); break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: OutputDebugStringA("Type: Deprecated Behavior"); break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  OutputDebugStringA("Type: Undefined Behavior"); break; 
-        case GL_DEBUG_TYPE_PORTABILITY:         OutputDebugStringA("Type: Portability"); break;
-        case GL_DEBUG_TYPE_PERFORMANCE:         OutputDebugStringA("Type: Performance"); break;
-        case GL_DEBUG_TYPE_MARKER:              OutputDebugStringA("Type: Marker"); break;
-        case GL_DEBUG_TYPE_PUSH_GROUP:          OutputDebugStringA("Type: Push Group"); break;
-        case GL_DEBUG_TYPE_POP_GROUP:           OutputDebugStringA("Type: Pop Group"); break;
-        case GL_DEBUG_TYPE_OTHER:               OutputDebugStringA("Type: Other"); break;
-        default:                                OutputDebugStringA("Type: Unknown"); break;
+        case GL_DEBUG_TYPE_ERROR:               OutputDebugStringA("Type: Error\n"); break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: OutputDebugStringA("Type: Deprecated Behavior\n"); break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  OutputDebugStringA("Type: Undefined Behavior\n"); break; 
+        case GL_DEBUG_TYPE_PORTABILITY:         OutputDebugStringA("Type: Portability\n"); break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         OutputDebugStringA("Type: Performance\n"); break;
+        case GL_DEBUG_TYPE_MARKER:              OutputDebugStringA("Type: Marker\n"); break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          OutputDebugStringA("Type: Push Group\n"); break;
+        case GL_DEBUG_TYPE_POP_GROUP:           OutputDebugStringA("Type: Pop Group\n"); break;
+        case GL_DEBUG_TYPE_OTHER:               OutputDebugStringA("Type: Other\n"); break;
+        default:                                OutputDebugStringA("Type: Unknown\n"); break;
     }
     
     switch (severity)
@@ -176,6 +172,7 @@ internal void win32_init_opengl(HWND window)
 internal LRESULT CALLBACK win32_main_window_callback(HWND window, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LRESULT result = 0;
+
     switch(msg)
     {
         case WM_QUIT:
@@ -234,7 +231,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         WNDCLASSEXW window_class = {0};
         window_class.cbSize = sizeof(WNDCLASSEXW);
-        window_class.style = CS_HREDRAW | CS_VREDRAW |CS_OWNDC;
+        window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC | CS_DBLCLKS;
         window_class.lpfnWndProc = &win32_main_window_callback;
         window_class.hInstance = instance;
         window_class.hIcon = LoadIconW(0, IDI_APPLICATION);
@@ -282,7 +279,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     Win32XAudio2State xaudio2_state;
     win32_init_xaudio2(&xaudio2_state);
-    
+
     ExampleState state;
     init_example_state(&state);
 
@@ -293,8 +290,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         // Double buffer input to detect buttons held
         Input old_input = state.input;
-        win32_process_keyboard_input(window, &state.input.keyboard);
-        win32_process_mouse_input(&state.input.mouse);
+        win32_process_keyboard_mouse_input(window, &state.input.keyboard, &state.input.mouse);
         win32_process_xinput_gamepad_input(&state.input);
 
         HDC device_context = GetDC(window);
