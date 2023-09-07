@@ -611,65 +611,53 @@ int ui_overview(struct nk_context *ctx)
 
             if (nk_tree_push(ctx, NK_TREE_NODE, "Input", NK_MINIMIZED))
             {
-                TextBoxConfig config = {0};
-                config.label_align = NK_TEXT_LEFT;
-                config.edit_type = NK_EDIT_FIELD;
-                config.max_len = 64;
-                config.filter = nk_filter_default;
-
-                local_persist f32 ratio[] = {120, 150};
-                local_persist char field_buffer[64];
-                local_persist char text[9][64];
-                local_persist int text_len[9];
-                local_persist char box_buffer[512];
-                local_persist int field_len;
-                local_persist int box_len;
+                static const float ratio[] = {120, 150};
+                static char field_buffer[64];
+                static char text[9][64];
+                static int text_len[9];
+                static char box_buffer[512];
+                static int field_len;
+                static int box_len;
                 nk_flags active;
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
 
-                text_box(ctx, "Default:", text[0], &text_len[0], config);
-                config.edit_type = NK_EDIT_SIMPLE;
-                config.filter = nk_filter_decimal;
-                text_box(ctx, "Int:", text[1], &text_len[1], config);
-                config.filter = nk_filter_float;
-                text_box(ctx, "Float:", text[2], &text_len[2], config);
-                config.filter = nk_filter_hex;
-                text_box(ctx, "Hex:", text[3], &text_len[3], config);
-                config.filter = nk_filter_oct;
-                text_box(ctx, "Octal:", text[4], &text_len[4], config);
-                config.filter = nk_filter_binary;
-                text_box(ctx, "Binary:", text[5], &text_len[5], config);               
+                nk_label(ctx, "Default:", NK_TEXT_LEFT);
+                if (nk_widget_is_hovered(ctx))
+                    cursor_set_from_system(CURSOR_TEXT);
+                nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_default);
+                
+                nk_label(ctx, "Int:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[1], &text_len[1], 64, nk_filter_decimal);
+                nk_label(ctx, "Float:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[2], &text_len[2], 64, nk_filter_float);
+                nk_label(ctx, "Hex:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[4], &text_len[4], 64, nk_filter_hex);
+                nk_label(ctx, "Octal:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[5], &text_len[5], 64, nk_filter_oct);
+                nk_label(ctx, "Binary:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_SIMPLE, text[6], &text_len[6], 64, nk_filter_binary);
 
-                int old_len = text_len[8];
-                char buffer[64];
-                for (int i = 0; i < text_len[8]; ++i)
-                    buffer[i] = '*';
+                nk_label(ctx, "Password:", NK_TEXT_LEFT);
+                {
+                    int i = 0;
+                    int old_len = text_len[8];
+                    char buffer[64];
+                    for (i = 0; i < text_len[8]; ++i) buffer[i] = '*';
+                    nk_edit_string(ctx, NK_EDIT_FIELD, buffer, &text_len[8], 64, nk_filter_default);
+                    if (old_len < text_len[8])
+                        memcpy(&text[8][old_len], &buffer[old_len], (nk_size)(text_len[8] - old_len));
+                }
 
-                config.edit_type = NK_EDIT_FIELD;
-                config.filter = nk_filter_default;
-                text_box(ctx, "Password:", buffer, &text_len[8], config);
-                if (old_len < text_len[8])
-                    memcpy(&text[8][old_len], &buffer[old_len], (nk_size)(text_len[8] - old_len));
+                nk_label(ctx, "Field:", NK_TEXT_LEFT);
+                nk_edit_string(ctx, NK_EDIT_FIELD, field_buffer, &field_len, 64, nk_filter_default);
 
-                text_box(ctx, "Field:", field_buffer, &field_len, config);
+                nk_label(ctx, "Box:", NK_TEXT_LEFT);
+                nk_layout_row_static(ctx, 180, 278, 1);
+                nk_edit_string(ctx, NK_EDIT_BOX, box_buffer, &box_len, 512, nk_filter_default);
 
-                config.edit_type = NK_EDIT_BOX;
-                config.max_len = 512;
-                config.height = 180;
-                config.item_width = 278;
-                config.cols = 1;
-                text_box(ctx, "Box:", box_buffer, &box_len, config);
-                config.item_width = 0;
-
-                config.edit_type = NK_EDIT_FIELD|NK_EDIT_SIG_ENTER;
-                config.max_len = 64;
-                config.filter = nk_filter_ascii;
-                config.height = 25;
-                config.cols = 2;
-                config.ratios = ratio;
-
-                active = text_box(ctx, "", text[7], &text_len[7], config);
+                nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
+                active = nk_edit_string(ctx, NK_EDIT_FIELD|NK_EDIT_SIG_ENTER, text[7], &text_len[7], 64,  nk_filter_ascii);
                 if (nk_button_label(ctx, "Submit") ||
                     (active & NK_EDIT_COMMITED))
                 {
