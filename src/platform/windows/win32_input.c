@@ -6,6 +6,48 @@
 #include <Windowsx.h>
 #include <Xinput.h>
 
+global_variable WINDOWPLACEMENT global_window_position_prev = {sizeof(global_window_position_prev)};
+
+internal void win32_toggle_fullscreen(HWND window)
+{
+    // TODO(lucas): Update to use Get/SetWindowLongPtr functions instead of Get/SetWindowLong?
+
+    // NOTE(lucas): Based on Raymond Chen's blog on fullscreen toggling:
+    // https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
+    DWORD style = GetWindowLongA(window, GWL_STYLE);
+    if (style & WS_OVERLAPPEDWINDOW)
+    {
+        MONITORINFO monitor_info = {sizeof(monitor_info)};
+        if (GetWindowPlacement(window, &global_window_position_prev) && 
+            GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor_info))
+        {
+            /* NOTE(lucas): Make sure there are no styles that could potentially cause aritfacts, borders, etc.
+             * in fullscreen mode.
+             * In my case, one of the extended border styles was adding a 2 pixel white border
+             * around the whole screen.
+             */
+            style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+            DWORD ex_style = GetWindowLong(window, GWL_EXSTYLE);
+            ex_style &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+            SetWindowLongA(window, GWL_EXSTYLE, ex_style);
+
+            SetWindowLongA(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+            SetWindowPos(window, HWND_TOP,
+                         monitor_info.rcMonitor.left, monitor_info.rcMonitor.top,
+                         monitor_info.rcMonitor.right - monitor_info.rcMonitor.left,
+                         monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top,
+                         SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    }
+    else
+    {
+        SetWindowLongA(window, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(window, &global_window_position_prev);
+        SetWindowPos(window, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
+}
 
 internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
 {
@@ -232,11 +274,23 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
                     case VK_F12:        win32_process_key(&key_input->keys[KEY_F12], is_down, was_down); break;
                 }
 
-                // Handle Alt+F4 closing window
-                // NOTE(lucas): 29th bit is context (here, whether Alt is down)
-                b32 alt_key_down = msg.lParam & (1 << 29);
-                if ((virtual_key_code == VK_F4) && alt_key_down)
-                    PostQuitMessage(0);
+                if (is_down)
+                {
+                    // Handle Alt+F4 closing window
+                    // NOTE(lucas): 29th bit is context (here, whether Alt is down)
+                    b32 alt_key_down = msg.lParam & (1 << 29);
+                    if ((virtual_key_code == VK_F4) && alt_key_down)
+                        PostQuitMessage(0);
+
+                    // NOTE(lucas): Fullscreen key set to F11 for now,
+                    // but probably want ot make this configurable in the future
+                    // Also want to allow key combos like ALT+ENTER
+                    if (virtual_key_code == VK_F11)
+                    {
+                        if (msg.hwnd)
+                            win32_toggle_fullscreen(msg.hwnd);
+                    }
+                }
 
                 TranslateMessage(&msg);
             } break;
@@ -318,6 +372,17 @@ void cursor_set_from_system(CursorType type)
         // TODO(lucas): Logging, invalid type value
         default: break;
     }
+    SetCursor(cursor);
+}
+
+void* cursor_load_from_file(const char* filename)
+{
+    HCURSOR cursor = LoadImageA(NULL, filename, IMAGE_CURSOR, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE);
+    return cursor;
+}
+
+void cursor_set_from_memory(void* cursor)
+{
     SetCursor(cursor);
 }
 

@@ -166,7 +166,6 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-    glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
 }
 

@@ -33,9 +33,10 @@ typedef enum ChartType
     CHART_MIXED
 } ChartType;
 
-int ui_overview(struct nk_context *ctx)
+int ui_overview(struct nk_context *ctx, u32 window_width)
 {
     /* window flags */
+    local_persist b32 first_frame  = true;
     local_persist b32 show_menu    = true;
     local_persist b32 titlebar     = true;
     local_persist b32 border       = true;
@@ -59,9 +60,16 @@ int ui_overview(struct nk_context *ctx)
     if (no_scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
     if (scale_left) window_flags   |= NK_WINDOW_SCALE_LEFT;
     if (minimizable) window_flags  |= NK_WINDOW_MINIMIZABLE;
+    if (first_frame) window_flags  |= NK_WINDOW_MINIMIZED;
 
-    if (nk_begin(ctx, "Overview", nk_rect(10.0f, 10.0f, 400.0f, 600.0f), window_flags))
+    f32 ui_width = 400.0f;
+    f32 ui_height = 600.0f;
+    f32 ui_x = (f32)window_width - ui_width - 10.0f;
+    f32 ui_y = 10.0f;
+
+    if (nk_begin(ctx, "Overview", nk_rect(ui_x, ui_y, ui_width, ui_height), window_flags))
     {
+        first_frame = false;
         if (show_menu)
         {
             /* menubar */
