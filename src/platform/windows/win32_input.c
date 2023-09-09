@@ -284,6 +284,7 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
 
                     // NOTE(lucas): Fullscreen key set to F11 for now,
                     // but probably want ot make this configurable in the future
+                    // Also want to allow key combos like ALT+ENTER
                     if (virtual_key_code == VK_F11)
                     {
                         if (msg.hwnd)
@@ -371,6 +372,17 @@ void cursor_set_from_system(CursorType type)
         // TODO(lucas): Logging, invalid type value
         default: break;
     }
+    SetCursor(cursor);
+}
+
+void* cursor_load_from_file(const char* filename)
+{
+    HCURSOR cursor = LoadImageA(NULL, filename, IMAGE_CURSOR, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE);
+    return cursor;
+}
+
+void cursor_set_from_memory(void* cursor)
+{
     SetCursor(cursor);
 }
 

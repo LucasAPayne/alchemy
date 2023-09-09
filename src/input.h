@@ -134,6 +134,8 @@ typedef enum CursorType
 /* Wrappers for platform-specific functions */
 void cursor_show(bool show);
 void cursor_set_from_system(CursorType type);
+void* cursor_load_from_file(const char* filename);
+void cursor_set_from_memory(void* cursor);
 
 // TODO(lucas): load_cursor, set_cursor
 

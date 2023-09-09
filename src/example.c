@@ -178,6 +178,9 @@ void init_example_state(ExampleState* state)
     timer_init(&state->dash_cooldown, 2.0f, false);
     stopwatch_init(&state->stopwatch, false);
 
+    state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
+    state->use_sword_cursror = false;
+
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
     state->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
@@ -209,7 +212,17 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     Gamepad* gamepad = &state->input.gamepads[0];
     update_dvd(state, delta_time, window_width, window_height);
     update_player(state, delta_time, window_width, window_height);  
-        
+
+    if (is_key_pressed(&state->input.keyboard, KEY_LBRACKET))
+        state->use_sword_cursror = true;
+    if (is_key_pressed(&state->input.keyboard, KEY_RBRACKET))
+        state->use_sword_cursror = false;
+
+    if (state->use_sword_cursror)
+        cursor_set_from_memory(state->sword_cursor);
+    else
+        cursor_set_from_system(CURSOR_ARROW);
+
     state->sound_output.should_play = false;
     if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
     {

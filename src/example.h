@@ -34,6 +34,9 @@ typedef struct ExampleState
 
     Stopwatch stopwatch;
 
+    b32 use_sword_cursror;
+    void* sword_cursor;
+
     struct nk_alchemy_state alchemy_state;
     struct nk_font* immortal;
 } ExampleState;
