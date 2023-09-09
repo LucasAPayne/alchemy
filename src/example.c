@@ -154,7 +154,6 @@ void init_example_state(ExampleState* state)
     state->logo.rotation = 0.0f;
     state->logo_x_direction = 1.0f;
     state->logo_y_direction = 1.0f;
-    state->clear_color = (v3){0.2f, 0.2f, 0.2f};
 
     u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player.renderer = &state->sprite_renderer;
@@ -181,7 +180,7 @@ void init_example_state(ExampleState* state)
 
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
-    state->bg = (struct nk_colorf){0.10f, 0.18f, 0.24f, 1.0f};
+    state->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
     state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
     struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
@@ -238,7 +237,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     glViewport(0, 0, window_width, window_height);
     glClear(GL_COLOR_BUFFER_BIT);
-    glClearColor(state->bg.r, state->bg.g, state->bg.b, state->bg.a);
+    glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, state->clear_color.a);
 
     m4 projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
     shader_set_m4(state->font_renderer.shader, "projection", projection, 0);

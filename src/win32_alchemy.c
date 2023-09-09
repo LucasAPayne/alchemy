@@ -199,7 +199,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND window, UINT msg, WPAR
             global_running = false;
             PostQuitMessage(0);
         } break;
-        
+
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
@@ -295,7 +295,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
         HDC device_context = GetDC(window);
         Win32WindowDimensions dimensions = win32_get_window_dimensions(window);
-       
+
         f32 delta_time = win32_get_seconds_elapsed(start_ticks, win32_get_ticks(), ticks_per_second);
         start_ticks = win32_get_ticks();
         example_update_and_render(&state, delta_time, dimensions.width, dimensions.height);

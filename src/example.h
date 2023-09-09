@@ -27,18 +27,14 @@ typedef struct ExampleState
     f32 dash_distance;
     Timer dash_cooldown;
 
-    v3 clear_color;
+    v4 clear_color;
 
     SoundOutput sound_output;
     b32 is_shooting;
 
     Stopwatch stopwatch;
 
-    // nk_user_font debug_panel_font;
-    // nk_context debug_panel;
-
     struct nk_alchemy_state alchemy_state;
-    struct nk_colorf bg;
     struct nk_font* immortal;
 } ExampleState;
 
