@@ -1,4 +1,4 @@
-#include "win32_input.h"
+#include "platform/windows/win32_input.h"
 #include "input.h"
 #include "util/types.h"
 

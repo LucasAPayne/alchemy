@@ -4,8 +4,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 project(alchemy)
 
 add_executable(${PROJECT_NAME} WIN32
-               ${PROJECT_SOURCE_DIR}/src/win32_alchemy.c
-               ${PROJECT_SOURCE_DIR}/src/example.c
+               ${PROJECT_SOURCE_DIR}/example/example.c
+               ${PROJECT_SOURCE_DIR}/example/ui_overview.c
+               ${PROJECT_SOURCE_DIR}/example/win32_alchemy.c
                ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
                ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
                ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
@@ -16,11 +17,10 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
                ${PROJECT_SOURCE_DIR}/src/util/time.c
-               ${PROJECT_SOURCE_DIR}/src/ui.c
-               ${PROJECT_SOURCE_DIR}/src/ui_overview.c)
+               ${PROJECT_SOURCE_DIR}/src/ui.c)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-            ${PROJECT_SOURCE_DIR}/src)
+            ${PROJECT_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
             ${PROJECT_SOURCE_DIR}/lib

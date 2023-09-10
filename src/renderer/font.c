@@ -1,6 +1,6 @@
-#include "font.h"
-#include "shader.h"
-#include "texture.h"
+#include "renderer/font.h"
+#include "renderer/shader.h"
+#include "renderer/texture.h"
 #include "util/types.h"
 
 #include <glad/glad.h>
