@@ -295,6 +295,13 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
                 TranslateMessage(&msg);
             } break;
 
+            // TODO(lucas): WM_QUIT has stopped being picked up by the window callback for some reason
+            // and instead gets picked up here.
+            case WM_QUIT:
+            {
+                DestroyWindow(window);
+            } break;
+
             case WM_CHAR:
             {
                 key_input->current_char = msg.wParam;
