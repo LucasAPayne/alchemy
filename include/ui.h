@@ -39,7 +39,6 @@ typedef struct nk_alchemy_state {
     struct nk_vec2 fb_scale;
     u32 text[NK_ALCHEMY_TEXT_MAX];
     int text_len;
-    struct nk_vec2 scroll;
 
     Keyboard* keyboard;
     Mouse* mouse;

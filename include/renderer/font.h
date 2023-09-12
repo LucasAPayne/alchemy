@@ -15,6 +15,6 @@ typedef struct FontRenderer
     FT_Face face;
 } FontRenderer;
 
-void init_font_renderer(FontRenderer* font_renderer, u32 shader, const char* filename);
-void delete_font_renderer(FontRenderer* font_renderer);
+void font_renderer_init(FontRenderer* font_renderer, u32 shader, const char* filename);
+void font_renderer_delete(FontRenderer* font_renderer);
 void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32 pt, v4 color);

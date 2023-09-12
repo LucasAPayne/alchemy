@@ -5,7 +5,7 @@
 
 #include <glad/glad.h>
 
-void init_font_renderer(FontRenderer* font_renderer, u32 shader, const char* filename)
+void font_renderer_init(FontRenderer* font_renderer, u32 shader, const char* filename)
 {
     FT_Library ft;
     if (FT_Init_FreeType(&ft))
@@ -54,7 +54,7 @@ void init_font_renderer(FontRenderer* font_renderer, u32 shader, const char* fil
     font_renderer->ibo = ibo;
 }
 
-void delete_font_renderer(FontRenderer* font_renderer)
+void font_renderer_delete(FontRenderer* font_renderer)
 {
     glDeleteVertexArrays(1, &font_renderer->vao);
     glDeleteBuffers(1, &font_renderer->vbo);
@@ -118,5 +118,5 @@ void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32
     }
 
     glBindVertexArray(0);
-    unbind_texture();
+    texture_unbind();
 }

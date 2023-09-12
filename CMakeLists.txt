@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-project(alchemy)
+project(alchemy VERSION 0.1)
 
 add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/example/example.c

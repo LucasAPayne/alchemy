@@ -107,42 +107,42 @@ u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path
     return shader_program;
 }
 
-void bind_shader(u32 id)
+void shader_bind(u32 id)
 {
     glUseProgram(id);
 }
 
-void unbind_shader()
+void shader_unbind()
 {
     glUseProgram(0);
 }
 
-void delete_shader(u32 id)
+void shader_delete(u32 id)
 {
     glDeleteProgram(id);
 }
 
 void shader_set_v3(u32 shader, const char* name, v3 value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform3f(glGetUniformLocation(shader, name), value.x, value.y, value.z);
 }
 
 void shader_set_v4(u32 shader, const char* name, v4 value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
 void shader_set_m4(u32 shader, const char* name, m4 value, b32 transpose)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
 }
 
 
 void shader_set_int(u32 shader, const char* name, int value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform1i(glGetUniformLocation(shader, name), value);
 }

@@ -277,11 +277,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
     win32_init_opengl(window);
 
-    Win32XAudio2State xaudio2_state;
-    win32_init_xaudio2(&xaudio2_state);
+    XAudio2State xaudio2_state;
+    xaudio2_state_init(&xaudio2_state);
 
     ExampleState state;
-    init_example_state(&state);
+    example_state_init(&state);
 
     i64 start_ticks = win32_get_ticks();
 
@@ -310,6 +310,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         old_input = state.input;
     }
 
-    delete_example_state(&state);
+    example_state_delete(&state);
     return 0;
 }

@@ -56,12 +56,12 @@ typedef struct Keyboard
     // char_callback_func char_callback;
 } Keyboard;
 
-inline bool is_key_pressed(Keyboard* input, int key)
+inline bool key_pressed(Keyboard* input, int key)
 {
     return input->keys[key].is_pressed;
 }
 
-inline bool is_key_released(Keyboard* input, int key)
+inline bool key_released(Keyboard* input, int key)
 {
     return input->keys[key].is_released;
 }
@@ -90,17 +90,17 @@ typedef struct Mouse
     ButtonState buttons[MOUSE_NUM_BUTTONS];
 } Mouse;
 
-inline bool is_mouse_button_pressed(Mouse* mouse, int button)
+inline bool mouse_button_pressed(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_pressed;
 }
 
-inline bool is_mouse_button_released(Mouse* mouse, int button)
+inline bool mouse_button_released(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_released;
 }
 
-inline bool is_mouse_button_double_clicked(Mouse* mouse, int button)
+inline bool mouse_button_double_clicked(Mouse* mouse, int button)
 {
     return mouse->buttons[button].is_double_clicked;
 }
@@ -132,12 +132,10 @@ typedef enum CursorType
 } CursorType;
 
 /* Wrappers for platform-specific functions */
-void cursor_show(bool show);
-void cursor_set_from_system(CursorType type);
+void  cursor_show(bool show);
+void  cursor_set_from_system(CursorType type);
 void* cursor_load_from_file(const char* filename);
-void cursor_set_from_memory(void* cursor);
-
-// TODO(lucas): load_cursor, set_cursor
+void  cursor_set_from_memory(void* cursor);
 
 /* Gamepad */
 // TODO(lucas): Add support for multiple gamepads
@@ -209,12 +207,12 @@ typedef struct Gamepad
     };  
 } Gamepad;
 
-inline bool is_gamepad_button_pressed(ButtonState button)
+inline bool gamepad_button_pressed(ButtonState button)
 {
     return button.is_pressed;
 }
 
-inline bool is_gamepad_button_released(ButtonState button)
+inline bool gamepad_button_released(ButtonState button)
 {
     return button.is_released;
 }
@@ -234,5 +232,5 @@ typedef struct Input
 } Input;
 
 /* Clipboard */
-bool clipboard_write_string(char* text);
+bool  clipboard_write_string(char* text);
 char* clipboard_read_string(void);

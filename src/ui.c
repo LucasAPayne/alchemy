@@ -44,7 +44,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
         glVertexAttribPointer((GLuint)dev->attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
     }
 
-    unbind_texture();
+    texture_unbind();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -61,8 +61,8 @@ void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, 
 void nk_alchemy_device_destroy(nk_alchemy_state* state)
 {
     nk_alchemy_device *dev = &state->device;
-    delete_shader(dev->shader);
-    delete_texture(dev->font_tex);
+    shader_delete(dev->shader);
+    texture_delete(dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
     nk_buffer_free(&dev->cmds);
@@ -93,7 +93,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     glActiveTexture(GL_TEXTURE0);
 
     /* setup program */
-    bind_shader(dev->shader);
+    shader_bind(dev->shader);
     shader_set_int(dev->shader, "tex", 0);
     shader_set_m4(dev->shader, "projection", ortho, false);
     glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
@@ -148,7 +148,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
         nk_draw_foreach(cmd, &state->ctx, &dev->cmds)
         {
             if (!cmd->elem_count) continue;
-            bind_texture((u32)cmd->texture.id, 0);
+            texture_bind((u32)cmd->texture.id, 0);
             glScissor(
                 (GLint)(cmd->clip_rect.x * state->fb_scale.x),
                 (GLint)((state->height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * state->fb_scale.y),
@@ -162,7 +162,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
     }
 
     /* default OpenGL state */
-    unbind_shader();
+    shader_unbind();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -229,6 +229,8 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
 void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height)
 {
     struct nk_context* ctx = &state->ctx;
+    Keyboard* keyboard = state->keyboard;
+    Mouse* mouse = state->mouse;
 
     state->width = window_width;
     state->height = window_height;
@@ -240,57 +242,56 @@ void nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_
     nk_input_begin(ctx);
 
     // text input
-    nk_alchemy_enter_char(state, state->keyboard->current_char);
+    nk_alchemy_enter_char(state, keyboard->current_char);
     for (int i = 0; i < state->text_len; ++i)
         nk_input_unicode(ctx, state->text[i]);
 
-    nk_input_key(ctx, NK_KEY_DEL, is_key_pressed(state->keyboard, KEY_DEL));
-    nk_input_key(ctx, NK_KEY_ENTER, is_key_pressed(state->keyboard, KEY_ENTER));
-    nk_input_key(ctx, NK_KEY_TAB, is_key_pressed(state->keyboard, KEY_TAB));
-    nk_input_key(ctx, NK_KEY_BACKSPACE, is_key_pressed(state->keyboard, KEY_BACKSPACE));
-    nk_input_key(ctx, NK_KEY_UP, is_key_pressed(state->keyboard, KEY_UP));
-    nk_input_key(ctx, NK_KEY_DOWN, is_key_pressed(state->keyboard, KEY_DOWN));
-    nk_input_key(ctx, NK_KEY_TEXT_START, is_key_pressed(state->keyboard, KEY_HOME));
-    nk_input_key(ctx, NK_KEY_TEXT_END, is_key_pressed(state->keyboard, KEY_END));
-    nk_input_key(ctx, NK_KEY_SCROLL_START, is_key_pressed(state->keyboard, KEY_HOME));
-    nk_input_key(ctx, NK_KEY_SCROLL_END, is_key_pressed(state->keyboard, KEY_END));
-    nk_input_key(ctx, NK_KEY_SCROLL_DOWN, is_key_pressed(state->keyboard, KEY_PAGEDOWN));
-    nk_input_key(ctx, NK_KEY_SCROLL_UP, is_key_pressed(state->keyboard, KEY_PAGEUP));
-    nk_input_key(ctx, NK_KEY_SHIFT, is_key_pressed(state->keyboard, KEY_LSHIFT) || is_key_pressed(state->keyboard, KEY_RSHIFT));
+    nk_input_key(ctx, NK_KEY_DEL,          key_pressed(keyboard, KEY_DEL));
+    nk_input_key(ctx, NK_KEY_ENTER,        key_pressed(keyboard, KEY_ENTER));
+    nk_input_key(ctx, NK_KEY_TAB,          key_pressed(keyboard, KEY_TAB));
+    nk_input_key(ctx, NK_KEY_BACKSPACE,    key_pressed(keyboard, KEY_BACKSPACE));
+    nk_input_key(ctx, NK_KEY_UP,           key_pressed(keyboard, KEY_UP));
+    nk_input_key(ctx, NK_KEY_DOWN,         key_pressed(keyboard, KEY_DOWN));
+    nk_input_key(ctx, NK_KEY_TEXT_START,   key_pressed(keyboard, KEY_HOME));
+    nk_input_key(ctx, NK_KEY_TEXT_END,     key_pressed(keyboard, KEY_END));
+    nk_input_key(ctx, NK_KEY_SCROLL_START, key_pressed(keyboard, KEY_HOME));
+    nk_input_key(ctx, NK_KEY_SCROLL_END,   key_pressed(keyboard, KEY_END));
+    nk_input_key(ctx, NK_KEY_SCROLL_DOWN,  key_pressed(keyboard, KEY_PAGEDOWN));
+    nk_input_key(ctx, NK_KEY_SCROLL_UP,    key_pressed(keyboard, KEY_PAGEUP));
+    nk_input_key(ctx, NK_KEY_SHIFT,        key_pressed(keyboard, KEY_LSHIFT) ||
+                                           key_pressed(keyboard, KEY_RSHIFT));
 
-    if (is_key_pressed(state->keyboard, KEY_LCONTROL) || is_key_pressed(state->keyboard, KEY_RCONTROL))
+    if (key_pressed(keyboard, KEY_LCONTROL) || key_pressed(keyboard, KEY_RCONTROL))
     {
-        nk_input_key(ctx, NK_KEY_COPY, is_key_pressed(state->keyboard, KEY_C));
-        nk_input_key(ctx, NK_KEY_PASTE, is_key_pressed(state->keyboard, KEY_V));
-        nk_input_key(ctx, NK_KEY_CUT, is_key_pressed(state->keyboard, KEY_X));
-        nk_input_key(ctx, NK_KEY_TEXT_UNDO, is_key_pressed(state->keyboard, KEY_Z));
-        nk_input_key(ctx, NK_KEY_TEXT_REDO, is_key_pressed(state->keyboard, KEY_Y));
-        nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
-        nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
-        nk_input_key(ctx, NK_KEY_TEXT_LINE_START, is_key_pressed(state->keyboard, KEY_B));
-        nk_input_key(ctx, NK_KEY_TEXT_LINE_END, is_key_pressed(state->keyboard, KEY_E));
+        nk_input_key(ctx, NK_KEY_COPY,            key_pressed(keyboard, KEY_C));
+        nk_input_key(ctx, NK_KEY_PASTE,           key_pressed(keyboard, KEY_V));
+        nk_input_key(ctx, NK_KEY_CUT,             key_pressed(keyboard, KEY_X));
+        nk_input_key(ctx, NK_KEY_TEXT_UNDO,       key_pressed(keyboard, KEY_Z));
+        nk_input_key(ctx, NK_KEY_TEXT_REDO,       key_pressed(keyboard, KEY_Y));
+        nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT,  key_pressed(keyboard, KEY_LEFT));
+        nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, key_pressed(keyboard, KEY_RIGHT));
+        nk_input_key(ctx, NK_KEY_TEXT_LINE_START, key_pressed(keyboard, KEY_B));
+        nk_input_key(ctx, NK_KEY_TEXT_LINE_END,   key_pressed(keyboard, KEY_E));
     }
     else
     {
-        nk_input_key(ctx, NK_KEY_LEFT, is_key_pressed(state->keyboard, KEY_LEFT));
-        nk_input_key(ctx, NK_KEY_RIGHT, is_key_pressed(state->keyboard, KEY_RIGHT));
+        nk_input_key(ctx, NK_KEY_LEFT, key_pressed(keyboard, KEY_LEFT));
+        nk_input_key(ctx, NK_KEY_RIGHT, key_pressed(keyboard, KEY_RIGHT));
         nk_input_key(ctx, NK_KEY_COPY, 0);
         nk_input_key(ctx, NK_KEY_PASTE, 0);
         nk_input_key(ctx, NK_KEY_CUT, 0);
         nk_input_key(ctx, NK_KEY_SHIFT, 0);
     }
 
-    nk_input_motion(ctx, state->mouse->x, state->mouse->y);
-    nk_input_scroll(ctx, nk_vec2(0.0f, (f32)state->mouse->scroll));
+    nk_input_motion(ctx, mouse->x, mouse->y);
+    nk_input_scroll(ctx, nk_vec2(0.0f, (f32)mouse->scroll));
 
-    nk_input_button(ctx, NK_BUTTON_LEFT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_LEFT));
-    nk_input_button(ctx, NK_BUTTON_MIDDLE, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_MIDDLE));
-    nk_input_button(ctx, NK_BUTTON_RIGHT, state->mouse->x, state->mouse->y, is_mouse_button_pressed(state->mouse, MOUSE_RIGHT));
-    nk_input_button(ctx, NK_BUTTON_DOUBLE, state->mouse->x, state->mouse->y, is_mouse_button_double_clicked(state->mouse, MOUSE_LEFT));
-    nk_input_scroll(ctx, state->scroll);
+    nk_input_button(ctx, NK_BUTTON_LEFT, mouse->x, mouse->y,   mouse_button_pressed(mouse, MOUSE_LEFT));
+    nk_input_button(ctx, NK_BUTTON_MIDDLE, mouse->x, mouse->y, mouse_button_pressed(mouse, MOUSE_MIDDLE));
+    nk_input_button(ctx, NK_BUTTON_RIGHT, mouse->x, mouse->y,  mouse_button_pressed(mouse, MOUSE_RIGHT));
+    nk_input_button(ctx, NK_BUTTON_DOUBLE, mouse->x, mouse->y, mouse_button_double_clicked(mouse, MOUSE_LEFT));
     nk_input_end(&state->ctx);
     state->text_len = 0;
-    state->scroll = nk_vec2(0,0);
 }
 
 void nk_alchemy_shutdown(nk_alchemy_state* state)

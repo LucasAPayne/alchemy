@@ -70,13 +70,13 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     // Dash
     if (!state->dash_cooldown.is_active)
     {
-        if (is_gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
+        if (gamepad_button_released(gamepad->left_shoulder) && state->dash_counter == 0)
         {
             state->dash_counter = state->dash_frames;
             state->dash_direction = -1.0f;
             timer_start(&state->dash_cooldown);
         }
-        if (is_gamepad_button_released(gamepad->right_shoulder) && state->dash_counter == 0)
+        if (gamepad_button_released(gamepad->right_shoulder) && state->dash_counter == 0)
         {
             state->dash_counter = state->dash_frames;
             state->dash_direction = 1.0f;
@@ -115,8 +115,8 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         state->player.rotation = 45.0f;
     if (state->player.rotation < -45.0f)
         state->player.rotation = -45.0f;
-    if (!is_gamepad_button_pressed(gamepad->left_trigger) &&
-        !is_gamepad_button_pressed(gamepad->right_trigger))
+    if (!gamepad_button_pressed(gamepad->left_trigger) &&
+        !gamepad_button_pressed(gamepad->right_trigger))
     {
         if (state->player.rotation > 0.0f)
             state->player.rotation -= 2.0f;
@@ -127,11 +127,11 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     }
 
     // Vibration test
-    if (is_gamepad_button_pressed(gamepad->x_button))
+    if (gamepad_button_pressed(gamepad->x_button))
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-void init_example_state(ExampleState* state)
+void example_state_init(ExampleState* state)
 {
     srand(0);
     *state = (ExampleState){0};
@@ -141,9 +141,9 @@ void init_example_state(ExampleState* state)
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    init_sprite_renderer(&state->sprite_renderer, sprite_shader);
-    init_font_renderer(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
-    init_font_renderer(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
+    sprite_renderer_init(&state->sprite_renderer, sprite_shader);
+    font_renderer_init(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    font_renderer_init(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
     u32 logo_tex = generate_texture_from_file("textures/dvd.png");
     state->logo.renderer = &state->sprite_renderer;
@@ -195,13 +195,13 @@ void init_example_state(ExampleState* state)
     state->alchemy_state.mouse = &state->input.mouse;
 }
 
-void delete_example_state(ExampleState* state)
+void example_state_delete(ExampleState* state)
 {
-    delete_font_renderer(&state->font_renderer);
-    delete_font_renderer(&state->frame_time_renderer);
-    delete_sprite_renderer(&state->sprite_renderer);
-    delete_texture(state->logo.texture);
-    delete_texture(state->player.texture);
+    font_renderer_delete(&state->font_renderer);
+    font_renderer_delete(&state->frame_time_renderer);
+    sprite_renderer_delete(&state->sprite_renderer);
+    texture_delete(state->logo.texture);
+    texture_delete(state->player.texture);
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
@@ -213,9 +213,9 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     update_dvd(state, delta_time, window_width, window_height);
     update_player(state, delta_time, window_width, window_height);  
 
-    if (is_key_pressed(&state->input.keyboard, KEY_LBRACKET))
+    if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         state->use_sword_cursror = true;
-    if (is_key_pressed(&state->input.keyboard, KEY_RBRACKET))
+    if (key_pressed(&state->input.keyboard, KEY_RBRACKET))
         state->use_sword_cursror = false;
 
     if (state->use_sword_cursror)
@@ -224,15 +224,15 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
         cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;
-    if (is_gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
+    if (gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
     {
         state->is_shooting = true;
         state->sound_output.should_play = true;
     }
-    if (is_gamepad_button_released(gamepad->a_button))
+    if (gamepad_button_released(gamepad->a_button))
         state->is_shooting = false;
     
-    if (is_gamepad_button_released(gamepad->y_button))
+    if (gamepad_button_released(gamepad->y_button))
     {
         if (state->stopwatch.is_active)
             stopwatch_stop(&state->stopwatch);
@@ -240,7 +240,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
             stopwatch_start(&state->stopwatch);
     }
 
-    if (is_gamepad_button_released(gamepad->b_button))
+    if (gamepad_button_released(gamepad->b_button))
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */

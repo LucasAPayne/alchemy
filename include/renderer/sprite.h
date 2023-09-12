@@ -10,8 +10,8 @@ typedef struct SpriteRenderer
     u32 ibo;
 } SpriteRenderer;
 
-void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader);
-void delete_sprite_renderer(SpriteRenderer* sprite_renderer);
+void sprite_renderer_init(SpriteRenderer* sprite_renderer, u32 shader);
+void sprite_renderer_delete(SpriteRenderer* sprite_renderer);
 
 typedef struct Sprite
 {

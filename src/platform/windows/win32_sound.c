@@ -36,7 +36,7 @@ global_variable IXAudio2VoiceCallback xaudio_callbacks = {
     }
 };
 
-void win32_init_xaudio2(Win32XAudio2State* xaudio2_state)
+void xaudio2_state_init(XAudio2State* xaudio2_state)
 {
     xaudio2_state->xaudio2 = NULL;
     if (FAILED(XAudio2Create(&xaudio2_state->xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
@@ -135,7 +135,7 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-void win32_process_sound_output(SoundOutput* sound_output, Win32XAudio2State* xaudio2_state)
+void win32_process_sound_output(SoundOutput* sound_output, XAudio2State* xaudio2_state)
 {
     WAVEFORMATEX wave = {0};
     XAUDIO2_BUFFER buffer = {0};

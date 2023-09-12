@@ -5,6 +5,6 @@
 u32 generate_texture();
 u32 generate_texture_from_file(const char* filename);
 
-void bind_texture(u32 texture, u32 slot);
-void unbind_texture(void);
-void delete_texture(u32 texture);
+void texture_bind(u32 texture, u32 slot);
+void texture_unbind(void);
+void texture_delete(u32 texture);

@@ -63,18 +63,18 @@ u32 generate_texture()
     return texture;
 }
 
-void bind_texture(u32 texture, u32 slot)
+void texture_bind(u32 texture, u32 slot)
 {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, texture);
 }
 
-void unbind_texture(void)
+void texture_unbind(void)
 {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void delete_texture(u32 texture)
+void texture_delete(u32 texture)
 {
     glDeleteTextures(1, &texture);
 }

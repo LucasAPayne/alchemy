@@ -6,7 +6,7 @@
 
 #include <glad/glad.h>
 
-void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
+void sprite_renderer_init(SpriteRenderer* sprite_renderer, u32 shader)
 {
     f32 vertices[] = 
     { 
@@ -50,12 +50,12 @@ void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
     sprite_renderer->ibo = ibo;
 }
 
-void delete_sprite_renderer(SpriteRenderer* sprite_renderer)
+void sprite_renderer_delete(SpriteRenderer* sprite_renderer)
 {
     glDeleteVertexArrays(1, &sprite_renderer->vao);
     glDeleteBuffers(1, &sprite_renderer->vbo);
     glDeleteBuffers(1, &sprite_renderer->ibo);
-    delete_shader(sprite_renderer->shader);
+    shader_delete(sprite_renderer->shader);
 }
 
 // TODO(lucas): Allow using only color and no texture
@@ -79,7 +79,7 @@ void draw_sprite(Sprite sprite)
     shader_set_m4(sprite.renderer->shader, "model", model, 0);
     shader_set_v3(sprite.renderer->shader, "color", sprite.color);
 
-    bind_texture(sprite.texture, 0);
+    texture_bind(sprite.texture, 0);
 
     glBindVertexArray(sprite.renderer->vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
