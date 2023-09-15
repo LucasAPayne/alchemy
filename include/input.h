@@ -6,10 +6,16 @@
 
 typedef struct ButtonState
 {
-    bool is_pressed;
-    bool is_released;
-    bool is_double_clicked;
+    b32 pressed;
+    b32 released;
 } ButtonState;
+
+typedef struct MouseButtonState
+{
+    b32 pressed;
+    b32 released;
+    b32 double_clicked;
+} MouseButtonState;
 
 /* Keyboard */
 /* IMPORTANT(lucas): This enum is used for array indexing.
@@ -56,14 +62,14 @@ typedef struct Keyboard
     // char_callback_func char_callback;
 } Keyboard;
 
-inline bool key_pressed(Keyboard* input, int key)
+inline b32 key_pressed(Keyboard* input, int key)
 {
-    return input->keys[key].is_pressed;
+    return input->keys[key].pressed;
 }
 
-inline bool key_released(Keyboard* input, int key)
+inline b32 key_released(Keyboard* input, int key)
 {
-    return input->keys[key].is_released;
+    return input->keys[key].released;
 }
 
 /* Mouse */
@@ -87,22 +93,22 @@ typedef struct Mouse
     i32 x;
     i32 y;
     i32 scroll;
-    ButtonState buttons[MOUSE_NUM_BUTTONS];
+    MouseButtonState buttons[MOUSE_NUM_BUTTONS];
 } Mouse;
 
-inline bool mouse_button_pressed(Mouse* mouse, int button)
+inline b32 mouse_button_pressed(Mouse* mouse, int button)
 {
-    return mouse->buttons[button].is_pressed;
+    return mouse->buttons[button].pressed;
 }
 
-inline bool mouse_button_released(Mouse* mouse, int button)
+inline b32 mouse_button_released(Mouse* mouse, int button)
 {
-    return mouse->buttons[button].is_released;
+    return mouse->buttons[button].released;
 }
 
-inline bool mouse_button_double_clicked(Mouse* mouse, int button)
+inline b32 mouse_button_double_clicked(Mouse* mouse, int button)
 {
-    return mouse->buttons[button].is_double_clicked;
+    return mouse->buttons[button].double_clicked;
 }
 
 /* Cursor */
@@ -132,7 +138,7 @@ typedef enum CursorType
 } CursorType;
 
 /* Wrappers for platform-specific functions */
-void  cursor_show(bool show);
+void  cursor_show(b32 show);
 void  cursor_set_from_system(CursorType type);
 void* cursor_load_from_file(const char* filename);
 void  cursor_set_from_memory(void* cursor);
@@ -207,14 +213,14 @@ typedef struct Gamepad
     };  
 } Gamepad;
 
-inline bool gamepad_button_pressed(ButtonState button)
+inline b32 gamepad_button_pressed(ButtonState button)
 {
-    return button.is_pressed;
+    return button.pressed;
 }
 
-inline bool gamepad_button_released(ButtonState button)
+inline b32 gamepad_button_released(ButtonState button)
 {
-    return button.is_released;
+    return button.released;
 }
 
 inline void gamepad_set_vibration(Gamepad* pad, u16 left_vibration, u16 right_vibration)
@@ -232,5 +238,5 @@ typedef struct Input
 } Input;
 
 /* Clipboard */
-bool  clipboard_write_string(char* text);
+b32  clipboard_write_string(char* text);
 char* clipboard_read_string(void);

@@ -80,8 +80,8 @@ internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
 
 internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
 {
-    key->is_pressed = is_down;
-    key->is_released = was_down && !is_down;
+    key->pressed = is_down;
+    key->released = was_down && !is_down;
 }
 
 internal int win32_get_mouse_xbutton(MSG msg)
@@ -97,7 +97,7 @@ internal int win32_get_mouse_xbutton(MSG msg)
     return result;
 }
 
-internal void win32_process_mouse_button(ButtonState* button, int clicks)
+internal void win32_process_mouse_button(MouseButtonState* button, int clicks)
 {
     // NOTE(lucas): Clicks is the number of times key was pressed:
     // 0: released, 1: pressed, 2: double click
@@ -105,18 +105,18 @@ internal void win32_process_mouse_button(ButtonState* button, int clicks)
     {
         case 0: // released
         {
-            button->is_released = true;
-            button->is_pressed = false;
+            button->released = true;
+            button->pressed = false;
         } break;
 
         case 1: // pressed
         {
-            button->is_pressed = true;
+            button->pressed = true;
         } break;
 
         case 2: // double clicked
         {
-            button->is_double_clicked = true;
+            button->double_clicked = true;
         } break;
     }
 }
@@ -129,13 +129,13 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
 
     // Release state should not persist, so make sure it is false for each button
     for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
-        key_input->keys[key].is_released = false;
+        key_input->keys[key].released = false;
 
     // Release and double click state should not persist, so set it to false
     for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
     {
-        mouse->buttons[button].is_released = false;
-        mouse->buttons[button].is_double_clicked = false;
+        mouse->buttons[button].released = false;
+        mouse->buttons[button].double_clicked = false;
     }
     mouse->scroll = 0;
 
@@ -341,7 +341,7 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
     }
 }
 
-void cursor_show(bool show)
+void cursor_show(b32 show)
 {
     ShowCursor(show);
 }
@@ -395,8 +395,8 @@ void cursor_set_from_memory(void* cursor)
 
 internal void win32_xinput_button_release(ButtonState* button)
 {
-    button->is_released = true;
-    button->is_pressed  = false; 
+    button->released = true;
+    button->pressed  = false; 
 }
 
 internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* gamepad)
@@ -409,43 +409,43 @@ internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* 
     {
         switch(keystroke.VirtualKey)
         {
-            case VK_PAD_A: gamepad->a_button.is_pressed = true; break;
-            case VK_PAD_B: gamepad->b_button.is_pressed = true; break;
-            case VK_PAD_X: gamepad->x_button.is_pressed = true; break;
-            case VK_PAD_Y: gamepad->y_button.is_pressed = true; break;
+            case VK_PAD_A: gamepad->a_button.pressed = true; break;
+            case VK_PAD_B: gamepad->b_button.pressed = true; break;
+            case VK_PAD_X: gamepad->x_button.pressed = true; break;
+            case VK_PAD_Y: gamepad->y_button.pressed = true; break;
 
-            case VK_PAD_LSHOULDER: gamepad->left_shoulder.is_pressed  = true; break;
-            case VK_PAD_RSHOULDER: gamepad->right_shoulder.is_pressed = true; break;
-            case VK_PAD_LTRIGGER:  gamepad->left_trigger.is_pressed   = true; break;
-            case VK_PAD_RTRIGGER:  gamepad->right_trigger.is_pressed  = true; break;
+            case VK_PAD_LSHOULDER: gamepad->left_shoulder.pressed  = true; break;
+            case VK_PAD_RSHOULDER: gamepad->right_shoulder.pressed = true; break;
+            case VK_PAD_LTRIGGER:  gamepad->left_trigger.pressed   = true; break;
+            case VK_PAD_RTRIGGER:  gamepad->right_trigger.pressed  = true; break;
 
-            case VK_PAD_DPAD_UP:    gamepad->dpad_up.is_pressed    = true; break;
-            case VK_PAD_DPAD_DOWN:  gamepad->dpad_down.is_pressed  = true; break;
-            case VK_PAD_DPAD_LEFT:  gamepad->dpad_left.is_pressed  = true; break;
-            case VK_PAD_DPAD_RIGHT: gamepad->dpad_right.is_pressed = true; break;
+            case VK_PAD_DPAD_UP:    gamepad->dpad_up.pressed    = true; break;
+            case VK_PAD_DPAD_DOWN:  gamepad->dpad_down.pressed  = true; break;
+            case VK_PAD_DPAD_LEFT:  gamepad->dpad_left.pressed  = true; break;
+            case VK_PAD_DPAD_RIGHT: gamepad->dpad_right.pressed = true; break;
 
-            case VK_PAD_START: gamepad->start_button.is_pressed = true; break;
-            case VK_PAD_BACK:  gamepad->back_button.is_pressed  = true; break;
+            case VK_PAD_START: gamepad->start_button.pressed = true; break;
+            case VK_PAD_BACK:  gamepad->back_button.pressed  = true; break;
 
-            case VK_PAD_LTHUMB_PRESS:     gamepad->left_stick_press.is_pressed     = true; break;
-            case VK_PAD_LTHUMB_UP:        gamepad->left_stick_up.is_pressed        = true; break;
-            case VK_PAD_LTHUMB_DOWN:      gamepad->left_stick_down.is_pressed      = true; break;
-            case VK_PAD_LTHUMB_LEFT:      gamepad->left_stick_left.is_pressed      = true; break;
-            case VK_PAD_LTHUMB_RIGHT:     gamepad->left_stick_right.is_pressed     = true; break;
-            case VK_PAD_LTHUMB_UPLEFT:    gamepad->left_stick_upleft.is_pressed    = true; break;
-            case VK_PAD_LTHUMB_UPRIGHT:   gamepad->left_stick_upright.is_pressed   = true; break;
-            case VK_PAD_LTHUMB_DOWNLEFT:  gamepad->left_stick_downleft.is_pressed  = true; break;
-            case VK_PAD_LTHUMB_DOWNRIGHT: gamepad->left_stick_downright.is_pressed = true; break;
+            case VK_PAD_LTHUMB_PRESS:     gamepad->left_stick_press.pressed     = true; break;
+            case VK_PAD_LTHUMB_UP:        gamepad->left_stick_up.pressed        = true; break;
+            case VK_PAD_LTHUMB_DOWN:      gamepad->left_stick_down.pressed      = true; break;
+            case VK_PAD_LTHUMB_LEFT:      gamepad->left_stick_left.pressed      = true; break;
+            case VK_PAD_LTHUMB_RIGHT:     gamepad->left_stick_right.pressed     = true; break;
+            case VK_PAD_LTHUMB_UPLEFT:    gamepad->left_stick_upleft.pressed    = true; break;
+            case VK_PAD_LTHUMB_UPRIGHT:   gamepad->left_stick_upright.pressed   = true; break;
+            case VK_PAD_LTHUMB_DOWNLEFT:  gamepad->left_stick_downleft.pressed  = true; break;
+            case VK_PAD_LTHUMB_DOWNRIGHT: gamepad->left_stick_downright.pressed = true; break;
 
-            case VK_PAD_RTHUMB_PRESS:     gamepad->right_stick_press.is_pressed     = true; break;
-            case VK_PAD_RTHUMB_UP:        gamepad->right_stick_up.is_pressed        = true; break;
-            case VK_PAD_RTHUMB_DOWN:      gamepad->right_stick_down.is_pressed      = true; break;
-            case VK_PAD_RTHUMB_LEFT:      gamepad->right_stick_left.is_pressed      = true; break;
-            case VK_PAD_RTHUMB_RIGHT:     gamepad->right_stick_right.is_pressed     = true; break;
-            case VK_PAD_RTHUMB_UPLEFT:    gamepad->right_stick_upleft.is_pressed    = true; break;
-            case VK_PAD_RTHUMB_UPRIGHT:   gamepad->right_stick_upright.is_pressed   = true; break;
-            case VK_PAD_RTHUMB_DOWNLEFT:  gamepad->right_stick_downleft.is_pressed  = true; break;
-            case VK_PAD_RTHUMB_DOWNRIGHT: gamepad->right_stick_downright.is_pressed = true; break;
+            case VK_PAD_RTHUMB_PRESS:     gamepad->right_stick_press.pressed     = true; break;
+            case VK_PAD_RTHUMB_UP:        gamepad->right_stick_up.pressed        = true; break;
+            case VK_PAD_RTHUMB_DOWN:      gamepad->right_stick_down.pressed      = true; break;
+            case VK_PAD_RTHUMB_LEFT:      gamepad->right_stick_left.pressed      = true; break;
+            case VK_PAD_RTHUMB_RIGHT:     gamepad->right_stick_right.pressed     = true; break;
+            case VK_PAD_RTHUMB_UPLEFT:    gamepad->right_stick_upleft.pressed    = true; break;
+            case VK_PAD_RTHUMB_UPRIGHT:   gamepad->right_stick_upright.pressed   = true; break;
+            case VK_PAD_RTHUMB_DOWNLEFT:  gamepad->right_stick_downleft.pressed  = true; break;
+            case VK_PAD_RTHUMB_DOWNRIGHT: gamepad->right_stick_downright.pressed = true; break;
 
             default: break;
         }
@@ -545,7 +545,7 @@ void win32_process_xinput_gamepad_input(Input* input)
 
         // Release state should not persist, so make sure it is false for each button
         for (int button_index = 0; button_index < ARRAY_COUNT(gamepad->buttons); button_index++)
-            gamepad->buttons[button_index].is_released = false;
+            gamepad->buttons[button_index].released = false;
 
         XINPUT_STATE controller_state;
         ZeroMemory(&controller_state, sizeof(XINPUT_STATE));
@@ -606,7 +606,7 @@ void win32_process_xinput_gamepad_input(Input* input)
     }
 }
 
-bool clipboard_write_string(char* text)
+b32 clipboard_write_string(char* text)
 {
     // Before clipboard can be written to, it first needs to be opened and emptied
     HWND window = GetActiveWindow();
