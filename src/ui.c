@@ -4,6 +4,9 @@
 #include "renderer/texture.h"
 #include "util/types.h"
 
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
 typedef struct nk_alchemy_vertex {
     f32 position[2];
     f32 uv[2];
@@ -68,7 +71,7 @@ void nk_alchemy_device_destroy(nk_alchemy_state* state)
     nk_buffer_free(&dev->cmds);
 }
 
-void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
+void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA)
 {
     nk_alchemy_device *dev = &state->device;
     struct nk_buffer vbuf, ebuf;
@@ -108,8 +111,8 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
-        glBufferData(GL_ARRAY_BUFFER, max_vertex_buffer, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_buffer, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_BUFFER, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_BUFFER, NULL, GL_STREAM_DRAW);
 
         /* load draw vertices & elements directly into vertex + element buffer */
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
@@ -137,8 +140,8 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA, int ma
             config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
-            nk_buffer_init_fixed(&vbuf, vertices, (usize)max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (usize)max_element_buffer);
+            nk_buffer_init_fixed(&vbuf, vertices, (usize)MAX_VERTEX_BUFFER);
+            nk_buffer_init_fixed(&ebuf, elements, (usize)MAX_ELEMENT_BUFFER);
             nk_convert(&state->ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);

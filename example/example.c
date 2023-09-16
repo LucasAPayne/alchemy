@@ -1,24 +1,12 @@
 #include "example.h"
-#include "renderer/font.h"
-#include "renderer/shader.h"
-#include "renderer/sprite.h"
-#include "renderer/texture.h"
+#include "renderer/renderer.h"
 #include "util/types.h"
 
 #include "ui_overview.h"
 
-// TODO(lucas): Move raw OpenGL code to separate layer
-#include <glad/glad.h>
-
 #include <stdlib.h> // rand
 #include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
-
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
-
-static void error_callback(int e, const char *d)
-{printf("Error %d: %s\n", e, d);}
 
 global_variable v3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
@@ -248,9 +236,8 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
-    glViewport(0, 0, window_width, window_height);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glClearColor(state->clear_color.r, state->clear_color.g, state->clear_color.b, state->clear_color.a);
+    renderer_viewport(0, 0, window_width, window_height);
+    renderer_clear(state->clear_color);
 
     m4 projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
     shader_set_m4(state->font_renderer.shader, "projection", projection, 0);
@@ -281,5 +268,5 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 
     ui_overview(ctx, window_width);
-    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
 }

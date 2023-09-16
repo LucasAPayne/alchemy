@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME} WIN32
                ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
                ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
                ${PROJECT_SOURCE_DIR}/src/renderer/font.c
+               ${PROJECT_SOURCE_DIR}/src/renderer/renderer.c
                ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.c

@@ -14,9 +14,7 @@
 
 #include "input.h"
 
-#ifndef NK_ALCHEMY_TEXT_MAX
 #define NK_ALCHEMY_TEXT_MAX 256
-#endif
 
 typedef struct nk_alchemy_device {
     struct nk_buffer cmds;
@@ -49,7 +47,7 @@ void                 nk_alchemy_shutdown(nk_alchemy_state* state);
 void                 nk_alchemy_font_stash_begin(nk_alchemy_state* state, struct nk_font_atlas **atlas);
 void                 nk_alchemy_font_stash_end(nk_alchemy_state* state);
 void                 nk_alchemy_new_frame(nk_alchemy_state* state, u32 window_width, u32 window_height);
-void                 nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
+void                 nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing);
 
 void                 nk_alchemy_device_destroy(nk_alchemy_state* state);
 void                 nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader);
