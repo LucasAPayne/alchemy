@@ -235,10 +235,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         window_class.lpfnWndProc = &win32_main_window_callback;
         window_class.hInstance = instance;
         window_class.hIcon = LoadIconW(0, IDI_APPLICATION);
-        window_class.hCursor = LoadCursorW(0, IDC_ARROW);
+        // window_class.hCursor = LoadCursorW(0, IDC_ARROW);
         window_class.lpszClassName = L"MyWindowClass";
         window_class.hIconSm = LoadIconW(0, IDI_APPLICATION);
-
+        
         if(!RegisterClassExW(&window_class))
         {
             MessageBoxA(0, "RegisterClassEx failed", "Fatal Error", MB_OK);

@@ -1,5 +1,6 @@
 #include "example.h"
 #include "renderer/renderer.h"
+#include "util/alchemy_math.h"
 #include "util/types.h"
 
 #include "ui_overview.h"
@@ -12,37 +13,33 @@ global_variable v3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1
                           {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
                           {0.0f, 1.0f, 1.0f}};
 
+internal void bounce_dvd(ExampleState* state, f32* direction)
+{
+    // Bounce off screen boundary
+    *direction *= -1.0f;
+
+    int color_index = rand() % 7;
+    // Make sure new color is different. Incredibly efficient
+    while (color_index == state->last_color_index)
+        color_index = rand() % 7;
+    state->logo.color = colors[color_index];
+    state->last_color_index = color_index;
+}
+
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
+    rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
+                                      (v2){window_width - state->logo.size.x, window_height - state->logo.size.y});
 
-    state->logo.position.x += speed * delta_time * state->logo_x_direction;
-    state->logo.position.y += speed * delta_time * state->logo_y_direction;
+    state->logo.position = v2_add(state->logo.position, v2_scale(state->logo_direction, speed*delta_time));
 
-    // TODO(lucas): Clamp position to boundaries
-    if (state->logo.position.x > (window_width - state->logo.size.x) || state->logo.position.x < 0)
-    {
-        // Bounce off screen boundary
-        state->logo_x_direction *= -1.0f;
+    if ((state->logo.position.x > window_bounds.max.x) || (state->logo.position.x < window_bounds.min.x))
+        bounce_dvd(state, &state->logo_direction.x);
+    if ((state->logo.position.y > window_bounds.max.y) || (state->logo.position.y < 0.0f))
+        bounce_dvd(state, &state->logo_direction.y);
 
-        int color_index = rand() % 7;
-        // Make sure new color is different. Incredibly efficient
-        while (color_index == state->last_color_index)
-            color_index = rand() % 7;
-        state->logo.color = colors[color_index];
-        state->last_color_index = color_index;
-    }
-    if (state->logo.position.y > (window_height - state->logo.size.y) || state->logo.position.y < 0)
-    {
-        state->logo_y_direction *= -1.0f;
-
-        int color_index = rand() % 7;
-        // Make sure new color is different. Incredibly efficient
-        while (color_index == state->last_color_index)
-            color_index = rand() % 7;
-        state->logo.color = colors[color_index];
-        state->last_color_index = color_index;
-    }
+    state->logo.position = v2_clamp_to_rect(state->logo.position, window_bounds);
 }
 
 internal void update_player(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
@@ -51,9 +48,13 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 
     Gamepad* gamepad = &state->input.gamepads[0];
     f32 speed = 250.0f; // pixels per second
+
+    rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
+                                      (v2){window_width - state->player.size.x, window_height - state->player.size.y});
+
     // Update player position
-    state->player.position.x += speed * delta_time * gamepad->left_stick_x;
-    state->player.position.y += speed * delta_time * gamepad->left_stick_y;
+    v2 player_delta = v2_scale((v2){gamepad->left_stick_x, gamepad->left_stick_y}, speed*delta_time);
+    state->player.position = v2_add(state->player.position, player_delta);
 
     // Dash
     if (!state->dash_cooldown.is_active)
@@ -79,30 +80,12 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     }
 
     // Bounds checking
-    if (state->player.position.x > (window_width - state->player.size.x))
-    {
-        state->player.position.x = window_width - state->player.size.x;
-    }
-    if (state->player.position.x < 0.0f)
-    {
-        state->player.position.x = 0.0f;
-    }
-    if (state->player.position.y > (window_height - state->player.size.y))
-    {
-        state->player.position.y = window_height - state->player.size.y;
-    }
-    if (state->player.position.y < 0.0f)
-    {
-        state->player.position.y = 0.0f;
-    }
+    state->player.position = v2_clamp_to_rect(state->player.position, window_bounds);
 
     // Update player rotation
     state->player.rotation += 2.0f * gamepad->right_trigger_val;
     state->player.rotation -= 2.0f * gamepad->left_trigger_val;
-    if (state->player.rotation > 45.0f)
-        state->player.rotation = 45.0f;
-    if (state->player.rotation < -45.0f)
-        state->player.rotation = -45.0f;
+    state->player.rotation = f32_clamp(state->player.rotation, -45.0f, 45.0f);
     if (!gamepad_button_pressed(gamepad->left_trigger) &&
         !gamepad_button_pressed(gamepad->right_trigger))
     {
@@ -110,7 +93,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
             state->player.rotation -= 2.0f;
         if (state->player.rotation < 0.0f)
             state->player.rotation += 2.0f;
-        if (fabs(state->player.rotation - 0.0f) < 2.0f)
+        if (fabs(state->player.rotation) < 2.0f)
             state->player.rotation = 0.0f;
     }
 
@@ -140,8 +123,7 @@ void example_state_init(ExampleState* state)
     state->logo.color = colors[0];
     state->logo.size = (v2){300.0f, 150.0f};
     state->logo.rotation = 0.0f;
-    state->logo_x_direction = 1.0f;
-    state->logo_y_direction = 1.0f;
+    state->logo_direction = (v2){1.0f, 1.0f};
 
     u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
     state->player.renderer = &state->sprite_renderer;
@@ -166,8 +148,8 @@ void example_state_init(ExampleState* state)
     timer_init(&state->dash_cooldown, 2.0f, false);
     stopwatch_init(&state->stopwatch, false);
 
+    cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
-    state->use_sword_cursror = false;
 
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
@@ -177,7 +159,6 @@ void example_state_init(ExampleState* state)
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
     state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
     nk_alchemy_font_stash_end(&state->alchemy_state);
-    // nk_style_load_all_cursors(&state->alchemy_state.ctx, atlas->cursors);
     nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
     state->alchemy_state.keyboard = &state->input.keyboard;
     state->alchemy_state.mouse = &state->input.mouse;
@@ -202,13 +183,9 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     update_player(state, delta_time, window_width, window_height);  
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
-        state->use_sword_cursror = true;
-    if (key_pressed(&state->input.keyboard, KEY_RBRACKET))
-        state->use_sword_cursror = false;
-
-    if (state->use_sword_cursror)
         cursor_set_from_memory(state->sword_cursor);
-    else
+
+    if (key_pressed(&state->input.keyboard, KEY_RBRACKET))
         cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;
@@ -238,8 +215,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
     renderer_viewport(0, 0, window_width, window_height);
     renderer_clear(state->clear_color);
-
-    m4 projection = glms_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
+    m4 projection = m4_ortho(0.0f, (f32)window_width, (f32)window_height, 0.0f, -1.0f, 1.0f); 
     shader_set_m4(state->font_renderer.shader, "projection", projection, 0);
     shader_set_m4(state->sprite_renderer.shader, "projection", projection, 0);
 

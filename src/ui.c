@@ -1,8 +1,9 @@
 #include "ui.h"
 
-#include "renderer/shader.h"
-#include "renderer/texture.h"
+#include "renderer/renderer.h"
 #include "util/types.h"
+
+#include <glad/glad.h>
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024

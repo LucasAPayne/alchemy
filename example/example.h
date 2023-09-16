@@ -5,8 +5,7 @@
 #include "ui.h"
 #include "util/types.h"
 #include "util/time.h"
-#include "renderer/font.h"
-#include "renderer/sprite.h"
+#include "renderer/renderer.h"
 
 typedef struct ExampleState
 {
@@ -15,8 +14,7 @@ typedef struct ExampleState
     FontRenderer font_renderer;
     FontRenderer frame_time_renderer;
     Sprite logo;
-    f32 logo_x_direction;
-    f32 logo_y_direction;
+    v2 logo_direction;
     v3* colors;
     int last_color_index;
 
@@ -34,7 +32,6 @@ typedef struct ExampleState
 
     Stopwatch stopwatch;
 
-    b32 use_sword_cursror;
     void* sword_cursor;
 
     struct nk_alchemy_state alchemy_state;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "glad/include/glad/glad.h"
-
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -21,11 +19,11 @@ typedef struct nk_alchemy_device {
     struct nk_draw_null_texture tex_null;
     u32 shader;
 
-    GLuint vbo, vao, ebo;
-    GLint attrib_pos;
-    GLint attrib_uv;
-    GLint attrib_col;
-    GLuint font_tex;
+    u32 vbo, vao, ebo;
+    i32 attrib_pos;
+    i32 attrib_uv;
+    i32 attrib_col;
+    u32 font_tex;
 } nk_alchemy_device;
 
 typedef struct nk_alchemy_state {
