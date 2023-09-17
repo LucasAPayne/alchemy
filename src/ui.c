@@ -57,7 +57,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
 void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
 {
     nk_alchemy_device *dev = &state->device;
-    dev->font_tex = generate_texture();
+    dev->font_tex = texture_generate();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
@@ -66,7 +66,7 @@ void nk_alchemy_device_destroy(nk_alchemy_state* state)
 {
     nk_alchemy_device *dev = &state->device;
     shader_delete(dev->shader);
-    texture_delete(dev->font_tex);
+    texture_delete(&dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
     nk_buffer_free(&dev->cmds);
@@ -152,7 +152,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA)
         nk_draw_foreach(cmd, &state->ctx, &dev->cmds)
         {
             if (!cmd->elem_count) continue;
-            texture_bind((u32)cmd->texture.id, 0);
+            texture_bind_id((u32)cmd->texture.id);
             glScissor(
                 (GLint)(cmd->clip_rect.x * state->fb_scale.x),
                 (GLint)((state->height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * state->fb_scale.y),
@@ -225,7 +225,7 @@ void nk_alchemy_font_stash_end(nk_alchemy_state* state)
     const void *image; int w, h;
     image = nk_font_atlas_bake(&state->atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     nk_alchemy_device_upload_atlas(state, image, w, h);
-    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->device.font_tex), &state->device.tex_null);
+    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->device.font_tex.id), &state->device.tex_null);
     if (state->atlas.default_font)
         nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
 }

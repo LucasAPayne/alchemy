@@ -13,6 +13,9 @@ typedef struct ExampleState
     SpriteRenderer sprite_renderer;
     FontRenderer font_renderer;
     FontRenderer frame_time_renderer;
+    Texture logo_tex;
+    Texture player_tex;
+
     Sprite logo;
     v2 logo_direction;
     v3* colors;

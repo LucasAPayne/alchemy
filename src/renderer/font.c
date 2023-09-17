@@ -59,10 +59,10 @@ void font_renderer_delete(FontRenderer* font_renderer)
     glDeleteVertexArrays(1, &font_renderer->vao);
     glDeleteBuffers(1, &font_renderer->vbo);
     glDeleteBuffers(1, &font_renderer->ibo);
-    glDeleteProgram(font_renderer->shader);
+    shader_delete(font_renderer->shader);
 }
 
-void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32 pt, v4 color)
+void text_draw(FontRenderer* font_renderer, const char* text, v2 position, u32 pt, v4 color)
 {
     // Set font size in pt
     FT_Set_Pixel_Sizes(font_renderer->face, 0, pt);
@@ -74,7 +74,7 @@ void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32
     // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
     // but we need 1-byte alignment for grayscale glyph bitmaps
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    u32 texture = generate_texture();
+    Texture texture = texture_generate();
 
     const char *c;
     for (c = text; *c; ++c)
@@ -119,4 +119,5 @@ void render_text(FontRenderer* font_renderer, const char* text, v2 position, u32
 
     glBindVertexArray(0);
     texture_unbind();
+    texture_delete(&texture);
 }

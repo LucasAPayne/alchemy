@@ -9,9 +9,9 @@
 #include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
 
-global_variable v3 colors[7] = {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-                          {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f},
-                          {0.0f, 1.0f, 1.0f}};
+global_variable v4 colors[7] = {{1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f},
+                                {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f},
+                                {0.0f, 1.0f, 1.0f, 1.0f}};
 
 internal void bounce_dvd(ExampleState* state, f32* direction)
 {
@@ -30,7 +30,8 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
 {
     f32 speed = 100.0f; // pixels per second
     rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
-                                      (v2){window_width - state->logo.size.x, window_height - state->logo.size.y});
+                                      (v2){(f32)(window_width - state->logo.size.x),
+                                           (f32)(window_height - state->logo.size.y)});
 
     state->logo.position = v2_add(state->logo.position, v2_scale(state->logo_direction, speed*delta_time));
 
@@ -50,7 +51,8 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     f32 speed = 250.0f; // pixels per second
 
     rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
-                                      (v2){window_width - state->player.size.x, window_height - state->player.size.y});
+                                      (v2){(f32)(window_width - state->player.size.x),
+                                           (f32)(window_height - state->player.size.y)});
 
     // Update player position
     v2 player_delta = v2_scale((v2){gamepad->left_stick_x, gamepad->left_stick_y}, speed*delta_time);
@@ -116,22 +118,16 @@ void example_state_init(ExampleState* state)
     font_renderer_init(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
     font_renderer_init(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
-    u32 logo_tex = generate_texture_from_file("textures/dvd.png");
-    state->logo.renderer = &state->sprite_renderer;
-    state->logo.position = (v2){0.0f, 0.0f};
-    state->logo.texture = logo_tex;
-    state->logo.color = colors[0];
-    state->logo.size = (v2){300.0f, 150.0f};
-    state->logo.rotation = 0.0f;
+    state->logo_tex = texture_load_from_file("textures/dvd.png");
+    state->logo = sprite_init(&state->sprite_renderer, &state->logo_tex);
+    state->logo.size = (iv2){300, 150};
+
     state->logo_direction = (v2){1.0f, 1.0f};
 
-    u32 player_tex = generate_texture_from_file("textures/white_pixel.png");
-    state->player.renderer = &state->sprite_renderer;
-    state->player.position = (v2){0.0f, 0.0f};
-    state->player.texture = player_tex;
-    state->player.color = (v3){1.0f, 1.0f, 1.0f};
-    state->player.size = (v2){50.0f, 50.0f};
-    state->player.rotation = 0.0f;
+    state->player_tex = texture_load_from_file("textures/white_pixel.png");
+    state->player = sprite_init(&state->sprite_renderer, &state->player_tex);
+    state->player.size = (iv2){50, 50};
+
     state->dash_counter = 0;
     state->dash_frames = 15;
     state->dash_direction = 0.0f;
@@ -169,8 +165,8 @@ void example_state_delete(ExampleState* state)
     font_renderer_delete(&state->font_renderer);
     font_renderer_delete(&state->frame_time_renderer);
     sprite_renderer_delete(&state->sprite_renderer);
-    texture_delete(state->logo.texture);
-    texture_delete(state->player.texture);
+    texture_delete(&state->logo_tex);
+    texture_delete(&state->player_tex);
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
@@ -219,29 +215,29 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     shader_set_m4(state->font_renderer.shader, "projection", projection, 0);
     shader_set_m4(state->sprite_renderer.shader, "projection", projection, 0);
 
-    draw_sprite(state->logo);
-    draw_sprite(state->player);
+    sprite_draw(state->logo);
+    sprite_draw(state->player);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     v2 engine_text_pos = {500.0f, 50.0f};
-    render_text(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
+    text_draw(&state->font_renderer, "Alchemy Engine", engine_text_pos, 48, font_color);
     char buffer[512];
 
     FontRenderer frame_time_renderer = {0};
     v2 ms_text_pos = {10.0f, window_height - 10.0f};
     sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    render_text(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
+    text_draw(&state->frame_time_renderer, buffer, ms_text_pos, 32, font_color);
 
     char cooldown_buffer[512];
     v2 cooldown_text_pos = {1050.0f, window_height - 10.0f};
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&state->dash_cooldown));
     if (state->dash_cooldown.is_active)
-        render_text(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
+        text_draw(&state->frame_time_renderer, cooldown_buffer, cooldown_text_pos, 32, font_color);
     
     char stopwatch_buffer[512];
     v2 stopwatch_text_pos = {10.0f, 40.0f};
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    render_text(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
+    text_draw(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 
     ui_overview(ctx, window_width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);

@@ -2,9 +2,17 @@
 
 #include "util/types.h"
 
-u32 generate_texture();
-u32 generate_texture_from_file(const char* filename);
+typedef struct Texture 
+{
+    u32 id;
+    i32 channels;
+    iv2 size;
+} Texture;
 
-void texture_bind(u32 texture, u32 slot);
+Texture texture_generate();
+Texture texture_load_from_file(const char* filename);
+
+void texture_bind_id(u32 id);
+void texture_bind(Texture* tex);
 void texture_unbind(void);
-void texture_delete(u32 texture);
+void texture_delete(Texture* tex);

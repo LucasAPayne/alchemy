@@ -11,6 +11,7 @@
 #include <nuklear/nuklear.h>
 
 #include "input.h"
+#include "renderer/renderer.h"
 
 #define NK_ALCHEMY_TEXT_MAX 256
 
@@ -23,7 +24,7 @@ typedef struct nk_alchemy_device {
     i32 attrib_pos;
     i32 attrib_uv;
     i32 attrib_col;
-    u32 font_tex;
+    Texture font_tex;
 } nk_alchemy_device;
 
 typedef struct nk_alchemy_state {

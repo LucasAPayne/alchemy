@@ -59,9 +59,24 @@ void sprite_renderer_delete(SpriteRenderer* sprite_renderer)
     shader_delete(sprite_renderer->shader);
 }
 
+Sprite sprite_init(SpriteRenderer* renderer, Texture* tex)
+{
+    Sprite sprite = {0};
+    sprite.renderer = renderer;
+    sprite.texture = tex;
+
+    // Default sprite to have texture's size and no tint or rotation, and zero out position
+    sprite.size = tex->size;
+    sprite.rotation = 0.0f;
+    sprite.position = (v2){0.0f, 0.0f};
+    sprite.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+
+    return sprite;
+}
+
 // TODO(lucas): Allow using only color and no texture
 // Note that texture could not be set to 0 for no texture since that is OpenGL's error case
-void draw_sprite(Sprite sprite)
+void sprite_draw(Sprite sprite)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){sprite.position.x, sprite.position.y, 0.0f});
@@ -74,13 +89,13 @@ void draw_sprite(Sprite sprite)
     model = m4_translate(model, (v3){-0.5f*sprite.size.x, -0.5f*sprite.size.y, 0.0f});
 
     // Scale sprite to appropriate size
-    model = m4_scale(model, (v3){sprite.size.x, sprite.size.y, 1.0f});
+    model = m4_scale(model, (v3){(f32)sprite.size.x, (f32)sprite.size.y, 1.0f});
 
     // Set model matrix and color shader values
     shader_set_m4(sprite.renderer->shader, "model", model, 0);
-    shader_set_v3(sprite.renderer->shader, "color", sprite.color);
+    shader_set_v4(sprite.renderer->shader, "color", sprite.color);
 
-    texture_bind(sprite.texture, 0);
+    texture_bind(sprite.texture);
 
     glBindVertexArray(sprite.renderer->vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

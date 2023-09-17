@@ -1,5 +1,6 @@
 #pragma once
 
+#include "renderer/texture.h"
 #include "util/types.h"
 
 typedef struct SpriteRenderer
@@ -16,11 +17,12 @@ void sprite_renderer_delete(SpriteRenderer* sprite_renderer);
 typedef struct Sprite
 {
     SpriteRenderer* renderer;
-    u32 texture;
-    v3 color;
+    Texture* texture;
+    v4 color;
     v2 position;
-    v2 size;
+    iv2 size;
     f32 rotation; // Rotation in degrees
 } Sprite;
 
-void draw_sprite(Sprite sprite);
+Sprite sprite_init(SpriteRenderer* renderer, Texture* tex);
+void sprite_draw(Sprite sprite);
