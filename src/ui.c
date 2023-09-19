@@ -121,7 +121,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA)
         {
             /* fill convert configuration */
             struct nk_convert_config config;
-            local_persist const struct nk_draw_vertex_layout_element vertex_layout[] =
+            persist const struct nk_draw_vertex_layout_element vertex_layout[] =
             {
                 {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(nk_alchemy_vertex, position)},
                 {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(nk_alchemy_vertex, uv)},

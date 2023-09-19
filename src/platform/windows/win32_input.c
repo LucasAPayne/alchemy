@@ -1,12 +1,12 @@
-#include "platform/windows/win32_input.h"
 #include "input.h"
+#include "window.h"
 #include "util/types.h"
 
 #include <windows.h>
 #include <Windowsx.h>
 #include <Xinput.h>
 
-global_variable WINDOWPLACEMENT global_window_position_prev = {sizeof(global_window_position_prev)};
+global WINDOWPLACEMENT global_window_position_prev = {sizeof(global_window_position_prev)};
 
 internal void win32_toggle_fullscreen(HWND window)
 {
@@ -122,7 +122,7 @@ internal void win32_process_mouse_button(MouseButtonState* button, int clicks)
 }
 
 // TODO(lucas): Support for non-US keyboard layouts
-void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse* mouse)
+void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mouse)
 {
     // Reset any character that was entered last frame
     key_input->current_char = 0;
@@ -140,7 +140,7 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
     mouse->scroll = 0;
 
     MSG msg;
-    while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+    while(PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
     {
         switch(msg.message)
         {
@@ -295,11 +295,10 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
                 TranslateMessage(&msg);
             } break;
 
-            // TODO(lucas): WM_QUIT has stopped being picked up by the window callback for some reason
-            // and instead gets picked up here.
             case WM_QUIT:
             {
-                DestroyWindow(window);
+                window->open = false;
+                DestroyWindow(window->ptr);
             } break;
 
             case WM_CHAR:
@@ -335,7 +334,7 @@ void win32_process_keyboard_mouse_input(HWND window, Keyboard* key_input, Mouse*
             default:
             {
                 TranslateMessage(&msg);
-                DispatchMessage(&msg);
+                DispatchMessageA(&msg);
             } break;
         }
     }
@@ -536,7 +535,7 @@ internal f32 win32_process_xinput_trigger(BYTE xinput_trigger_value)
     return result;
 }
 
-void win32_process_xinput_gamepad_input(Input* input)
+void gamepad_process_input(Input* input)
 {
     Gamepad* gamepad = {0};
     for (int i = 0; i < MAX_GAMEPADS; ++i)

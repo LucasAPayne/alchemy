@@ -1,5 +1,6 @@
 #pragma once
 
+#include "window.h"
 #include "util/types.h"
 
 #define MAX_GAMEPADS 4
@@ -236,6 +237,9 @@ typedef struct Input
     Keyboard keyboard;
     Mouse mouse;
 } Input;
+
+void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mouse);
+void gamepad_process_input(Input* input);
 
 /* Clipboard */
 b32  clipboard_write_string(char* text);

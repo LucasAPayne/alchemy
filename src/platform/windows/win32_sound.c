@@ -24,7 +24,7 @@ void OnLoopEnd(IXAudio2VoiceCallback* This, void* pBufferContext) { }
 void OnVoiceError(IXAudio2VoiceCallback* This, void* pBufferContext, HRESULT Error) { }
 
 // Callbacks are set up by adding them to the lpVtbl, which is type IXAudio2VoiceCallbackVtbl*
-global_variable IXAudio2VoiceCallback xaudio_callbacks = {
+global IXAudio2VoiceCallback xaudio_callbacks = {
     .lpVtbl = &(IXAudio2VoiceCallbackVtbl) {
         .OnStreamEnd = OnStreamEnd,
         .OnVoiceProcessingPassEnd = OnVoiceProcessingPassEnd,
@@ -36,17 +36,22 @@ global_variable IXAudio2VoiceCallback xaudio_callbacks = {
     }
 };
 
-void xaudio2_state_init(XAudio2State* xaudio2_state)
+XAudio2State xaudio2_state_init(void)
 {
-    xaudio2_state->xaudio2 = NULL;
-    if (FAILED(XAudio2Create(&xaudio2_state->xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
+    XAudio2State xaudio2_state = {0};
+    xaudio2_state.xaudio2 = NULL;
+    if (FAILED(XAudio2Create(&xaudio2_state.xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
 
-    xaudio2_state->master_voice = NULL;
-    if (FAILED(IXAudio2_CreateMasteringVoice(xaudio2_state->xaudio2, &xaudio2_state->master_voice,
+    xaudio2_state.master_voice = NULL;
+    if (FAILED(IXAudio2_CreateMasteringVoice(xaudio2_state.xaudio2, &xaudio2_state.master_voice,
                                              XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_SAMPLERATE,
                                              0, NULL, NULL, AudioCategory_GameEffects)))
+    {
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
+    }
+
+    return xaudio2_state;    
 }
 
 internal b32 find_chunk(HANDLE file, DWORD fourcc, DWORD* chunk_size, DWORD* chunk_data_pos)

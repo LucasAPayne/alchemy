@@ -11,5 +11,5 @@ typedef struct XAudio2State
     IXAudio2MasteringVoice* master_voice;
 } XAudio2State;
 
-void xaudio2_state_init(XAudio2State* xaudio2_state);
+XAudio2State xaudio2_state_init(void);
 void win32_process_sound_output(SoundOutput* sound_output, XAudio2State* xaudio2_state);

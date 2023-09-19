@@ -14,9 +14,9 @@
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
 #endif
 
-#define internal        static
-#define local_persist   static
-#define global_variable static
+#define internal static
+#define persist  static
+#define global   static
 
 typedef bool b8;
 typedef int32_t b32;
