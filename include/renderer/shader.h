@@ -3,9 +3,9 @@
 #include "util/types.h"
 
 u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path);
-void bind_shader(u32 id);
-void unbind_shader();
-void delete_shader(u32 id);
+void shader_bind(u32 id);
+void shader_unbind();
+void shader_delete(u32 id);
 
 // Wrapper functions to set uniforms
 void shader_set_v3(u32 shader, const char* name, v3 value);

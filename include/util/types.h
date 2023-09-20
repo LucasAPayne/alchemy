@@ -1,10 +1,8 @@
 #pragma once
 
-#pragma warning(push)
-#pragma warning(disable: 4996)
 #include <cglm/struct.h>
-#pragma warning(pop)
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
@@ -13,10 +11,11 @@
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
 #endif
 
-#define internal        static
-#define local_persist   static
-#define global_variable static
+#define internal static
+#define persist  static
+#define global   static
 
+typedef bool b8;
 typedef int32_t b32;
 typedef uint8_t  u8;
 typedef uint16_t u16;

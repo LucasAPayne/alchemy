@@ -2,8 +2,6 @@
 
 #include <time.h> // struct tm
 
-#pragma warning(disable: 4996)
-
 typedef enum MenuState
 {
     MENU_NONE,
@@ -36,20 +34,20 @@ typedef enum ChartType
 int ui_overview(struct nk_context *ctx, u32 window_width)
 {
     /* window flags */
-    local_persist b32 first_frame  = true;
-    local_persist b32 show_menu    = true;
-    local_persist b32 titlebar     = true;
-    local_persist b32 border       = true;
-    local_persist b32 resize       = true;
-    local_persist b32 movable      = true;
-    local_persist b32 no_scrollbar = false;
-    local_persist b32 scale_left   = false;
-    local_persist b32 minimizable  = true;
-    local_persist nk_flags window_flags = 0;
+    persist b32 first_frame  = true;
+    persist b32 show_menu    = true;
+    persist b32 titlebar     = true;
+    persist b32 border       = true;
+    persist b32 resize       = true;
+    persist b32 movable      = true;
+    persist b32 no_scrollbar = false;
+    persist b32 scale_left   = false;
+    persist b32 minimizable  = true;
+    persist nk_flags window_flags = 0;
 
     /* popups */
-    local_persist enum nk_style_header_align header_align = NK_HEADER_RIGHT;
-    local_persist b32 show_app_about = false;
+    persist enum nk_style_header_align header_align = NK_HEADER_RIGHT;
+    persist b32 show_app_about = false;
 
     /* window flags */
     window_flags = 0;
@@ -80,9 +78,9 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             nk_layout_row_push(ctx, 45.0f);
             if (nk_menu_begin_label(ctx, "MENU", NK_TEXT_LEFT, nk_vec2(120.0f, 200.0f)))
             {
-                local_persist usize prog = 40;
-                local_persist int slider = 10;
-                local_persist b32 check = true;
+                persist usize prog = 40;
+                persist int slider = 10;
+                persist b32 check = true;
 
                 nk_layout_row_dynamic(ctx, 25.0f, 1);
 
@@ -101,7 +99,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             nk_layout_row_push(ctx, 75.0f);
             if (nk_menu_begin_label(ctx, "ADVANCED", NK_TEXT_LEFT, nk_vec2(200.0f, 600.0f)))
             {
-                local_persist MenuState menu_state = MENU_NONE;
+                persist MenuState menu_state = MENU_NONE;
                 enum nk_collapse_states state;
 
                 state = (menu_state == MENU_FILE) ? NK_MAXIMIZED: NK_MINIMIZED;
@@ -168,7 +166,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
         if (show_app_about)
         {
             /* about popup */
-            local_persist struct nk_rect s = {20, 100, 300, 190};
+            persist struct nk_rect s = {20, 100, 300, 190};
             if (nk_popup_begin(ctx, NK_POPUP_STATIC, "About", NK_WINDOW_CLOSABLE, s))
             {
                 nk_layout_row_dynamic(ctx, 20, 1);
@@ -196,8 +194,8 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Widgets", NK_MINIMIZED))
         {
-            local_persist int checkbox;
-            local_persist int option;
+            persist int checkbox;
+            persist int option;
             if (nk_tree_push(ctx, NK_TREE_NODE, "Text", NK_MINIMIZED))
             {
                 /* Text Widgets */
@@ -247,20 +245,20 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             if (nk_tree_push(ctx, NK_TREE_NODE, "Basic", NK_MINIMIZED))
             {
                 /* Basic widgets */
-                local_persist int int_slider = 5;
-                local_persist f32 f32_slider = 2.5f;
-                local_persist nk_size prog_value = 40;
-                local_persist f32 property_f32 = 2;
-                local_persist int property_int = 10;
-                local_persist int property_neg = 10;
+                persist int int_slider = 5;
+                persist f32 f32_slider = 2.5f;
+                persist nk_size prog_value = 40;
+                persist f32 property_f32 = 2;
+                persist int property_int = 10;
+                persist int property_neg = 10;
 
-                local_persist f32 range_f32_min = 0;
-                local_persist f32 range_f32_max = 100;
-                local_persist f32 range_f32_value = 50;
-                local_persist int range_int_min = 0;
-                local_persist int range_int_value = 2048;
-                local_persist int range_int_max = 4096;
-                local_persist const f32 ratio[] = {120, 150};
+                persist f32 range_f32_min = 0;
+                persist f32 range_f32_max = 100;
+                persist f32 range_f32_value = 50;
+                persist int range_int_min = 0;
+                persist int range_int_value = 2048;
+                persist int range_int_max = 4096;
+                persist const f32 ratio[] = {120, 150};
 
                 nk_layout_row_static(ctx, 30, 100, 1);
                 nk_checkbox_label(ctx, "Checkbox", &checkbox);
@@ -303,7 +301,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
             if (nk_tree_push(ctx, NK_TREE_NODE, "Inactive", NK_MINIMIZED))
             {
-                local_persist int inactive = 1;
+                persist int inactive = 1;
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_checkbox_label(ctx, "Inactive", &inactive);
 
@@ -334,7 +332,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             {
                 if (nk_tree_push(ctx, NK_TREE_NODE, "List", NK_MINIMIZED))
                 {
-                    local_persist int selected[4] = {false, false, true, false};
+                    persist int selected[4] = {false, false, true, false};
                     nk_layout_row_static(ctx, 18, 100, 1);
                     nk_selectable_label(ctx, "Selectable", NK_TEXT_LEFT, &selected[0]);
                     nk_selectable_label(ctx, "Selectable", NK_TEXT_LEFT, &selected[1]);
@@ -346,7 +344,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 if (nk_tree_push(ctx, NK_TREE_NODE, "Grid", NK_MINIMIZED))
                 {
                     int i;
-                    local_persist int selected[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+                    persist int selected[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
                     nk_layout_row_static(ctx, 50, 50, 4);
                     for (i = 0; i < 16; ++i) {
                         if (nk_selectable_label(ctx, "Z", NK_TEXT_CENTERED, &selected[i]))
@@ -392,14 +390,14 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                  * which only show the currently activated time/data and hide the
                  * selection logic inside the combobox popup.
                  */
-                local_persist f32 chart_selection = 8.0f;
-                local_persist int current_weapon = 0;
-                local_persist int check_values[5];
-                local_persist f32 position[3];
-                local_persist struct nk_color combo_color = {130, 50, 50, 255};
-                local_persist struct nk_colorf combo_color2 = {0.509f, 0.705f, 0.2f, 1.0f};
-                local_persist usize prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
-                local_persist const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
+                persist f32 chart_selection = 8.0f;
+                persist int current_weapon = 0;
+                persist int check_values[5];
+                persist f32 position[3];
+                persist struct nk_color combo_color = {130, 50, 50, 255};
+                persist struct nk_colorf combo_color2 = {0.509f, 0.705f, 0.2f, 1.0f};
+                persist usize prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
+                persist const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
 
                 char buffer[64];
                 usize sum = 0;
@@ -426,7 +424,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 /* complex color combobox */
                 if (nk_combo_begin_color(ctx, nk_rgb_cf(combo_color2), nk_vec2(200,400)))
                 {
-                    local_persist int col_mode = COL_RGB;
+                    persist int col_mode = COL_RGB;
                     #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
                     nk_layout_row_dynamic(ctx, 120, 1);
                     combo_color2 = nk_color_picker(ctx, combo_color2, NK_RGBA);
@@ -498,7 +496,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 if (nk_combo_begin_label(ctx, buffer, nk_vec2(200,250)))
                 {
                     usize i = 0;
-                    local_persist const f32 values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
+                    persist const f32 values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
                     nk_layout_row_dynamic(ctx, 150, 1);
                     nk_chart_begin(ctx, NK_CHART_COLUMN, NK_LEN(values), 0, 50);
                     for (i = 0; i < NK_LEN(values); ++i) {
@@ -514,10 +512,10 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 }
 
                 {
-                    local_persist int time_selected = 0;
-                    local_persist int date_selected = 0;
-                    local_persist struct tm sel_time;
-                    local_persist struct tm sel_date;
+                    persist int time_selected = 0;
+                    persist int date_selected = 0;
+                    persist struct tm sel_time;
+                    persist struct tm sel_date;
                     if (!time_selected || !date_selected)
                     {
                         /* keep time and date updated if nothing is selected */
@@ -693,8 +691,8 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
              * and then call `nk_chart_push` to push values into the chart.
              * Finally `nk_chart_end` needs to be called to end the process. */
             f32 id = 0;
-            local_persist int col_index = -1;
-            local_persist int line_index = -1;
+            persist int col_index = -1;
+            persist int line_index = -1;
             f32 step = (2*3.141592654f) / 32;
 
             int i;
@@ -783,9 +781,9 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Popup", NK_MINIMIZED))
         {
-            local_persist struct nk_color color = {255,0,0, 255};
-            local_persist int select[4];
-            local_persist int popup_active;
+            persist struct nk_color color = {255,0,0, 255};
+            persist int select[4];
+            persist int popup_active;
             const struct nk_input *in = &ctx->input;
             struct nk_rect bounds;
 
@@ -796,8 +794,8 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
             if (nk_contextual_begin(ctx, 0, nk_vec2(100, 300), bounds))
             {
-                local_persist usize prog = 40;
-                local_persist int slider = 10;
+                persist usize prog = 40;
+                persist int slider = 10;
 
                 nk_layout_row_dynamic(ctx, 25, 1);
                 nk_checkbox_label(ctx, "Menu", &show_menu);
@@ -842,7 +840,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
             if (popup_active)
             {
-                local_persist struct nk_rect s = {20, 100, 220, 90};
+                persist struct nk_rect s = {20, 100, 220, 90};
                 if (nk_popup_begin(ctx, NK_POPUP_STATIC, "Error", 0, s))
                 {
                     nk_layout_row_dynamic(ctx, 25, 1);
@@ -958,11 +956,11 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
             if (nk_tree_push(ctx, NK_TREE_NODE, "Group", NK_MINIMIZED))
             {
-                local_persist b32 group_titlebar = false;
-                local_persist b32 group_border = true;
-                local_persist b32 group_no_scrollbar = false;
-                local_persist int group_width = 320;
-                local_persist int group_height = 200;
+                persist b32 group_titlebar = false;
+                persist b32 group_border = true;
+                persist b32 group_no_scrollbar = false;
+                persist int group_width = 320;
+                persist int group_height = 200;
 
                 nk_flags group_flags = 0;
                 if (group_border) group_flags |= NK_WINDOW_BORDER;
@@ -987,7 +985,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 if (nk_group_begin(ctx, "Group", group_flags))
                 {
                     int i = 0;
-                    local_persist int selected[16];
+                    persist int selected[16];
                     nk_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 16; ++i)
                         nk_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", NK_TEXT_CENTERED, &selected[i]);
@@ -997,11 +995,11 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             }
             if (nk_tree_push(ctx, NK_TREE_NODE, "Tree", NK_MINIMIZED))
             {
-                local_persist int root_selected = 0;
+                persist int root_selected = 0;
                 int sel = root_selected;
                 if (nk_tree_element_push(ctx, NK_TREE_NODE, "Root", NK_MINIMIZED, &sel))
                 {
-                    local_persist int selected[8];
+                    persist int selected[8];
                     int i = 0, node_select = selected[0];
                     if (sel != root_selected)
                     {
@@ -1012,7 +1010,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                     if (nk_tree_element_push(ctx, NK_TREE_NODE, "Node", NK_MINIMIZED, &node_select))
                     {
                         int j = 0;
-                        local_persist int sel_nodes[4];
+                        persist int sel_nodes[4];
                         if (node_select != selected[0])
                         {
                             selected[0] = node_select;
@@ -1045,7 +1043,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
             }
             if (nk_tree_push(ctx, NK_TREE_NODE, "Notebook", NK_MINIMIZED))
             {
-                local_persist int current_tab = 0;
+                persist int current_tab = 0;
                 f32 step = (2*3.141592654f) / 32;
                 const char *names[] = {"Lines", "Columns", "Mixed"};
                 f32 id = 0;
@@ -1174,7 +1172,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 nk_layout_space_push(ctx, nk_rect(0,0,150,500));
                 if (nk_group_begin(ctx, "Group_left", NK_WINDOW_BORDER))
                 {
-                    local_persist int selected[32];
+                    persist int selected[32];
                     nk_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 32; ++i)
                         nk_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", NK_TEXT_CENTERED, &selected[i]);
@@ -1210,7 +1208,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 nk_layout_space_push(ctx, nk_rect(320,0,150,150));
                 if (nk_group_begin(ctx, "Group_right_top", NK_WINDOW_BORDER))
                 {
-                    local_persist int selected[4];
+                    persist int selected[4];
                     nk_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
                         nk_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", NK_TEXT_CENTERED, &selected[i]);
@@ -1220,7 +1218,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 nk_layout_space_push(ctx, nk_rect(320,160,150,150));
                 if (nk_group_begin(ctx, "Group_right_center", NK_WINDOW_BORDER))
                 {
-                    local_persist int selected[4];
+                    persist int selected[4];
                     nk_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
                         nk_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", NK_TEXT_CENTERED, &selected[i]);
@@ -1230,7 +1228,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 nk_layout_space_push(ctx, nk_rect(320,320,150,150));
                 if (nk_group_begin(ctx, "Group_right_bottom", NK_WINDOW_BORDER))
                 {
-                    local_persist int selected[4];
+                    persist int selected[4];
                     nk_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
                         nk_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", NK_TEXT_CENTERED, &selected[i]);
@@ -1249,7 +1247,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
                 if (nk_tree_push(ctx, NK_TREE_NODE, "Vertical", NK_MINIMIZED))
                 {
-                    local_persist f32 a = 100, b = 100, c = 100;
+                    persist f32 a = 100, b = 100, c = 100;
                     struct nk_rect bounds;
 
                     f32 row_layout[5];
@@ -1339,7 +1337,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
 
                 if (nk_tree_push(ctx, NK_TREE_NODE, "Horizontal", NK_MINIMIZED))
                 {
-                    local_persist f32 a = 100, b = 100, c = 100;
+                    persist f32 a = 100, b = 100, c = 100;
                     struct nk_rect bounds;
 
                     /* header */

@@ -1,12 +1,13 @@
-#include "sprite.h"
+#include "renderer/sprite.h"
 
-#include "shader.h"
-#include "texture.h"
+#include "renderer/shader.h"
+#include "renderer/texture.h"
+#include "util/alchemy_math.h"
 #include "util/types.h"
 
 #include <glad/glad.h>
 
-void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
+void sprite_renderer_init(SpriteRenderer* sprite_renderer, u32 shader)
 {
     f32 vertices[] = 
     { 
@@ -50,36 +51,51 @@ void init_sprite_renderer(SpriteRenderer* sprite_renderer, u32 shader)
     sprite_renderer->ibo = ibo;
 }
 
-void delete_sprite_renderer(SpriteRenderer* sprite_renderer)
+void sprite_renderer_delete(SpriteRenderer* sprite_renderer)
 {
     glDeleteVertexArrays(1, &sprite_renderer->vao);
     glDeleteBuffers(1, &sprite_renderer->vbo);
     glDeleteBuffers(1, &sprite_renderer->ibo);
-    delete_shader(sprite_renderer->shader);
+    shader_delete(sprite_renderer->shader);
+}
+
+Sprite sprite_init(SpriteRenderer* renderer, Texture* tex)
+{
+    Sprite sprite = {0};
+    sprite.renderer = renderer;
+    sprite.texture = tex;
+
+    // Default sprite to have texture's size and no tint or rotation, and zero out position
+    sprite.size = tex->size;
+    sprite.rotation = 0.0f;
+    sprite.position = (v2){0.0f, 0.0f};
+    sprite.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+
+    return sprite;
 }
 
 // TODO(lucas): Allow using only color and no texture
 // Note that texture could not be set to 0 for no texture since that is OpenGL's error case
-void draw_sprite(Sprite sprite)
+void sprite_draw(Sprite sprite)
 {
-    m4 model = glms_mat4_identity();
-    model = glms_translate(model, (v3){sprite.position.x, sprite.position.y, 0.0f});
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){sprite.position.x, sprite.position.y, 0.0f});
 
     // NOTE(lucas): The origin of a quad is at the top left, but we want the origin to appear in the center of the quad
     // for rotation. So, before rotation, translate the quad right and down by half its size. After the rotation, undo
     // this translation.
-    model = glms_translate(model, (v3){0.5f * sprite.size.x, 0.5f * sprite.size.y, 0.0f});
-    model = glms_rotate(model, glm_rad(sprite.rotation), (v3){0.0f, 0.0f, 1.0f});
-    model = glms_translate(model, (v3){-0.5f * sprite.size.x, -0.5f * sprite.size.y, 0.0f});
+    model = m4_translate(model, (v3){0.5f*sprite.size.x, 0.5f*sprite.size.y, 0.0f});
+    model = m4_rotate(model, glm_rad(sprite.rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_translate(model, (v3){-0.5f*sprite.size.x, -0.5f*sprite.size.y, 0.0f});
 
     // Scale sprite to appropriate size
-    model = glms_scale(model, (v3){sprite.size.x, sprite.size.y, 1.0f});
+    model = m4_scale(model, (v3){(f32)sprite.size.x, (f32)sprite.size.y, 1.0f});
 
     // Set model matrix and color shader values
     shader_set_m4(sprite.renderer->shader, "model", model, 0);
-    shader_set_v3(sprite.renderer->shader, "color", sprite.color);
+    shader_set_v4(sprite.renderer->shader, "color", sprite.color);
 
-    bind_texture(sprite.texture, 0);
+    texture_bind(sprite.texture);
 
     glBindVertexArray(sprite.renderer->vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

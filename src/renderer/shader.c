@@ -1,8 +1,6 @@
-#include "shader.h"
+#include "renderer/shader.h"
 #include "util/types.h"
 
-// TODO(lucas): Insert logging and remove Windows dependency
-#include <windows.h>
 #include <glad/glad.h>
 
 #include <stdio.h>  // File I/O
@@ -51,7 +49,8 @@ internal void shader_error_check(GLuint shader)
     else
     {
         // TODO(lucas): Logging
-        MessageBoxA(0, "Object is not a shader or shader program!", "Shader Error", MB_OK);
+        // Shader error: Object is not a shader or shader program!
+        ASSERT(0);
     }
 
     if (!success)
@@ -60,16 +59,18 @@ internal void shader_error_check(GLuint shader)
         {
             glGetShaderInfoLog(shader, sizeof(info_log), NULL, info_log);
             // TODO(lucas): Logging
-            MessageBoxA(0, "Shader compilation failed:\n", "Shader Error", MB_OK);
+            // Shader error: Shader compilation failed
+            ASSERT(0);
         }
         else if (glIsProgram(shader))
         {
             GLsizei log_length = 0;
             glGetProgramInfoLog(shader, sizeof(info_log), &log_length, info_log);
             // TODO(lucas): Logging
-            MessageBoxA(0, "Shader linking failed:\n", "Shader Error", MB_OK);
+            // Shader Error: Shader linking failed
+            ASSERT(0);
         }
-        OutputDebugStringA(info_log);
+        // TODO(lucas): Output info log
     }
 }
 
@@ -94,7 +95,10 @@ u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path
     GLuint shader_program = glCreateProgram();
     // TODO(lucas): Logging
     if (!shader_program)
-        MessageBoxA(0, "Shader program creation failed!\n", "Shader Error", MB_OK);
+    {
+        // Shader Error: Shader program creation failed!
+        ASSERT(0);
+    }
     glAttachShader(shader_program, vertex_shader);
     glAttachShader(shader_program, fragment_shader);
     glLinkProgram(shader_program);
@@ -107,42 +111,42 @@ u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path
     return shader_program;
 }
 
-void bind_shader(u32 id)
+void shader_bind(u32 id)
 {
     glUseProgram(id);
 }
 
-void unbind_shader()
+void shader_unbind()
 {
     glUseProgram(0);
 }
 
-void delete_shader(u32 id)
+void shader_delete(u32 id)
 {
     glDeleteProgram(id);
 }
 
 void shader_set_v3(u32 shader, const char* name, v3 value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform3f(glGetUniformLocation(shader, name), value.x, value.y, value.z);
 }
 
 void shader_set_v4(u32 shader, const char* name, v4 value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
 void shader_set_m4(u32 shader, const char* name, m4 value, b32 transpose)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
 }
 
 
 void shader_set_int(u32 shader, const char* name, int value)
 {
-    bind_shader(shader);
+    shader_bind(shader);
     glUniform1i(glGetUniformLocation(shader, name), value);
 }
