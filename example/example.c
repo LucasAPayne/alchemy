@@ -238,7 +238,6 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     text_draw(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 
-    // TODO(lucas): UI input is broken
     ui_overview(ctx, window_width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
 }

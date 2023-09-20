@@ -2,8 +2,6 @@
 
 #include <time.h> // struct tm
 
-#pragma warning(disable: 4996)
-
 typedef enum MenuState
 {
     MENU_NONE,

@@ -1,8 +1,6 @@
 #include "renderer/shader.h"
 #include "util/types.h"
 
-// TODO(lucas): Insert logging and remove Windows dependency
-#include <windows.h>
 #include <glad/glad.h>
 
 #include <stdio.h>  // File I/O
@@ -51,7 +49,8 @@ internal void shader_error_check(GLuint shader)
     else
     {
         // TODO(lucas): Logging
-        MessageBoxA(0, "Object is not a shader or shader program!", "Shader Error", MB_OK);
+        // Shader error: Object is not a shader or shader program!
+        ASSERT(0);
     }
 
     if (!success)
@@ -60,16 +59,18 @@ internal void shader_error_check(GLuint shader)
         {
             glGetShaderInfoLog(shader, sizeof(info_log), NULL, info_log);
             // TODO(lucas): Logging
-            MessageBoxA(0, "Shader compilation failed:\n", "Shader Error", MB_OK);
+            // Shader error: Shader compilation failed
+            ASSERT(0);
         }
         else if (glIsProgram(shader))
         {
             GLsizei log_length = 0;
             glGetProgramInfoLog(shader, sizeof(info_log), &log_length, info_log);
             // TODO(lucas): Logging
-            MessageBoxA(0, "Shader linking failed:\n", "Shader Error", MB_OK);
+            // Shader Error: Shader linking failed
+            ASSERT(0);
         }
-        OutputDebugStringA(info_log);
+        // TODO(lucas): Output info log
     }
 }
 
@@ -94,7 +95,10 @@ u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path
     GLuint shader_program = glCreateProgram();
     // TODO(lucas): Logging
     if (!shader_program)
-        MessageBoxA(0, "Shader program creation failed!\n", "Shader Error", MB_OK);
+    {
+        // Shader Error: Shader program creation failed!
+        ASSERT(0);
+    }
     glAttachShader(shader_program, vertex_shader);
     glAttachShader(shader_program, fragment_shader);
     glLinkProgram(shader_program);

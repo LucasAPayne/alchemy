@@ -22,13 +22,13 @@ add_executable(${PROJECT_NAME}
                ${PROJECT_SOURCE_DIR}/src/ui.c)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-            ${PROJECT_SOURCE_DIR}/include)
+                           ${PROJECT_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
-            ${PROJECT_SOURCE_DIR}/lib
-            ${PROJECT_SOURCE_DIR}/lib/glad/include
-            ${PROJECT_SOURCE_DIR}/lib/cglm
-            ${PROJECT_SOURCE_DIR}/lib/freetype/include)
+                           ${PROJECT_SOURCE_DIR}/lib
+                           ${PROJECT_SOURCE_DIR}/lib/glad/include
+                           ${PROJECT_SOURCE_DIR}/lib/cglm
+                           ${PROJECT_SOURCE_DIR}/lib/freetype/include)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
                       user32.lib
@@ -51,12 +51,14 @@ if (MSVC)
     # C4116 is unnamed type definitions in parenthetical expressions. Disabled because of nuklear
     # /Oi: Generate intrinsic functions
     # LNK4099 is about linking without debug info. Disabled because of freetype
-    target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+                           /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116
+                           /D_CRT_SECURE_NO_WARNINGS)
     target_link_options(${PROJECT_NAME} PRIVATE /subsystem:windows /entry:mainCRTStartup /ignore:4099)
-endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-    # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
-    target_compile_options(${PROJECT_NAME} PRIVATE /Zi /Od)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ALCHEMY_DEBUG)
+    if (CMAKE_BUILD_TYPE STREQUAL Debug)
+        # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
+        target_compile_options(${PROJECT_NAME} PRIVATE /Zi /Od /RTCcsu)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE ALCHEMY_DEBUG)
+    endif()
 endif()
