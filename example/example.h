@@ -41,6 +41,6 @@ typedef struct ExampleState
     struct nk_font* immortal;
 } ExampleState;
 
-ExampleState example_state_init(void);
+void example_state_init(ExampleState* state);
 void example_state_delete(ExampleState* state);
 void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height);

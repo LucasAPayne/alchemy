@@ -1,9 +1,15 @@
-#include "platform/windows/win32_sound.h"
 #include "sound.h"
 #include "util/types.h"
 
 #include <windows.h>
 #include <xaudio2.h>
+
+typedef struct XAudio2State
+{
+    b32 initialized;
+    IXAudio2* xaudio2;
+    IXAudio2MasteringVoice* master_voice;
+} XAudio2State;
 
 // Little-Endian
 #define FOURCC_RIFF 'FFIR'
@@ -36,7 +42,7 @@ global IXAudio2VoiceCallback xaudio_callbacks = {
     }
 };
 
-XAudio2State xaudio2_state_init(void)
+internal XAudio2State xaudio2_state_init(void)
 {
     XAudio2State xaudio2_state = {0};
     xaudio2_state.xaudio2 = NULL;
@@ -50,6 +56,8 @@ XAudio2State xaudio2_state_init(void)
     {
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
     }
+
+    xaudio2_state.initialized = true;
 
     return xaudio2_state;    
 }
@@ -140,8 +148,12 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-void win32_process_sound_output(SoundOutput* sound_output, XAudio2State* xaudio2_state)
+void sound_output_process(SoundOutput* sound_output)
 {
+    persist XAudio2State xaudio2_state = {0};
+    if (!xaudio2_state.initialized)
+        xaudio2_state = xaudio2_state_init();
+
     WAVEFORMATEX wave = {0};
     XAUDIO2_BUFFER buffer = {0};
     HANDLE sound_file = CreateFileA(sound_output->filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -182,7 +194,7 @@ void win32_process_sound_output(SoundOutput* sound_output, XAudio2State* xaudio2
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source void not to expect data after this buffer
     
     IXAudio2SourceVoice* source_voice;
-    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state->xaudio2, &source_voice, &wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
+    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, &wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
                                           &xaudio_callbacks, NULL, NULL)))
     {
         // TODO(lucas): Diagnostic

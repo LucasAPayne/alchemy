@@ -104,62 +104,59 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-ExampleState example_state_init(void)
+void example_state_init(ExampleState* state)
 {
     srand(0);
-    ExampleState state = {0};
 
     // Compile and Load shaders
     u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    sprite_renderer_init(&state.sprite_renderer, sprite_shader);
-    font_renderer_init(&state.font_renderer, font_shader, "fonts/cardinal.ttf");
-    font_renderer_init(&state.frame_time_renderer, font_shader, "fonts/immortal.ttf");
+    sprite_renderer_init(&state->sprite_renderer, sprite_shader);
+    font_renderer_init(&state->font_renderer, font_shader, "fonts/cardinal.ttf");
+    font_renderer_init(&state->frame_time_renderer, font_shader, "fonts/immortal.ttf");
 
-    state.logo_tex = texture_load_from_file("textures/dvd.png");
-    state.logo = sprite_init(&state.sprite_renderer, &state.logo_tex);
-    state.logo.size = (iv2){300, 150};
+    state->logo_tex = texture_load_from_file("textures/dvd.png");
+    state->logo = sprite_init(&state->sprite_renderer, &state->logo_tex);
+    state->logo.size = (iv2){300, 150};
 
-    state.logo_direction = (v2){1.0f, 1.0f};
+    state->logo_direction = (v2){1.0f, 1.0f};
 
-    state.player_tex = texture_load_from_file("textures/white_pixel.png");
-    state.player = sprite_init(&state.sprite_renderer, &state.player_tex);
-    state.player.size = (iv2){50, 50};
+    state->player_tex = texture_load_from_file("textures/white_pixel.png");
+    state->player = sprite_init(&state->sprite_renderer, &state->player_tex);
+    state->player.size = (iv2){50, 50};
 
-    state.dash_counter = 0;
-    state.dash_frames = 15;
-    state.dash_direction = 0.0f;
-    state.dash_distance = 300.0f;
+    state->dash_counter = 0;
+    state->dash_frames = 15;
+    state->dash_direction = 0.0f;
+    state->dash_distance = 300.0f;
 
-    shader_set_int(state.sprite_renderer.shader, "image", 0);
+    shader_set_int(state->sprite_renderer.shader, "image", 0);
     const char* test_sound_filename = "sounds/pew.wav";
-    strncpy_s(state.sound_output.filename, sizeof(state.sound_output.filename), test_sound_filename,
+    strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
               strlen(test_sound_filename));
-    set_volume(&state.sound_output, 0.5f);
-    state.sound_output.should_play = false;
-    state.is_shooting = false;
+    sound_output_set_volume(&state->sound_output, 0.5f);
+    state->sound_output.should_play = false;
+    state->is_shooting = false;
 
-    timer_init(&state.dash_cooldown, 2.0f, false);
-    stopwatch_init(&state.stopwatch, false);
+    timer_init(&state->dash_cooldown, 2.0f, false);
+    stopwatch_init(&state->stopwatch, false);
 
     cursor_set_from_system(CURSOR_ARROW);
-    state.sword_cursor = cursor_load_from_file("cursors/sword.ani");
+    state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
     // nuklear example
-    state.alchemy_state = (nk_alchemy_state){0};
-    state.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
-    state.alchemy_state.ctx = nk_alchemy_init(&state.alchemy_state, ui_shader);
-    struct nk_font_atlas* atlas = &state.alchemy_state.atlas;
-    nk_alchemy_font_stash_begin(&state.alchemy_state, &atlas);
-    state.immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
-    nk_alchemy_font_stash_end(&state.alchemy_state);
-    nk_style_set_font(&state.alchemy_state.ctx, &state.immortal->handle);
-    state.alchemy_state.keyboard = &state.input.keyboard;
-    state.alchemy_state.mouse = &state.input.mouse;
-
-    return state;
+    state->alchemy_state = (nk_alchemy_state){0};
+    state->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
+    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
+    struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
+    nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
+    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
+    nk_alchemy_font_stash_end(&state->alchemy_state);
+    nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
+    state->alchemy_state.keyboard = &state->input.keyboard;
+    state->alchemy_state.mouse = &state->input.mouse;
 }
 
 void example_state_delete(ExampleState* state)
@@ -241,6 +238,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     text_draw(&state->frame_time_renderer, stopwatch_buffer, stopwatch_text_pos, 32, font_color);
 
+    // TODO(lucas): UI input is broken
     ui_overview(ctx, window_width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
 }

@@ -238,8 +238,7 @@ typedef struct Input
     Mouse mouse;
 } Input;
 
-void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mouse);
-void gamepad_process_input(Input* input);
+void input_process(Window* window, Input* input);
 
 /* Clipboard */
 b32  clipboard_write_string(char* text);

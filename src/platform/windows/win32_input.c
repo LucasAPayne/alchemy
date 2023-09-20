@@ -122,14 +122,17 @@ internal void win32_process_mouse_button(MouseButtonState* button, int clicks)
 }
 
 // TODO(lucas): Support for non-US keyboard layouts
-void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mouse)
+void win32_keyboard_mouse_process_input(Window* window, Input* input)
 {
+    Keyboard* keyboard = &input->keyboard;
+    Mouse* mouse = &input->mouse;
+
     // Reset any character that was entered last frame
-    key_input->current_char = 0;
+    keyboard->current_char = 0;
 
     // Release state should not persist, so make sure it is false for each button
-    for (int key = 0; key < ARRAY_COUNT(key_input->keys); key++)
-        key_input->keys[key].released = false;
+    for (int key = 0; key < ARRAY_COUNT(keyboard->keys); key++)
+        keyboard->keys[key].released = false;
 
     // Release and double click state should not persist, so set it to false
     for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
@@ -174,104 +177,104 @@ void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mo
                 // For keys that have no ANSI equivalent, Windows provides defines for virtual keycodes
                 switch(virtual_key_code)
                 {
-                    case 'A': win32_process_key(&key_input->keys[KEY_A], is_down, was_down); break;
-                    case 'B': win32_process_key(&key_input->keys[KEY_B], is_down, was_down); break;
-                    case 'C': win32_process_key(&key_input->keys[KEY_C], is_down, was_down); break;
-                    case 'D': win32_process_key(&key_input->keys[KEY_D], is_down, was_down); break;
-                    case 'E': win32_process_key(&key_input->keys[KEY_E], is_down, was_down); break;
-                    case 'F': win32_process_key(&key_input->keys[KEY_F], is_down, was_down); break;
-                    case 'G': win32_process_key(&key_input->keys[KEY_G], is_down, was_down); break;
-                    case 'H': win32_process_key(&key_input->keys[KEY_H], is_down, was_down); break;
-                    case 'I': win32_process_key(&key_input->keys[KEY_I], is_down, was_down); break;
-                    case 'J': win32_process_key(&key_input->keys[KEY_J], is_down, was_down); break;
-                    case 'K': win32_process_key(&key_input->keys[KEY_K], is_down, was_down); break;
-                    case 'L': win32_process_key(&key_input->keys[KEY_L], is_down, was_down); break;
-                    case 'M': win32_process_key(&key_input->keys[KEY_M], is_down, was_down); break;
-                    case 'N': win32_process_key(&key_input->keys[KEY_N], is_down, was_down); break;
-                    case 'O': win32_process_key(&key_input->keys[KEY_O], is_down, was_down); break;
-                    case 'P': win32_process_key(&key_input->keys[KEY_P], is_down, was_down); break;
-                    case 'Q': win32_process_key(&key_input->keys[KEY_Q], is_down, was_down); break;
-                    case 'R': win32_process_key(&key_input->keys[KEY_R], is_down, was_down); break;
-                    case 'S': win32_process_key(&key_input->keys[KEY_S], is_down, was_down); break;
-                    case 'T': win32_process_key(&key_input->keys[KEY_T], is_down, was_down); break;
-                    case 'U': win32_process_key(&key_input->keys[KEY_U], is_down, was_down); break;
-                    case 'V': win32_process_key(&key_input->keys[KEY_V], is_down, was_down); break;
-                    case 'W': win32_process_key(&key_input->keys[KEY_W], is_down, was_down); break;
-                    case 'X': win32_process_key(&key_input->keys[KEY_X], is_down, was_down); break;
-                    case 'Y': win32_process_key(&key_input->keys[KEY_Y], is_down, was_down); break;
-                    case 'Z': win32_process_key(&key_input->keys[KEY_Z], is_down, was_down); break;
+                    case 'A': win32_process_key(&keyboard->keys[KEY_A], is_down, was_down); break;
+                    case 'B': win32_process_key(&keyboard->keys[KEY_B], is_down, was_down); break;
+                    case 'C': win32_process_key(&keyboard->keys[KEY_C], is_down, was_down); break;
+                    case 'D': win32_process_key(&keyboard->keys[KEY_D], is_down, was_down); break;
+                    case 'E': win32_process_key(&keyboard->keys[KEY_E], is_down, was_down); break;
+                    case 'F': win32_process_key(&keyboard->keys[KEY_F], is_down, was_down); break;
+                    case 'G': win32_process_key(&keyboard->keys[KEY_G], is_down, was_down); break;
+                    case 'H': win32_process_key(&keyboard->keys[KEY_H], is_down, was_down); break;
+                    case 'I': win32_process_key(&keyboard->keys[KEY_I], is_down, was_down); break;
+                    case 'J': win32_process_key(&keyboard->keys[KEY_J], is_down, was_down); break;
+                    case 'K': win32_process_key(&keyboard->keys[KEY_K], is_down, was_down); break;
+                    case 'L': win32_process_key(&keyboard->keys[KEY_L], is_down, was_down); break;
+                    case 'M': win32_process_key(&keyboard->keys[KEY_M], is_down, was_down); break;
+                    case 'N': win32_process_key(&keyboard->keys[KEY_N], is_down, was_down); break;
+                    case 'O': win32_process_key(&keyboard->keys[KEY_O], is_down, was_down); break;
+                    case 'P': win32_process_key(&keyboard->keys[KEY_P], is_down, was_down); break;
+                    case 'Q': win32_process_key(&keyboard->keys[KEY_Q], is_down, was_down); break;
+                    case 'R': win32_process_key(&keyboard->keys[KEY_R], is_down, was_down); break;
+                    case 'S': win32_process_key(&keyboard->keys[KEY_S], is_down, was_down); break;
+                    case 'T': win32_process_key(&keyboard->keys[KEY_T], is_down, was_down); break;
+                    case 'U': win32_process_key(&keyboard->keys[KEY_U], is_down, was_down); break;
+                    case 'V': win32_process_key(&keyboard->keys[KEY_V], is_down, was_down); break;
+                    case 'W': win32_process_key(&keyboard->keys[KEY_W], is_down, was_down); break;
+                    case 'X': win32_process_key(&keyboard->keys[KEY_X], is_down, was_down); break;
+                    case 'Y': win32_process_key(&keyboard->keys[KEY_Y], is_down, was_down); break;
+                    case 'Z': win32_process_key(&keyboard->keys[KEY_Z], is_down, was_down); break;
 
-                    case '0': win32_process_key(&key_input->keys[KEY_NUM0], is_down, was_down); break;
-                    case '1': win32_process_key(&key_input->keys[KEY_NUM1], is_down, was_down); break;
-                    case '2': win32_process_key(&key_input->keys[KEY_NUM2], is_down, was_down); break;
-                    case '3': win32_process_key(&key_input->keys[KEY_NUM3], is_down, was_down); break;
-                    case '4': win32_process_key(&key_input->keys[KEY_NUM4], is_down, was_down); break;
-                    case '5': win32_process_key(&key_input->keys[KEY_NUM5], is_down, was_down); break;
-                    case '6': win32_process_key(&key_input->keys[KEY_NUM6], is_down, was_down); break;
-                    case '7': win32_process_key(&key_input->keys[KEY_NUM7], is_down, was_down); break;
-                    case '8': win32_process_key(&key_input->keys[KEY_NUM8], is_down, was_down); break;
-                    case '9': win32_process_key(&key_input->keys[KEY_NUM9], is_down, was_down); break;
+                    case '0': win32_process_key(&keyboard->keys[KEY_NUM0], is_down, was_down); break;
+                    case '1': win32_process_key(&keyboard->keys[KEY_NUM1], is_down, was_down); break;
+                    case '2': win32_process_key(&keyboard->keys[KEY_NUM2], is_down, was_down); break;
+                    case '3': win32_process_key(&keyboard->keys[KEY_NUM3], is_down, was_down); break;
+                    case '4': win32_process_key(&keyboard->keys[KEY_NUM4], is_down, was_down); break;
+                    case '5': win32_process_key(&keyboard->keys[KEY_NUM5], is_down, was_down); break;
+                    case '6': win32_process_key(&keyboard->keys[KEY_NUM6], is_down, was_down); break;
+                    case '7': win32_process_key(&keyboard->keys[KEY_NUM7], is_down, was_down); break;
+                    case '8': win32_process_key(&keyboard->keys[KEY_NUM8], is_down, was_down); break;
+                    case '9': win32_process_key(&keyboard->keys[KEY_NUM9], is_down, was_down); break;
 
-                    case VK_OEM_4:      win32_process_key(&key_input->keys[KEY_LBRACKET],  is_down, was_down); break;
-                    case VK_OEM_6:      win32_process_key(&key_input->keys[KEY_RBRACKET],  is_down, was_down); break;
-                    case VK_OEM_1:      win32_process_key(&key_input->keys[KEY_SEMICOLON], is_down, was_down); break;
-                    case VK_OEM_7:      win32_process_key(&key_input->keys[KEY_QUOTE],     is_down, was_down); break;
-                    case VK_OEM_COMMA:  win32_process_key(&key_input->keys[KEY_COMMA],     is_down, was_down); break;
-                    case VK_OEM_PERIOD: win32_process_key(&key_input->keys[KEY_PERIOD],    is_down, was_down); break;
-                    case VK_OEM_2:      win32_process_key(&key_input->keys[KEY_SLASH],     is_down, was_down); break;
-                    case VK_OEM_5:      win32_process_key(&key_input->keys[KEY_BACKSLASH], is_down, was_down); break;
-                    case VK_OEM_3:      win32_process_key(&key_input->keys[KEY_TILDE],     is_down, was_down); break;
-                    case VK_OEM_PLUS:   win32_process_key(&key_input->keys[KEY_EQUAL],     is_down, was_down); break;
-                    case VK_OEM_MINUS:  win32_process_key(&key_input->keys[KEY_HYPHEN],    is_down, was_down); break;
+                    case VK_OEM_4:      win32_process_key(&keyboard->keys[KEY_LBRACKET],  is_down, was_down); break;
+                    case VK_OEM_6:      win32_process_key(&keyboard->keys[KEY_RBRACKET],  is_down, was_down); break;
+                    case VK_OEM_1:      win32_process_key(&keyboard->keys[KEY_SEMICOLON], is_down, was_down); break;
+                    case VK_OEM_7:      win32_process_key(&keyboard->keys[KEY_QUOTE],     is_down, was_down); break;
+                    case VK_OEM_COMMA:  win32_process_key(&keyboard->keys[KEY_COMMA],     is_down, was_down); break;
+                    case VK_OEM_PERIOD: win32_process_key(&keyboard->keys[KEY_PERIOD],    is_down, was_down); break;
+                    case VK_OEM_2:      win32_process_key(&keyboard->keys[KEY_SLASH],     is_down, was_down); break;
+                    case VK_OEM_5:      win32_process_key(&keyboard->keys[KEY_BACKSLASH], is_down, was_down); break;
+                    case VK_OEM_3:      win32_process_key(&keyboard->keys[KEY_TILDE],     is_down, was_down); break;
+                    case VK_OEM_PLUS:   win32_process_key(&keyboard->keys[KEY_EQUAL],     is_down, was_down); break;
+                    case VK_OEM_MINUS:  win32_process_key(&keyboard->keys[KEY_HYPHEN],    is_down, was_down); break;
 
-                    case VK_SPACE:      win32_process_key(&key_input->keys[KEY_SPACE],     is_down, was_down); break;
-                    case VK_RETURN:     win32_process_key(&key_input->keys[KEY_ENTER],     is_down, was_down); break;
-                    case VK_ESCAPE:     win32_process_key(&key_input->keys[KEY_ESCAPE],    is_down, was_down); break;
-                    case VK_BACK:       win32_process_key(&key_input->keys[KEY_BACKSPACE], is_down, was_down); break;
-                    case VK_TAB:        win32_process_key(&key_input->keys[KEY_TAB],       is_down, was_down); break;
-                    case VK_LSHIFT:     win32_process_key(&key_input->keys[KEY_LSHIFT],    is_down, was_down); break;
-                    case VK_RSHIFT:     win32_process_key(&key_input->keys[KEY_RSHIFT],    is_down, was_down); break;
-                    case VK_LCONTROL:   win32_process_key(&key_input->keys[KEY_LCONTROL],  is_down, was_down); break;
-                    case VK_RCONTROL:   win32_process_key(&key_input->keys[KEY_RCONTROL],  is_down, was_down); break;
-                    case VK_LMENU:      win32_process_key(&key_input->keys[KEY_LALT],      is_down, was_down); break;
-                    case VK_RMENU:      win32_process_key(&key_input->keys[KEY_RALT],      is_down, was_down); break;
-                    case VK_LWIN:       win32_process_key(&key_input->keys[KEY_LSYSTEM],   is_down, was_down); break;
-                    case VK_RWIN:       win32_process_key(&key_input->keys[KEY_RSYSTEM],   is_down, was_down); break;
-                    case VK_APPS:       win32_process_key(&key_input->keys[KEY_MENU],      is_down, was_down); break;
-                    case VK_PRIOR:      win32_process_key(&key_input->keys[KEY_PAGEUP],    is_down, was_down); break;
-                    case VK_NEXT:       win32_process_key(&key_input->keys[KEY_PAGEDOWN],  is_down, was_down); break;
-                    case VK_END:        win32_process_key(&key_input->keys[KEY_END],       is_down, was_down); break;
-                    case VK_HOME:       win32_process_key(&key_input->keys[KEY_HOME],      is_down, was_down); break;
-                    case VK_INSERT:     win32_process_key(&key_input->keys[KEY_INSERT],    is_down, was_down); break;
-                    case VK_DELETE:     win32_process_key(&key_input->keys[KEY_DEL],       is_down, was_down); break;
-                    case VK_UP:         win32_process_key(&key_input->keys[KEY_UP],        is_down, was_down); break;
-                    case VK_DOWN:       win32_process_key(&key_input->keys[KEY_DOWN],      is_down, was_down); break;
-                    case VK_LEFT:       win32_process_key(&key_input->keys[KEY_LEFT],      is_down, was_down); break;
-                    case VK_RIGHT:      win32_process_key(&key_input->keys[KEY_RIGHT],     is_down, was_down); break;
+                    case VK_SPACE:      win32_process_key(&keyboard->keys[KEY_SPACE],     is_down, was_down); break;
+                    case VK_RETURN:     win32_process_key(&keyboard->keys[KEY_ENTER],     is_down, was_down); break;
+                    case VK_ESCAPE:     win32_process_key(&keyboard->keys[KEY_ESCAPE],    is_down, was_down); break;
+                    case VK_BACK:       win32_process_key(&keyboard->keys[KEY_BACKSPACE], is_down, was_down); break;
+                    case VK_TAB:        win32_process_key(&keyboard->keys[KEY_TAB],       is_down, was_down); break;
+                    case VK_LSHIFT:     win32_process_key(&keyboard->keys[KEY_LSHIFT],    is_down, was_down); break;
+                    case VK_RSHIFT:     win32_process_key(&keyboard->keys[KEY_RSHIFT],    is_down, was_down); break;
+                    case VK_LCONTROL:   win32_process_key(&keyboard->keys[KEY_LCONTROL],  is_down, was_down); break;
+                    case VK_RCONTROL:   win32_process_key(&keyboard->keys[KEY_RCONTROL],  is_down, was_down); break;
+                    case VK_LMENU:      win32_process_key(&keyboard->keys[KEY_LALT],      is_down, was_down); break;
+                    case VK_RMENU:      win32_process_key(&keyboard->keys[KEY_RALT],      is_down, was_down); break;
+                    case VK_LWIN:       win32_process_key(&keyboard->keys[KEY_LSYSTEM],   is_down, was_down); break;
+                    case VK_RWIN:       win32_process_key(&keyboard->keys[KEY_RSYSTEM],   is_down, was_down); break;
+                    case VK_APPS:       win32_process_key(&keyboard->keys[KEY_MENU],      is_down, was_down); break;
+                    case VK_PRIOR:      win32_process_key(&keyboard->keys[KEY_PAGEUP],    is_down, was_down); break;
+                    case VK_NEXT:       win32_process_key(&keyboard->keys[KEY_PAGEDOWN],  is_down, was_down); break;
+                    case VK_END:        win32_process_key(&keyboard->keys[KEY_END],       is_down, was_down); break;
+                    case VK_HOME:       win32_process_key(&keyboard->keys[KEY_HOME],      is_down, was_down); break;
+                    case VK_INSERT:     win32_process_key(&keyboard->keys[KEY_INSERT],    is_down, was_down); break;
+                    case VK_DELETE:     win32_process_key(&keyboard->keys[KEY_DEL],       is_down, was_down); break;
+                    case VK_UP:         win32_process_key(&keyboard->keys[KEY_UP],        is_down, was_down); break;
+                    case VK_DOWN:       win32_process_key(&keyboard->keys[KEY_DOWN],      is_down, was_down); break;
+                    case VK_LEFT:       win32_process_key(&keyboard->keys[KEY_LEFT],      is_down, was_down); break;
+                    case VK_RIGHT:      win32_process_key(&keyboard->keys[KEY_RIGHT],     is_down, was_down); break;
 
-                    case VK_NUMPAD0:    win32_process_key(&key_input->keys[KEY_NUMPAD0], is_down, was_down); break;
-                    case VK_NUMPAD1:    win32_process_key(&key_input->keys[KEY_NUMPAD1], is_down, was_down); break;
-                    case VK_NUMPAD2:    win32_process_key(&key_input->keys[KEY_NUMPAD2], is_down, was_down); break;
-                    case VK_NUMPAD3:    win32_process_key(&key_input->keys[KEY_NUMPAD3], is_down, was_down); break;
-                    case VK_NUMPAD4:    win32_process_key(&key_input->keys[KEY_NUMPAD4], is_down, was_down); break;
-                    case VK_NUMPAD5:    win32_process_key(&key_input->keys[KEY_NUMPAD5], is_down, was_down); break;
-                    case VK_NUMPAD6:    win32_process_key(&key_input->keys[KEY_NUMPAD6], is_down, was_down); break;
-                    case VK_NUMPAD7:    win32_process_key(&key_input->keys[KEY_NUMPAD7], is_down, was_down); break;
-                    case VK_NUMPAD8:    win32_process_key(&key_input->keys[KEY_NUMPAD8], is_down, was_down); break;
-                    case VK_NUMPAD9:    win32_process_key(&key_input->keys[KEY_NUMPAD9], is_down, was_down); break;
+                    case VK_NUMPAD0:    win32_process_key(&keyboard->keys[KEY_NUMPAD0], is_down, was_down); break;
+                    case VK_NUMPAD1:    win32_process_key(&keyboard->keys[KEY_NUMPAD1], is_down, was_down); break;
+                    case VK_NUMPAD2:    win32_process_key(&keyboard->keys[KEY_NUMPAD2], is_down, was_down); break;
+                    case VK_NUMPAD3:    win32_process_key(&keyboard->keys[KEY_NUMPAD3], is_down, was_down); break;
+                    case VK_NUMPAD4:    win32_process_key(&keyboard->keys[KEY_NUMPAD4], is_down, was_down); break;
+                    case VK_NUMPAD5:    win32_process_key(&keyboard->keys[KEY_NUMPAD5], is_down, was_down); break;
+                    case VK_NUMPAD6:    win32_process_key(&keyboard->keys[KEY_NUMPAD6], is_down, was_down); break;
+                    case VK_NUMPAD7:    win32_process_key(&keyboard->keys[KEY_NUMPAD7], is_down, was_down); break;
+                    case VK_NUMPAD8:    win32_process_key(&keyboard->keys[KEY_NUMPAD8], is_down, was_down); break;
+                    case VK_NUMPAD9:    win32_process_key(&keyboard->keys[KEY_NUMPAD9], is_down, was_down); break;
 
-                    case VK_F1:         win32_process_key(&key_input->keys[KEY_F1],  is_down, was_down); break;
-                    case VK_F2:         win32_process_key(&key_input->keys[KEY_F2],  is_down, was_down); break;
-                    case VK_F3:         win32_process_key(&key_input->keys[KEY_F3],  is_down, was_down); break;
-                    case VK_F4:         win32_process_key(&key_input->keys[KEY_F4],  is_down, was_down); break;
-                    case VK_F5:         win32_process_key(&key_input->keys[KEY_F5],  is_down, was_down); break;
-                    case VK_F6:         win32_process_key(&key_input->keys[KEY_F6],  is_down, was_down); break;
-                    case VK_F7:         win32_process_key(&key_input->keys[KEY_F7],  is_down, was_down); break;
-                    case VK_F8:         win32_process_key(&key_input->keys[KEY_F8],  is_down, was_down); break;
-                    case VK_F9:         win32_process_key(&key_input->keys[KEY_F9],  is_down, was_down); break;
-                    case VK_F10:        win32_process_key(&key_input->keys[KEY_F10], is_down, was_down); break;
-                    case VK_F11:        win32_process_key(&key_input->keys[KEY_F11], is_down, was_down); break;
-                    case VK_F12:        win32_process_key(&key_input->keys[KEY_F12], is_down, was_down); break;
+                    case VK_F1:         win32_process_key(&keyboard->keys[KEY_F1],  is_down, was_down); break;
+                    case VK_F2:         win32_process_key(&keyboard->keys[KEY_F2],  is_down, was_down); break;
+                    case VK_F3:         win32_process_key(&keyboard->keys[KEY_F3],  is_down, was_down); break;
+                    case VK_F4:         win32_process_key(&keyboard->keys[KEY_F4],  is_down, was_down); break;
+                    case VK_F5:         win32_process_key(&keyboard->keys[KEY_F5],  is_down, was_down); break;
+                    case VK_F6:         win32_process_key(&keyboard->keys[KEY_F6],  is_down, was_down); break;
+                    case VK_F7:         win32_process_key(&keyboard->keys[KEY_F7],  is_down, was_down); break;
+                    case VK_F8:         win32_process_key(&keyboard->keys[KEY_F8],  is_down, was_down); break;
+                    case VK_F9:         win32_process_key(&keyboard->keys[KEY_F9],  is_down, was_down); break;
+                    case VK_F10:        win32_process_key(&keyboard->keys[KEY_F10], is_down, was_down); break;
+                    case VK_F11:        win32_process_key(&keyboard->keys[KEY_F11], is_down, was_down); break;
+                    case VK_F12:        win32_process_key(&keyboard->keys[KEY_F12], is_down, was_down); break;
                 }
 
                 if (is_down)
@@ -303,7 +306,7 @@ void keyboard_mouse_process_input(Window* window, Keyboard* key_input, Mouse* mo
 
             case WM_CHAR:
             {
-                key_input->current_char = msg.wParam;
+                keyboard->current_char = msg.wParam;
             } break;
 
             /* Mouse Input */
@@ -535,7 +538,7 @@ internal f32 win32_process_xinput_trigger(BYTE xinput_trigger_value)
     return result;
 }
 
-void gamepad_process_input(Input* input)
+void win32_xinput_gamepad_process_input(Input* input)
 {
     Gamepad* gamepad = {0};
     for (int i = 0; i < MAX_GAMEPADS; ++i)
@@ -603,6 +606,12 @@ void gamepad_process_input(Input* input)
         XInputSetState(0, &vibration);
         gamepad->left_vibration = gamepad->right_vibration = 0;
     }
+}
+
+void input_process(Window* window, Input* input)
+{
+    win32_keyboard_mouse_process_input(window, input);
+    win32_xinput_gamepad_process_input(input);
 }
 
 b32 clipboard_write_string(char* text)

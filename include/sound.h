@@ -9,7 +9,9 @@ typedef struct SoundOutput
     char filename[512]; // Temporary
 } SoundOutput;
 
-inline void set_volume(SoundOutput* sound_output, f32 volume)
+void sound_output_process(SoundOutput* sound_output);
+
+inline void sound_output_set_volume(SoundOutput* sound_output, f32 volume)
 {
     sound_output->volume = volume;
 }
