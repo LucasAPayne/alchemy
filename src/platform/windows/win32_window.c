@@ -279,3 +279,15 @@ void window_render(Window* window)
     SwapBuffers(device_context);
     ReleaseDC(window->ptr, device_context);
 }
+
+void* window_icon_load_from_file(const char* filename)
+{
+    HICON icon = LoadImageA(NULL, filename, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE);
+    return icon;
+}
+
+void window_icon_set_from_memory(Window* window, void* icon)
+{
+    SendMessage(window->ptr, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+    SendMessage(window->ptr, WM_SETICON, ICON_BIG, (LPARAM)icon);
+}

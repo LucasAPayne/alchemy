@@ -6,8 +6,13 @@
 
 int main(int argc, char** argv)
 {
+
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
+    
+    void* potion_icon = window_icon_load_from_file("icons/potion.ico");
+    window_icon_set_from_memory(&window, potion_icon);
+
     ExampleState state = {0};
     example_state_init(&state);
 
