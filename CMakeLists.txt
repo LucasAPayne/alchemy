@@ -3,7 +3,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 project(alchemy VERSION 0.1)
 
-add_executable(${PROJECT_NAME} WIN32
+add_executable(${PROJECT_NAME}
                ${PROJECT_SOURCE_DIR}/example/example.c
                ${PROJECT_SOURCE_DIR}/example/ui_overview.c
                ${PROJECT_SOURCE_DIR}/example/win32_alchemy.c
@@ -52,7 +52,7 @@ if (MSVC)
     # /Oi: Generate intrinsic functions
     # LNK4099 is about linking without debug info. Disabled because of freetype
     target_compile_options(${PROJECT_NAME} PRIVATE /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116)
-    target_link_options(${PROJECT_NAME} PRIVATE /ignore:4099)
+    target_link_options(${PROJECT_NAME} PRIVATE /subsystem:windows /entry:mainCRTStartup /ignore:4099)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL Debug)

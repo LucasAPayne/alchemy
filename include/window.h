@@ -2,9 +2,6 @@
 
 #include "util/types.h"
 
-// TEMPORARY: HINSTANCE
-#include <windows.h>
-
 typedef struct Window
 {
     iv2 size;
@@ -14,7 +11,7 @@ typedef struct Window
     void* ptr;
 } Window;
 
-Window window_init(const char* title, int width, int height, HINSTANCE instance);
+void window_init(Window* window, const char* title, int width, int height);
 void window_render(Window* window);
 
 // Gets the number of seconds passed since the previous frame

@@ -216,17 +216,17 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
     return result;
 }
 
-Window window_init(const char* title, int width, int height, HINSTANCE instance)
+void window_init(Window* window, const char* title, int width, int height)
 {
-    Window window = {0};
-    window.size.x = width;
-    window.size.y = height;
+    window->size.x = width;
+    window->size.y = height;
 
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
-    window._ticks_per_second = frequency.QuadPart;
+    window->_ticks_per_second = frequency.QuadPart;
 
     // Open a window
+    HINSTANCE instance = GetModuleHandleA(0);
     WNDCLASSEXA window_class = {0};
     window_class.cbSize = sizeof(WNDCLASSEXA);
     window_class.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
@@ -262,24 +262,15 @@ Window window_init(const char* title, int width, int height, HINSTANCE instance)
         MessageBoxA(0, "CreateWindowEx failed", "Fatal Error", MB_OK);
     }
 
-    window.ptr = hwnd;
-    window.open = true;
+    window->ptr = hwnd;
+    window->open = true;
 
     // Associate window data with the window ptr
-    SetWindowLongPtrA(window.ptr, GWLP_USERDATA, (LONG_PTR)&window);
+    SetWindowLongPtrA(window->ptr, GWLP_USERDATA, (LONG_PTR)window);
 
-    // Initialize COM
-    if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
-    {
-        // Could not initialize COM
-        MessageBoxA(0, "CoInitializeEx failed", "COM error", MB_OK);
-    }
+    win32_init_opengl(window->ptr);
 
-    win32_init_opengl(window.ptr);
-
-    window._prev_frame_ticks = win32_get_ticks();
-
-    return window;
+    window->_prev_frame_ticks = win32_get_ticks();
 }
 
 void window_render(Window* window)

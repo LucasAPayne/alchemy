@@ -4,12 +4,10 @@
 #include "window.h"
 #include "util/types.h"
 
-// TODO(lucas): Switch from WinMain() to main()
-#include <windows.h>
-
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int show_cmd)
+int main(int argc, char** argv)
 {
-    Window window = window_init("Alchemy", 1280, 720, instance);
+    Window window = {0};
+    window_init(&window, "Alchemy", 1280, 720);
     ExampleState state = {0};
     example_state_init(&state);
 

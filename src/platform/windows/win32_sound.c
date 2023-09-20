@@ -46,6 +46,14 @@ internal XAudio2State xaudio2_state_init(void)
 {
     XAudio2State xaudio2_state = {0};
     xaudio2_state.xaudio2 = NULL;
+
+    // Initialize COM
+    if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
+    {
+        // Could not initialize COM
+        MessageBoxA(0, "CoInitializeEx failed", "COM error", MB_OK);
+    }
+
     if (FAILED(XAudio2Create(&xaudio2_state.xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
 
