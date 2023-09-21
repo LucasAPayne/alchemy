@@ -3,10 +3,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 project(alchemy VERSION 0.1)
 
+SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
+
 add_executable(${PROJECT_NAME}
-               ${PROJECT_SOURCE_DIR}/example/example.c
-               ${PROJECT_SOURCE_DIR}/example/ui_overview.c
-               ${PROJECT_SOURCE_DIR}/example/win32_alchemy.c
                ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
                ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
                ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
@@ -21,8 +20,19 @@ add_executable(${PROJECT_NAME}
                ${PROJECT_SOURCE_DIR}/src/util/time.c
                ${PROJECT_SOURCE_DIR}/src/ui.c)
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-                           ${PROJECT_SOURCE_DIR}/include)
+# TODO(lucas): Create separate projects for each example
+if(${STARTUP} STREQUAL "example")
+    target_sources(${PROJECT_NAME} PRIVATE
+                   ${PROJECT_SOURCE_DIR}/examples/example/example.c
+                   ${PROJECT_SOURCE_DIR}/examples/example/ui_overview.c
+                   ${PROJECT_SOURCE_DIR}/examples/example/win32_alchemy.c)
+
+elseif(${STARTUP} STREQUAL "snake")
+    target_sources(${PROJECT_NAME} PRIVATE
+                   ${PROJECT_SOURCE_DIR}/examples/snake/main.c)
+endif()
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
                            ${PROJECT_SOURCE_DIR}/lib

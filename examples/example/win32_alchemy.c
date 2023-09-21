@@ -4,9 +4,8 @@
 #include "window.h"
 #include "util/types.h"
 
-int main(int argc, char** argv)
+int main(void)
 {
-
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
     
