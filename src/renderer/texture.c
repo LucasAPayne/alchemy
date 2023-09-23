@@ -1,10 +1,7 @@
 #include "renderer/texture.h"
 
 #include <glad/glad.h>
-
 #include <stb_image/stb_image.h>
-
-#include <windows.h>
 
 Texture texture_generate()
 {

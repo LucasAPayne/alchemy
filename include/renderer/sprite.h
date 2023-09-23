@@ -1,22 +1,12 @@
 #pragma once
 
-#include "renderer/texture.h"
 #include "util/types.h"
 
-typedef struct SpriteRenderer
-{
-    u32 shader;
-    u32 vao;
-    u32 vbo;
-    u32 ibo;
-} SpriteRenderer;
-
-void sprite_renderer_init(SpriteRenderer* sprite_renderer, u32 shader);
-void sprite_renderer_delete(SpriteRenderer* sprite_renderer);
+typedef struct Texture Texture;
+typedef struct Renderer Renderer;
 
 typedef struct Sprite
 {
-    SpriteRenderer* renderer;
     Texture* texture;
     v4 color;
     v2 position;
@@ -24,5 +14,5 @@ typedef struct Sprite
     f32 rotation; // Rotation in degrees
 } Sprite;
 
-Sprite sprite_init(SpriteRenderer* renderer, Texture* tex);
-void sprite_draw(Sprite sprite);
+Sprite sprite_init(Texture* tex);
+void draw_sprite(Renderer* renderer, Sprite sprite);

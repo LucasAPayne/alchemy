@@ -22,7 +22,7 @@ int main(void)
         input_process(&window, &state.input);
 
         f32 delta_time = get_frame_seconds(&window);
-        example_update_and_render(&state, delta_time, window.size.x, window.size.y);
+        example_update_and_render(&state, delta_time, window.width, window.height);
 
         sound_output_process(&state.sound_output);
 

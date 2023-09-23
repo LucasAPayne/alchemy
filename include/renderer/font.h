@@ -5,16 +5,24 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-// NOTE(lucas): For now, there will be a font renderer for each different font
-typedef struct FontRenderer
-{
-    u32 shader;
-    u32 vao;
-    u32 vbo;
-    u32 ibo;
-    FT_Face face;
-} FontRenderer;
+typedef struct Renderer Renderer;
 
-void font_renderer_init(FontRenderer* font_renderer, u32 shader, const char* filename);
-void font_renderer_delete(FontRenderer* font_renderer);
-void text_draw(FontRenderer* font_renderer, const char* text, v2 position, u32 pt, v4 color);
+// NOTE(lucas): For now, there will be a font renderer for each different font
+typedef struct Font
+{
+    FT_Face face;
+} Font;
+
+typedef struct Text
+{
+    Font* font;
+    u32 pt;
+    v2 position;
+    v4 color;
+    const char* string;
+} Text;
+
+Font font_load_from_file(const char* filename);
+
+Text text_init(const char* string, Font* font, v2 position, u32 pt);
+void draw_text(Renderer* renderer, Text text);

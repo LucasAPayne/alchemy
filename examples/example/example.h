@@ -7,28 +7,37 @@
 #include "util/time.h"
 #include "renderer/renderer.h"
 
+typedef struct Player
+{
+    v2 position;
+    v2 size;
+    v4 color;
+    f32 rotation;
+    
+    int dash_counter;
+    int dash_frames;
+    f32 dash_direction; // -1: left, 1: right
+    f32 dash_distance;
+    Timer dash_cooldown;
+} Player;
+
 typedef struct ExampleState
 {
     Input input;
-    SpriteRenderer sprite_renderer;
-    FontRenderer font_renderer;
-    FontRenderer frame_time_renderer;
+    Renderer renderer;
+    v4 clear_color;
+
+    Font immortal_font;
+    Font cardinal_font;
+
     Texture logo_tex;
-    Texture player_tex;
 
     Sprite logo;
     v2 logo_direction;
     v3* colors;
     int last_color_index;
 
-    Sprite player;
-    int dash_counter;
-    int dash_frames;
-    f32 dash_direction; // -1: left, 1: right
-    f32 dash_distance;
-    Timer dash_cooldown;
-
-    v4 clear_color;
+    Player player;
 
     SoundOutput sound_output;
     b32 is_shooting;
