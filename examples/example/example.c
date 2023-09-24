@@ -87,8 +87,8 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     player->position = v2_clamp_to_rect(player->position, window_bounds);
 
     // Update player rotation
-    player->rotation += 2.0f * gamepad->right_trigger_val;
-    player->rotation -= 2.0f * gamepad->left_trigger_val;
+    player->rotation -= 2.0f * gamepad->right_trigger_val;
+    player->rotation += 2.0f * gamepad->left_trigger_val;
     player->rotation = f32_clamp(player->rotation, -45.0f, 45.0f);
     if (!gamepad_button_pressed(gamepad->left_trigger) &&
         !gamepad_button_pressed(gamepad->right_trigger))
@@ -106,7 +106,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-void example_state_init(ExampleState* state)
+void example_state_init(ExampleState* state, int window_width, int window_height)
 {
     srand(0);
 
@@ -120,9 +120,10 @@ void example_state_init(ExampleState* state)
 
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
+    state->logo.position = (v2){0.0f, (f32)window_height};
     state->logo.size = (iv2){300, 150};
 
-    state->logo_direction = (v2){1.0f, 1.0f};
+    state->logo_direction = (v2){-1.0f, -1.0f};
 
     state->player.size = (v2){50.0f, 50.0f};
     state->player.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
@@ -132,7 +133,6 @@ void example_state_init(ExampleState* state)
     state->player.dash_direction = 0.0f;
     state->player.dash_distance = 300.0f;
 
-    // shader_set_int(state->sprite_renderer.shader, "image", 0);
     const char* test_sound_filename = "sounds/pew.wav";
     strncpy_s(state->sound_output.filename, sizeof(state->sound_output.filename), test_sound_filename,
               strlen(test_sound_filename));
@@ -166,7 +166,7 @@ void example_state_delete(ExampleState* state)
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
-void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
+void example_update_and_render(ExampleState* state, f32 delta_time, int window_width, int window_height)
 {
     stopwatch_update(&state->stopwatch, delta_time);
     
@@ -214,26 +214,26 @@ void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_w
     draw_rect(&state->renderer, player->position, player->size, player->color, player->rotation);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, 50.0f}, 48);
+    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, window_height - 50.0f}, 48);
     engine_text.color = font_color;
     draw_text(&state->renderer, engine_text);
     
     char buffer[512];
     sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, window_height - 10.0f}, 32);
+    Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(&state->renderer, frame_time);
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1050.0f, window_height - 10.0f}, 32);
+    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(&state->renderer, cooldown_text);
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, 40.0f}, 32);
+    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window_height - 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(&state->renderer, stopwatch_text);
 

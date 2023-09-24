@@ -13,7 +13,7 @@ int main(void)
     window_icon_set_from_memory(&window, potion_icon);
 
     ExampleState state = {0};
-    example_state_init(&state);
+    example_state_init(&state, window.width, window.height);
 
     while(window.open)
     {

@@ -16,7 +16,8 @@ typedef struct RenderObject
 
 typedef struct Renderer
 {
-    RenderObject poly_renderer;
+    RenderObject line_renderer;
+    RenderObject rect_renderer;
     RenderObject sprite_renderer;
     RenderObject font_renderer;
 } Renderer;
@@ -27,4 +28,6 @@ void renderer_delete(Renderer* renderer);
 void renderer_viewport(Renderer* renderer, int x, int y, int width, int height);
 void renderer_clear(v4 color);
 
+// TODO(lucas): Line, Triangle, Quad structs?
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color);
 void draw_rect(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);

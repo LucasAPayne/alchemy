@@ -588,11 +588,11 @@ void win32_xinput_gamepad_process_input(Input* input)
         XINPUT_GAMEPAD xinput_gamepad = controller_state.Gamepad;
         gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX, 
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        gamepad->left_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbLY,
+        gamepad->left_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbLY,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->right_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbRX,
                                                             XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-        gamepad->right_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbRY,
+        gamepad->right_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbRY,
                                                             XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 
         // Triggers

@@ -2,10 +2,27 @@
 #include "input.h"
 #include "renderer/renderer.h"
 
+internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 color)
+{
+    f32 cell_size = (end.x - start.x) / (f32)slices;
+
+    f32 x = start.x;
+    f32 y = start.y;
+
+    for (u32 slice = 0; slice <= slices; ++slice)
+    {
+        draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color);
+        draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color);
+        x += cell_size;
+        y += cell_size;
+    }
+}
+
 int main(void)
 {
     Window window = {0};
-    window_init(&window, "Alchemy", 1280, 720);
+    // TODO(lucas): Allow 16:9 aspect ratio, but confine grid/play area to a square aspect ratio
+    window_init(&window, "Alchemy", 800, 800);
     
     void* potion_icon = window_icon_load_from_file("icons/potion.ico");
     window_icon_set_from_memory(&window, potion_icon);
@@ -27,8 +44,7 @@ int main(void)
         renderer_viewport(&renderer, 0, 0, window.width, window.height);
         renderer_clear((v4){0.2f, 0.2f, 0.2f, 1.0f});
 
-        draw_rect(&renderer, (v2){100.0f, 100.0f}, (v2){50.0f, 50.0f}, (v4){1.0f, 0.0f, 0.0f, 1.0f}, 0.0f);
-        draw_text(&renderer, text);
+        draw_grid(&renderer, (v2){1.0f, 1.0f}, (v2){(f32)window.width, (f32)window.height}, 5, (v4){1.0f, 0.0f, 0.0f, 1.0f});
 
         window_render(&window);
 
