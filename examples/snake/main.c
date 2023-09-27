@@ -22,13 +22,16 @@ int main(void)
 {
     Window window = {0};
     // TODO(lucas): Allow 16:9 aspect ratio, but confine grid/play area to a square aspect ratio
-    window_init(&window, "Alchemy", 800, 800);
+    int window_width = 800;
+    int window_height = 800;
+    window_init(&window, "Alchemy", window_width, window_height);
     
     void* potion_icon = window_icon_load_from_file("icons/potion.ico");
     window_icon_set_from_memory(&window, potion_icon);
 
     Input input = {0};
-    Renderer renderer = renderer_init();
+    Renderer renderer = renderer_init(window_width, window_height);
+    renderer.clear_color = (v4){0.1f, 0.1f, 0.1f, 1.0f};
 
     Font font = font_load_from_file("fonts/cardinal.ttf");
 
@@ -41,10 +44,10 @@ int main(void)
         Input old_input = input;
         input_process(&window, &input);
 
-        renderer_viewport(&renderer, 0, 0, window.width, window.height);
-        renderer_clear((v4){0.2f, 0.2f, 0.2f, 1.0f});
+        renderer_new_frame(&renderer);
 
         draw_grid(&renderer, (v2){1.0f, 1.0f}, (v2){(f32)window.width, (f32)window.height}, 5, (v4){1.0f, 0.0f, 0.0f, 1.0f});
+        draw_circle(&renderer, (v2){400.0f, 400.0f}, 80.0f, (v4){1.0f, 0.0f, 0.0f, 1.0f});
 
         window_render(&window);
 

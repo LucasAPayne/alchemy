@@ -25,7 +25,6 @@ typedef struct ExampleState
 {
     Input input;
     Renderer renderer;
-    v4 clear_color;
 
     Font immortal_font;
     Font cardinal_font;

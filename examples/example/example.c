@@ -35,9 +35,12 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
 
     state->logo.position = v2_add(state->logo.position, v2_scale(state->logo_direction, speed*delta_time));
 
-    if ((state->logo.position.x > window_bounds.max.x) || (state->logo.position.x < window_bounds.min.x))
+
+    v2 min = window_bounds.position;
+    v2 max = v2_add(min, window_bounds.size);
+    if ((state->logo.position.x > max.x) || (state->logo.position.x < min.x))
         bounce_dvd(state, &state->logo_direction.x);
-    if ((state->logo.position.y > window_bounds.max.y) || (state->logo.position.y < 0.0f))
+    if ((state->logo.position.y > max.y) || (state->logo.position.y < min.y))
         bounce_dvd(state, &state->logo_direction.y);
 
     state->logo.position = v2_clamp_to_rect(state->logo.position, window_bounds);
@@ -114,7 +117,9 @@ void example_state_init(ExampleState* state, int window_width, int window_height
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    state->renderer = renderer_init();
+    state->renderer = renderer_init(window_width, window_height);
+    state->renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
+
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
 
@@ -148,7 +153,6 @@ void example_state_init(ExampleState* state, int window_width, int window_height
 
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
-    state->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
     state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
     struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
     nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
@@ -205,8 +209,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, int window_w
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
-    renderer_viewport(&state->renderer, 0, 0, window_width, window_height);
-    renderer_clear(state->clear_color);
+    renderer_new_frame(&state->renderer);
 
     draw_sprite(&state->renderer, state->logo);
 
