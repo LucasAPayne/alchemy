@@ -55,6 +55,24 @@ inline f32 abs_f32(f32 x)
 }
 
 /* v2 */
+inline v2 v2_full(f32 fill_value)
+{
+    v2 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v2 v2_zero(void)
+{
+    v2 result = glms_vec2_zero();
+    return result;
+}
+
+inline v2 v2_one(void)
+{
+    v2 result = glms_vec2_one();
+    return result;
+}
+
 inline v2 v2_add(v2 a, v2 b)
 {
     v2 result = glms_vec2_add(a, b);
@@ -117,6 +135,144 @@ inline v2 v2_clamp_to_rect(v2 v, rect r)
     if (v.x > max.x) result.x = max.x;
     if (v.y > max.y) result.y = max.y;
 
+    return result;
+}
+
+/* v3 */
+inline v3 v3_full(f32 fill_value)
+{
+    v3 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v3 v3_zero(void)
+{
+    v3 result = glms_vec3_zero();
+    return result;
+}
+
+inline v3 v3_one(void)
+{
+    v3 result = glms_vec3_one();
+    return result;
+}
+
+inline v3 v3_add(v3 a, v3 b)
+{
+    v3 result = glms_vec3_add(a, b);
+    return result;
+}
+
+inline v3 v3_sub(v3 a, v3 b)
+{
+    v3 result = glms_vec3_sub(a, b);
+    return result;
+}
+
+inline v3 v3_neg(v3 v)
+{
+    v3 result = glms_vec3_negate(v);
+    return result;
+}
+
+inline v3 v3_abs(v3 v)
+{
+    v3 result = (v3){fabsf(v.x), fabsf(v.y)};
+    return result;
+}
+
+inline v3 v3_scale(v3 v, f32 s)
+{
+    v3 result = glms_vec3_scale(v, s);
+    return result;
+}
+
+inline f32 v3_dot(v3 a, v3 b)
+{
+    f32 result = glms_vec3_dot(a, b);
+    return result;
+}
+
+inline f32 v3_mag_sq(v3 v)
+{
+    f32 result = v3_dot(v, v);
+    return result;
+}
+
+inline v3 v3_reflect(v3 v, v3 r)
+{
+    v3 result = {0};
+    v3 vrr = v3_scale(r, 2.0f*v3_dot(v, r));
+    result = v3_sub(v, vrr);
+    return result;
+}
+
+/* v4 */
+inline v4 v4_full(f32 fill_value)
+{
+    v4 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v4 v4_zero(void)
+{
+    v4 result = glms_vec4_zero();
+    return result;
+}
+
+inline v4 v4_one(void)
+{
+    v4 result = glms_vec4_one();
+    return result;
+}
+
+inline v4 v4_add(v4 a, v4 b)
+{
+    v4 result = glms_vec4_add(a, b);
+    return result;
+}
+
+inline v4 v4_sub(v4 a, v4 b)
+{
+    v4 result = glms_vec4_sub(a, b);
+    return result;
+}
+
+inline v4 v4_neg(v4 v)
+{
+    v4 result = glms_vec4_negate(v);
+    return result;
+}
+
+inline v4 v4_abs(v4 v)
+{
+    v4 result = (v4){fabsf(v.x), fabsf(v.y)};
+    return result;
+}
+
+inline v4 v4_scale(v4 v, f32 s)
+{
+    v4 result = glms_vec4_scale(v, s);
+    return result;
+}
+
+inline f32 v4_dot(v4 a, v4 b)
+{
+    f32 result = glms_vec4_dot(a, b);
+    return result;
+}
+
+inline f32 v4_mag_sq(v4 v)
+{
+    f32 result = v4_dot(v, v);
+    return result;
+}
+
+inline v4 v4_reflect(v4 v, v4 r)
+{
+    v4 result = {0};
+    v4 vrr = v4_scale(r, 2.0f*v4_dot(v, r));
+    result = v4_sub(v, vrr);
     return result;
 }
 

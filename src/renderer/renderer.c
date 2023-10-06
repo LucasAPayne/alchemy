@@ -3,11 +3,21 @@
 
 #include <glad/glad.h>
 
-internal u32 vao_init()
+internal void vao_bind(u32 vao)
+{
+    glBindVertexArray(vao);
+}
+
+internal void vao_unbind(void)
+{
+    glBindVertexArray(0);
+}
+
+internal u32 vao_init(void)
 {
     u32 vao;
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    vao_bind(vao);
 
     return vao;
 }
@@ -22,7 +32,7 @@ internal u32 vbo_init(f32* vertices, usize size)
     return vbo;
 }
 
-internal u32 vbo_init_empty()
+internal u32 vbo_init_empty(void)
 {
     u32 vbo;
     glGenBuffers(1, &vbo);
@@ -41,7 +51,7 @@ internal u32 ibo_init(u32* indices, usize size)
     return ibo;
 }
 
-internal u32 ibo_init_empty()
+internal u32 ibo_init_empty(void)
 {
     u32 ibo;
     glGenBuffers(1, &ibo);
@@ -50,10 +60,97 @@ internal u32 ibo_init_empty()
     return ibo;
 }
 
+internal void fbo_bind(u32 fbo)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+}
+
+internal void fbo_unbind(void)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+internal u32 fbo_init(void)
+{
+    u32 fbo;
+    glGenFramebuffers(1, &fbo);
+    fbo_bind(fbo);
+
+    return fbo;
+}
+
+internal void fbo_delete(u32* fbo)
+{
+    glDeleteFramebuffers(1, fbo);
+}
+
+internal void rbo_bind(u32 rbo)
+{
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+}
+
+internal void rbo_unbind()
+{
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+internal u32 rbo_init(int window_width, int window_height)
+{
+    u32 rbo;
+    glGenRenderbuffers(1, &rbo);
+    rbo_bind(rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, window_width, window_height);
+    rbo_unbind();
+
+    return rbo;
+}
+
+internal void rbo_delete(u32 *rbo)
+{
+    glDeleteRenderbuffers(1, rbo);
+}
+
+internal void rbo_update(int window_width, int window_height)
+{
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, window_width, window_height);
+}
+
 internal void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
 {
     glEnableVertexAttribArray(index);
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, ptr);
+}
+
+internal RenderObject framebuffer_renderer_init(u32 shader)
+{
+    RenderObject framebuffer_renderer = {0};
+    framebuffer_renderer.shader = shader;
+
+    // These are in normalized device coordinates and will fill the screen
+    f32 vertices[] =
+    {    // pos       // tex
+         1.0f,  1.0f, 1.0f, 1.0f, // top right
+         1.0f, -1.0f, 1.0f, 0.0f, // bottom right
+        -1.0f, -1.0f, 0.0f, 0.0f, // bottom left
+        -1.0f,  1.0f, 0.0f, 1.0f  // top left
+    };
+
+    u32 indices[] =
+    {
+        0, 1, 3,
+        1, 2, 3
+    };
+
+    framebuffer_renderer.vao = vao_init();
+    framebuffer_renderer.vbo = vbo_init(vertices, sizeof(vertices));
+    framebuffer_renderer.ibo = ibo_init(indices, sizeof(indices));
+
+    vertex_layout_set(0, 2, 4*sizeof(f32), 0);
+    vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
+
+    vao_bind(0);    
+
+    return framebuffer_renderer;
 }
 
 internal RenderObject sprite_renderer_init(u32 shader)
@@ -83,7 +180,7 @@ internal RenderObject sprite_renderer_init(u32 shader)
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
     
-    glBindVertexArray(0);
+    vao_bind(0);
 
     return sprite_renderer;
 }
@@ -193,6 +290,42 @@ internal void render_object_delete(RenderObject* render_object)
     shader_delete(render_object->shader);
 }
 
+// Generate render-to-texture framebuffer
+internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_height)
+{
+    Framebuffer framebuffer = {0};
+    framebuffer.id = fbo_init();
+    framebuffer.texture = texture_generate();
+    texture_fill_empty_data(window_width, window_height);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.texture.id, 0);
+
+    framebuffer.rbo = rbo_init(window_width, window_height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        ASSERT(0);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    shader_bind(shader);
+    framebuffer.renderer = framebuffer_renderer_init(shader);
+
+    return framebuffer;
+}
+
+internal void framebuffer_delete(Framebuffer* framebuffer)
+{
+    texture_delete(&framebuffer->texture);
+    rbo_delete(&framebuffer->rbo);
+    render_object_delete(&framebuffer->renderer);
+    fbo_delete(&framebuffer->id);
+}
+
+void renderer_viewport(rect viewport)
+{
+    glViewport((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
+}
+
 Renderer renderer_init(int viewport_width, int viewport_height)
 {
     Renderer renderer = {0};
@@ -203,15 +336,17 @@ Renderer renderer_init(int viewport_width, int viewport_height)
     renderer.config.circle_line_segments = 64;
 
     // TODO(lucas): These relative paths might cause problems in the future
-    u32 poly_shader   = shader_init("shaders/poly.vert", "shaders/poly.frag");
-    u32 sprite_shader = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
-    u32 font_shader   = shader_init("shaders/font.vert", "shaders/font.frag");
+    u32 framebuffer_shader = shader_init("shaders/framebuffer.vert", "shaders/framebuffer.frag");
+    u32 poly_shader        = shader_init("shaders/poly.vert", "shaders/poly.frag");
+    u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
+    u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
 
     renderer.line_renderer   = line_renderer_init(poly_shader);
     renderer.circle_renderer = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.rect_renderer   = rect_renderer_init(poly_shader);
     renderer.sprite_renderer = sprite_renderer_init(sprite_shader);
     renderer.font_renderer   = font_renderer_init(font_shader);
+    renderer.framebuffer     = framebuffer_init(framebuffer_shader, viewport_width, viewport_height);
 
     return renderer;
 }
@@ -225,20 +360,53 @@ void renderer_delete(Renderer* renderer)
     render_object_delete(&renderer->font_renderer);
 }
 
-void renderer_new_frame(Renderer* renderer)
+void renderer_new_frame(Renderer* renderer, Window window)
 {
+    renderer->viewport.width = (f32)window.width;
+    renderer->viewport.height = (f32)window.height;
+
+    fbo_bind(renderer->framebuffer.id);
+
     rect viewport = renderer->viewport;
-    glViewport((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
+    renderer_viewport(viewport);
+
+    texture_bind(&renderer->framebuffer.texture);
+    texture_fill_empty_data((int)viewport.width, (int)viewport.height);
+    texture_unbind();
+
+    rbo_bind(renderer->framebuffer.rbo);
+    rbo_update((int)viewport.width, (int)viewport.height);
+    rbo_unbind();
+
     m4 projection = m4_ortho(0.0f, viewport.width, 0.0f, viewport.height, -1.0f, 1.0f);
 
-    // NOTE(lucas): Most shapes use the same shader, so no need to set the uniform
-    // for each shape
+    // NOTE(lucas): Most shapes use the same shader,
+    // so no need to set the uniform for each shape
     shader_set_m4(renderer->rect_renderer.shader,   "projection", projection, false);
     shader_set_m4(renderer->sprite_renderer.shader, "projection", projection, false);
     shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
 
     // Clear viewport
-    v4 color = renderer->clear_color;
+    renderer_clear(renderer->clear_color);
+}
+
+void renderer_render(Renderer* renderer)
+{
+    fbo_unbind();
+
+    renderer_viewport(renderer->viewport);
+    renderer_clear(renderer->clear_color);
+
+    shader_bind(renderer->framebuffer.renderer.shader);
+    vao_bind(renderer->framebuffer.renderer.vao);
+    texture_bind(&renderer->framebuffer.texture);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    vao_unbind();
+}
+
+void renderer_clear(v4 color)
+{
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(color.r, color.g, color.b, color.a);
 }

@@ -13,7 +13,7 @@ int main(void)
     window_icon_set_from_memory(&window, potion_icon);
 
     ExampleState state = {0};
-    example_state_init(&state, window.width, window.height);
+    example_state_init(&state, window);
 
     while(window.open)
     {
@@ -22,7 +22,7 @@ int main(void)
         input_process(&window, &state.input);
 
         f32 delta_time = get_frame_seconds(&window);
-        example_update_and_render(&state, delta_time, window.width, window.height);
+        example_update_and_render(&state, window, delta_time);
 
         sound_output_process(&state.sound_output);
 

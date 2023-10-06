@@ -10,6 +10,7 @@ typedef struct Texture
 } Texture;
 
 Texture texture_generate();
+void texture_fill_empty_data(int width, int height);
 Texture texture_load_from_file(const char* filename);
 
 void texture_bind_id(u32 id);

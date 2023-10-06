@@ -109,7 +109,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-void example_state_init(ExampleState* state, int window_width, int window_height)
+void example_state_init(ExampleState* state, Window window)
 {
     srand(0);
 
@@ -117,7 +117,7 @@ void example_state_init(ExampleState* state, int window_width, int window_height
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    state->renderer = renderer_init(window_width, window_height);
+    state->renderer = renderer_init(window.width, window.height);
     state->renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
@@ -125,7 +125,7 @@ void example_state_init(ExampleState* state, int window_width, int window_height
 
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
-    state->logo.position = (v2){0.0f, (f32)window_height};
+    state->logo.position = (v2){0.0f, (f32)window.height};
     state->logo.size = (iv2){300, 150};
 
     state->logo_direction = (v2){-1.0f, -1.0f};
@@ -170,13 +170,13 @@ void example_state_delete(ExampleState* state)
     nk_alchemy_shutdown(&state->alchemy_state);
 }
 
-void example_update_and_render(ExampleState* state, f32 delta_time, int window_width, int window_height)
+void example_update_and_render(ExampleState* state, Window window, f32 delta_time)
 {
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
-    update_dvd(state, delta_time, window_width, window_height);
-    update_player(state, delta_time, window_width, window_height);  
+    update_dvd(state, delta_time, window.width, window.height);
+    update_player(state, delta_time, window.width, window.height);  
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -205,11 +205,11 @@ void example_update_and_render(ExampleState* state, f32 delta_time, int window_w
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */
-    nk_alchemy_new_frame(&state->alchemy_state, window_width, window_height);
+    nk_alchemy_new_frame(&state->alchemy_state, window.width, window.height);
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
     // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
-    renderer_new_frame(&state->renderer);
+    renderer_new_frame(&state->renderer, window);
 
     draw_sprite(&state->renderer, state->logo);
 
@@ -217,7 +217,7 @@ void example_update_and_render(ExampleState* state, f32 delta_time, int window_w
     draw_rect(&state->renderer, player->position, player->size, player->color, player->rotation);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, window_height - 50.0f}, 48);
+    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
     engine_text.color = font_color;
     draw_text(&state->renderer, engine_text);
     
@@ -236,10 +236,11 @@ void example_update_and_render(ExampleState* state, f32 delta_time, int window_w
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window_height - 30.0f}, 32);
+    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(&state->renderer, stopwatch_text);
 
-    ui_overview(ctx, window_width);
+    ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
+    renderer_render(&state->renderer);
 }

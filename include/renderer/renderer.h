@@ -1,5 +1,6 @@
 #pragma once
 
+#include "window.h"
 #include "renderer/font.h"
 #include "renderer/shader.h"
 #include "renderer/texture.h"
@@ -15,6 +16,14 @@ typedef struct RenderObject
     u32 ibo;
 } RenderObject;
 
+typedef struct Framebuffer
+{
+    u32 id;
+    u32 rbo;
+    Texture texture;
+    RenderObject renderer;
+} Framebuffer;
+
 typedef struct RendererConfig
 {
     u32 circle_line_segments;
@@ -28,6 +37,8 @@ typedef struct Renderer
     RenderObject sprite_renderer;
     RenderObject font_renderer;
 
+    Framebuffer framebuffer;
+
     rect viewport;
     v4 clear_color;
 
@@ -37,7 +48,11 @@ typedef struct Renderer
 Renderer renderer_init(int viewport_width, int viewport_height);
 void renderer_delete(Renderer* renderer);
 
-void renderer_new_frame(Renderer* renderer);
+void renderer_new_frame(Renderer* renderer, Window window);
+void renderer_render(Renderer* renderer);
+
+void renderer_viewport(rect viewport);
+void renderer_clear(v4 color);
 
 // TODO(lucas): Line, Triangle, Quad structs?
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color);

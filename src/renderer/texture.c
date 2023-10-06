@@ -19,6 +19,11 @@ Texture texture_generate()
     return texture;
 }
 
+void texture_fill_empty_data(int width, int height)
+{
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+}
+
 Texture texture_load_from_file(const char* filename)
 {
     Texture tex = {0};

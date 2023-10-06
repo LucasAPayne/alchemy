@@ -104,6 +104,9 @@ u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path
     glLinkProgram(shader_program);
     shader_error_check(shader_program);
 
+    free(vertex_shader_source);
+    free(fragment_shader_source);
+
     // Delete the shader sources as they are no longer needed
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
