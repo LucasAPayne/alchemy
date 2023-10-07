@@ -94,13 +94,11 @@ internal void rbo_unbind()
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
 
-internal u32 rbo_init(int window_width, int window_height)
+internal u32 rbo_init()
 {
     u32 rbo;
     glGenRenderbuffers(1, &rbo);
     rbo_bind(rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, window_width, window_height);
-    rbo_unbind();
 
     return rbo;
 }
@@ -110,9 +108,9 @@ internal void rbo_delete(u32 *rbo)
     glDeleteRenderbuffers(1, rbo);
 }
 
-internal void rbo_update(int window_width, int window_height)
+internal void rbo_update(int window_width, int window_height, int samples)
 {
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, window_width, window_height);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, window_width, window_height);
 }
 
 internal void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
@@ -290,25 +288,44 @@ internal void render_object_delete(RenderObject* render_object)
     shader_delete(render_object->shader);
 }
 
+internal void framebuffer_attach_texture(Framebuffer* framebuffer, Texture texture, int samples)
+{
+    if (samples > 0)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, texture.id, 0);
+    else
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture.id, 0);
+}
+
+internal void framebuffer_attach_renderbuffer(Framebuffer* framebuffer)
+{
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer->rbo);
+}
+
 // Generate render-to-texture framebuffer
-internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_height)
+internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_height, int samples, b32 only_color)
 {
     Framebuffer framebuffer = {0};
     framebuffer.id = fbo_init();
-    framebuffer.texture = texture_generate();
-    texture_fill_empty_data(window_width, window_height);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.texture.id, 0);
 
-    framebuffer.rbo = rbo_init(window_width, window_height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.rbo);
+    framebuffer.texture = texture_generate(samples);
+    texture_fill_empty_data(&framebuffer.texture, window_width, window_height, samples);
+    framebuffer_attach_texture(&framebuffer, framebuffer.texture, samples);
+
+    // NOTE(lucas): Rendbuffer is used for depth/stencil attachments.
+    // The intermediate framebuffer only needs a color attachment
+    if (!only_color)
+    {
+        framebuffer.rbo = rbo_init();
+        rbo_update(window_width, window_height, samples);
+        framebuffer_attach_renderbuffer(&framebuffer);
+    }
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         ASSERT(0);
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    fbo_unbind();    
 
     shader_bind(shader);
-    framebuffer.renderer = framebuffer_renderer_init(shader);
 
     return framebuffer;
 }
@@ -317,7 +334,6 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
 {
     texture_delete(&framebuffer->texture);
     rbo_delete(&framebuffer->rbo);
-    render_object_delete(&framebuffer->renderer);
     fbo_delete(&framebuffer->id);
 }
 
@@ -330,10 +346,19 @@ Renderer renderer_init(int viewport_width, int viewport_height)
 {
     Renderer renderer = {0};
 
+    glEnable(GL_MULTISAMPLE);
+
     renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
-    renderer.config.circle_line_segments = 64;
+    renderer.config.circle_line_segments = 128;
+    renderer.config.msaa_level = 16;
+
+    // Clamp MSAA samples to max samples supported by GPU
+    GLint max_samples;
+    glGetIntegerv(GL_MAX_SAMPLES, &max_samples);
+    if (renderer.config.msaa_level > max_samples)
+        renderer.config.msaa_level = max_samples;
 
     // TODO(lucas): These relative paths might cause problems in the future
     u32 framebuffer_shader = shader_init("shaders/framebuffer.vert", "shaders/framebuffer.frag");
@@ -341,12 +366,16 @@ Renderer renderer_init(int viewport_width, int viewport_height)
     u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
 
-    renderer.line_renderer   = line_renderer_init(poly_shader);
-    renderer.circle_renderer = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
-    renderer.rect_renderer   = rect_renderer_init(poly_shader);
-    renderer.sprite_renderer = sprite_renderer_init(sprite_shader);
-    renderer.font_renderer   = font_renderer_init(font_shader);
-    renderer.framebuffer     = framebuffer_init(framebuffer_shader, viewport_width, viewport_height);
+    renderer.line_renderer        = line_renderer_init(poly_shader);
+    renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
+    renderer.rect_renderer        = rect_renderer_init(poly_shader);
+    renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
+    renderer.font_renderer        = font_renderer_init(font_shader);
+    renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
+    
+    renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
+                                            renderer.config.msaa_level, true);
+    renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
 
     return renderer;
 }
@@ -358,10 +387,15 @@ void renderer_delete(Renderer* renderer)
     render_object_delete(&renderer->rect_renderer);
     render_object_delete(&renderer->sprite_renderer);
     render_object_delete(&renderer->font_renderer);
+    render_object_delete(&renderer->framebuffer_renderer);
+
+    framebuffer_delete(&renderer->framebuffer);
+    framebuffer_delete(&renderer->intermediate_framebuffer);
 }
 
 void renderer_new_frame(Renderer* renderer, Window window)
 {
+    glEnable(GL_MULTISAMPLE);
     renderer->viewport.width = (f32)window.width;
     renderer->viewport.height = (f32)window.height;
 
@@ -370,12 +404,11 @@ void renderer_new_frame(Renderer* renderer, Window window)
     rect viewport = renderer->viewport;
     renderer_viewport(viewport);
 
-    texture_bind(&renderer->framebuffer.texture);
-    texture_fill_empty_data((int)viewport.width, (int)viewport.height);
-    texture_unbind();
+    texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, renderer->config.msaa_level);
+    texture_fill_empty_data(&renderer->intermediate_framebuffer.texture, (int)viewport.width, (int)viewport.height, 0);
 
     rbo_bind(renderer->framebuffer.rbo);
-    rbo_update((int)viewport.width, (int)viewport.height);
+    rbo_update((int)viewport.width, (int)viewport.height, renderer->config.msaa_level);
     rbo_unbind();
 
     m4 projection = m4_ortho(0.0f, viewport.width, 0.0f, viewport.height, -1.0f, 1.0f);
@@ -392,14 +425,30 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
 void renderer_render(Renderer* renderer)
 {
-    fbo_unbind();
+    rect viewport = renderer->viewport;
 
-    renderer_viewport(renderer->viewport);
+    // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the
+    // intermediate framebuffer
+    if (renderer->config.msaa_level > 0)
+    {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer->framebuffer.id);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer->intermediate_framebuffer.id);
+        glBlitFramebuffer((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
+                        (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
+                        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    }
+
+    fbo_unbind();
+    renderer_viewport(viewport);
     renderer_clear(renderer->clear_color);
 
-    shader_bind(renderer->framebuffer.renderer.shader);
-    vao_bind(renderer->framebuffer.renderer.vao);
-    texture_bind(&renderer->framebuffer.texture);
+    shader_bind(renderer->framebuffer_renderer.shader);
+    vao_bind(renderer->framebuffer_renderer.vao);
+
+    if (renderer->config.msaa_level > 0)
+        texture_bind(&renderer->intermediate_framebuffer.texture, 0);
+    else
+        texture_bind(&renderer->framebuffer.texture, renderer->config.msaa_level);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_unbind();

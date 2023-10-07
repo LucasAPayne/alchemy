@@ -21,12 +21,12 @@ typedef struct Framebuffer
     u32 id;
     u32 rbo;
     Texture texture;
-    RenderObject renderer;
 } Framebuffer;
 
 typedef struct RendererConfig
 {
     u32 circle_line_segments;
+    int msaa_level;
 } RendererConfig;
 
 typedef struct Renderer
@@ -36,8 +36,14 @@ typedef struct Renderer
     RenderObject rect_renderer;
     RenderObject sprite_renderer;
     RenderObject font_renderer;
+    RenderObject framebuffer_renderer;
 
+    // NOTE(lucas): If MSAA is disabled, then the intermediate framebuffer is unused.
+    // Otherwise, the main framebufer is used for multisampling operations and is
+    // blitted to the intermediate framebuffer. Any post-processing effects will be applied
+    // to the intermediate framebuffer.
     Framebuffer framebuffer;
+    Framebuffer intermediate_framebuffer;
 
     rect viewport;
     v4 clear_color;

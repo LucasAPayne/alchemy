@@ -47,7 +47,7 @@ void draw_text(Renderer* renderer, Text text)
     // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
     // but we need 1-byte alignment for grayscale glyph bitmaps
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    Texture texture = texture_generate();
+    Texture texture = texture_generate(0);
 
     const char* c;
     for (c = text.string; *c; ++c)
@@ -93,6 +93,6 @@ void draw_text(Renderer* renderer, Text text)
     }
 
     glBindVertexArray(0);
-    texture_unbind();
+    texture_unbind(0);
     texture_delete(&texture);
 }

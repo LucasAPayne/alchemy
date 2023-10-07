@@ -37,7 +37,7 @@ void draw_sprite(Renderer* renderer, Sprite sprite)
     shader_set_m4(renderer->sprite_renderer.shader, "model", model, 0);
     shader_set_v4(renderer->sprite_renderer.shader, "color", sprite.color);
 
-    texture_bind(sprite.texture);
+    texture_bind(sprite.texture, 0);
 
     glBindVertexArray(renderer->sprite_renderer.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

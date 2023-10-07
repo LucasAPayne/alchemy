@@ -48,7 +48,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
         glVertexAttribPointer((GLuint)dev->attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
     }
 
-    texture_unbind();
+    texture_unbind(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -57,7 +57,7 @@ void nk_alchemy_device_create(nk_alchemy_state* state, u32 ui_shader)
 void nk_alchemy_device_upload_atlas(nk_alchemy_state* state, const void *image, int width, int height)
 {
     nk_alchemy_device *dev = &state->device;
-    dev->font_tex = texture_generate();
+    dev->font_tex = texture_generate(0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
@@ -152,7 +152,7 @@ void nk_alchemy_render(nk_alchemy_state* state, enum nk_anti_aliasing AA)
         nk_draw_foreach(cmd, &state->ctx, &dev->cmds)
         {
             if (!cmd->elem_count) continue;
-            texture_bind_id((u32)cmd->texture.id);
+            texture_bind_id((u32)cmd->texture.id, 0);
             glScissor(
                 (GLint)(cmd->clip_rect.x * state->fb_scale.x),
                 (GLint)((state->height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * state->fb_scale.y),

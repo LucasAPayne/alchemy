@@ -44,7 +44,6 @@ int main(void)
 
         draw_grid(&renderer, v2_one(), (v2){(f32)window.width, (f32)window.height}, 5, (v4){1.0f, 0.0f, 0.0f, 1.0f});
         draw_circle(&renderer, (v2){400.0f, 400.0f}, 80.0f, (v4){1.0f, 0.0f, 0.0f, 1.0f});
-        // draw_rect(&renderer, v2_zero(), (v2){(f32)window.width, (f32)window.height}, (v4){0.3f, 0.0f, 0.0f, 1.0f}, 0.0f);
 
         renderer_render(&renderer);
         window_render(&window);
