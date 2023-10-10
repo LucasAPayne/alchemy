@@ -40,6 +40,9 @@ int main(void)
         Input old_input = input;
         input_process(&window, &input);
 
+        if (key_pressed(&input.keyboard, KEY_MENU) && key_released(&input.keyboard, KEY_Z))
+            renderer.config.wireframe_mode = !renderer.config.wireframe_mode;
+
         renderer_new_frame(&renderer, window);
 
         draw_grid(&renderer, v2_one(), (v2){(f32)window.width, (f32)window.height}, 5, (v4){1.0f, 0.0f, 0.0f, 1.0f});

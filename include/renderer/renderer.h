@@ -25,6 +25,7 @@ typedef struct Framebuffer
 
 typedef struct RendererConfig
 {
+    b32 wireframe_mode;
     u32 circle_line_segments;
     int msaa_level;
 } RendererConfig;

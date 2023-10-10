@@ -191,10 +191,10 @@ internal RenderObject rect_renderer_init(u32 shader)
     f32 vertices[] =
     {
         // pos
-        1.0f, 0.0f,
-        1.0f, 1.0f,
-        0.0f, 1.0f,
-        0.0f, 0.0f
+        1.0f, 1.0f, // top right
+        1.0f, 0.0f, // bottom right
+        0.0f, 0.0f, // bottom left
+        0.0f, 1.0f  // top left
     };
 
     u32 indices[] =
@@ -374,7 +374,7 @@ Renderer renderer_init(int viewport_width, int viewport_height)
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
     
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
-                                            renderer.config.msaa_level, true);
+                                            renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
 
     return renderer;
@@ -395,6 +395,9 @@ void renderer_delete(Renderer* renderer)
 
 void renderer_new_frame(Renderer* renderer, Window window)
 {
+    if (renderer->config.wireframe_mode)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     glEnable(GL_MULTISAMPLE);
     renderer->viewport.width = (f32)window.width;
     renderer->viewport.height = (f32)window.height;
@@ -404,11 +407,12 @@ void renderer_new_frame(Renderer* renderer, Window window)
     rect viewport = renderer->viewport;
     renderer_viewport(viewport);
 
-    texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, renderer->config.msaa_level);
+    int msaa = renderer->config.msaa_level;
+    texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, msaa);
     texture_fill_empty_data(&renderer->intermediate_framebuffer.texture, (int)viewport.width, (int)viewport.height, 0);
 
     rbo_bind(renderer->framebuffer.rbo);
-    rbo_update((int)viewport.width, (int)viewport.height, renderer->config.msaa_level);
+    rbo_update((int)viewport.width, (int)viewport.height, msaa);
     rbo_unbind();
 
     m4 projection = m4_ortho(0.0f, viewport.width, 0.0f, viewport.height, -1.0f, 1.0f);
@@ -450,6 +454,8 @@ void renderer_render(Renderer* renderer)
     else
         texture_bind(&renderer->framebuffer.texture, renderer->config.msaa_level);
 
+    // NOTE(lucas): Turn wireframe mode off before rendering the screen texture.
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_unbind();
 }
