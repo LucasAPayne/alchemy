@@ -49,7 +49,13 @@ internal void win32_toggle_fullscreen(HWND window)
     }
 }
 
-internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
+internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
+{
+    key->pressed = is_down;
+    key->released = was_down && !is_down;
+}
+
+internal WORD map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam)
 {
     /* NOTE(lucas): Processing keys through PeekMessage does not distinguish between left and right keys.
      * For example, VK_LSHIFT and VK_RSHIFT are just converted to VK_SHIFT, which is true if either shift key is
@@ -64,24 +70,33 @@ internal WORD map_extended_keys(WPARAM wparam, LPARAM lparam)
     if (extended)
         scan_code = MAKEWORD(scan_code, 0xE0);
 
+    b32 was_down = (lparam & (1 << 30)) != 0; // 30th bit is previous state (1 for down, 0 for up)
+    b32 is_down = (lparam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
+
     switch (vk)
     {
         case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
-        case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
-        case VK_MENU:    // converts to VK_LMENU or VK_RMENU
+        {
+            win32_process_key(&keyboard->keys[KEY_SHIFT], is_down, was_down);
             vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
-            break;
+        } break;
+
+        case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
+        {
+            win32_process_key(&keyboard->keys[KEY_CONTROL], is_down, was_down);
+            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
+        } break;
+
+        case VK_MENU:    // converts to VK_LMENU or VK_RMENU
+        {
+            win32_process_key(&keyboard->keys[KEY_ALT], is_down, was_down);
+            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
+        } break;
 
         default: break;
     }
 
     return vk;
-}
-
-internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
-{
-    key->pressed = is_down;
-    key->released = was_down && !is_down;
 }
 
 internal int win32_get_mouse_xbutton(MSG msg)
@@ -162,13 +177,13 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                  * to change the clear color while the key is held, then change it back to the original color when the
                  * key is released.
                  */
-                 u32 virtual_key_code = (u32)map_extended_keys(msg.wParam, msg.lParam);
+                 u32 virtual_key_code = (u32)map_extended_keys(keyboard, msg.wParam, msg.lParam);
 
                 // NOTE(lucas): lparam is a bitfield that gives extra information about the message
                 // Could just grab the value of the bit, but comparison forces result to be bool
                 b32 was_down = (msg.lParam & (1 << 30)) != 0; // 30th bit is previous state (1 for down, 0 for up)
                 b32 is_down = (msg.lParam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
-
+               
                 // Disregard key repeats
                 // if (was_down == is_down)
                 //     break;
@@ -275,7 +290,23 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                     case VK_F10:        win32_process_key(&keyboard->keys[KEY_F10], is_down, was_down); break;
                     case VK_F11:        win32_process_key(&keyboard->keys[KEY_F11], is_down, was_down); break;
                     case VK_F12:        win32_process_key(&keyboard->keys[KEY_F12], is_down, was_down); break;
+                    case VK_F13:        win32_process_key(&keyboard->keys[KEY_F13], is_down, was_down); break;
+                    case VK_F14:        win32_process_key(&keyboard->keys[KEY_F14], is_down, was_down); break;
+                    case VK_F15:        win32_process_key(&keyboard->keys[KEY_F15], is_down, was_down); break;
+                    case VK_F16:        win32_process_key(&keyboard->keys[KEY_F16], is_down, was_down); break;
+                    case VK_F17:        win32_process_key(&keyboard->keys[KEY_F17], is_down, was_down); break;
+                    case VK_F18:        win32_process_key(&keyboard->keys[KEY_F18], is_down, was_down); break;
+                    case VK_F19:        win32_process_key(&keyboard->keys[KEY_F19], is_down, was_down); break;
+                    case VK_F20:        win32_process_key(&keyboard->keys[KEY_F20], is_down, was_down); break;
+                    case VK_F21:        win32_process_key(&keyboard->keys[KEY_F21], is_down, was_down); break;
+                    case VK_F22:        win32_process_key(&keyboard->keys[KEY_F22], is_down, was_down); break;
+                    case VK_F23:        win32_process_key(&keyboard->keys[KEY_F23], is_down, was_down); break;
+                    case VK_F24:        win32_process_key(&keyboard->keys[KEY_F24], is_down, was_down); break;
                 }
+
+                if (key_pressed(keyboard, KEY_LSYSTEM) || key_pressed(keyboard, KEY_RSYSTEM) ||
+                    key_released(keyboard, KEY_LSYSTEM) || key_released(keyboard, KEY_RSYSTEM))
+                    win32_process_key(&keyboard->keys[KEY_SYSTEM], is_down, was_down);
 
                 if (is_down)
                 {
@@ -588,11 +619,11 @@ void win32_xinput_gamepad_process_input(Input* input)
         XINPUT_GAMEPAD xinput_gamepad = controller_state.Gamepad;
         gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX, 
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        gamepad->left_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbLY,
+        gamepad->left_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbLY,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->right_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbRX,
                                                             XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-        gamepad->right_stick_y = -win32_process_xinput_stick(xinput_gamepad.sThumbRY,
+        gamepad->right_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbRY,
                                                             XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 
         // Triggers

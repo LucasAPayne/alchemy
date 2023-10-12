@@ -4,7 +4,8 @@
 
 typedef struct Window
 {
-    iv2 size;
+    int width;
+    int height;
     b32 open;
 
     // Timing information used to calculate delta seconds for each frame.

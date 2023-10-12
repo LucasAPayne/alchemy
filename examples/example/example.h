@@ -7,28 +7,36 @@
 #include "util/time.h"
 #include "renderer/renderer.h"
 
-typedef struct ExampleState
+typedef struct Player
 {
-    Input input;
-    SpriteRenderer sprite_renderer;
-    FontRenderer font_renderer;
-    FontRenderer frame_time_renderer;
-    Texture logo_tex;
-    Texture player_tex;
-
-    Sprite logo;
-    v2 logo_direction;
-    v3* colors;
-    int last_color_index;
-
-    Sprite player;
+    v2 position;
+    v2 size;
+    v4 color;
+    f32 rotation;
+    
     int dash_counter;
     int dash_frames;
     f32 dash_direction; // -1: left, 1: right
     f32 dash_distance;
     Timer dash_cooldown;
+} Player;
 
-    v4 clear_color;
+typedef struct ExampleState
+{
+    Input input;
+    Renderer renderer;
+
+    Font immortal_font;
+    Font cardinal_font;
+
+    Texture logo_tex;
+
+    Sprite logo;
+    v2 logo_direction;
+    v4 colors[7];
+    int last_color_index;
+
+    Player player;
 
     SoundOutput sound_output;
     b32 is_shooting;
@@ -41,6 +49,6 @@ typedef struct ExampleState
     struct nk_font* immortal;
 } ExampleState;
 
-void example_state_init(ExampleState* state);
+void example_state_init(ExampleState* state, Window window);
 void example_state_delete(ExampleState* state);
-void example_update_and_render(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height);
+void example_update_and_render(ExampleState* state, Window window, f32 delta_time);

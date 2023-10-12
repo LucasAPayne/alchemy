@@ -152,8 +152,8 @@ internal void window_update_size(Window* window)
 {
     RECT client_rect = {0};
     GetClientRect(window->ptr, &client_rect);
-    window->size.x = client_rect.right - client_rect.left;
-    window->size.y = client_rect.bottom - client_rect.top;
+    window->width = client_rect.right - client_rect.left;
+    window->height = client_rect.bottom - client_rect.top;
 }
 
 internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -218,8 +218,8 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
 
 void window_init(Window* window, const char* title, int width, int height)
 {
-    window->size.x = width;
-    window->size.y = height;
+    window->width = width;
+    window->height = height;
 
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);

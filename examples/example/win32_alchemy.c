@@ -4,9 +4,8 @@
 #include "window.h"
 #include "util/types.h"
 
-int main(int argc, char** argv)
+int main(void)
 {
-
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
     
@@ -14,7 +13,7 @@ int main(int argc, char** argv)
     window_icon_set_from_memory(&window, potion_icon);
 
     ExampleState state = {0};
-    example_state_init(&state);
+    example_state_init(&state, window);
 
     while(window.open)
     {
@@ -23,7 +22,7 @@ int main(int argc, char** argv)
         input_process(&window, &state.input);
 
         f32 delta_time = get_frame_seconds(&window);
-        example_update_and_render(&state, delta_time, window.size.x, window.size.y);
+        example_update_and_render(&state, window, delta_time);
 
         sound_output_process(&state.sound_output);
 

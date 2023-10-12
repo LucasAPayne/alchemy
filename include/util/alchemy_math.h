@@ -1,13 +1,30 @@
+#pragma once
+
 #include "util/types.h"
+
+#include <math.h>
 
 typedef struct rect
 {
-    v2 min;
-    v2 max;
+    union
+    {
+        struct
+        {
+            v2 position;
+            v2 size;
+        };
+        struct
+        {
+            f32 x;
+            f32 y;
+            f32 width;
+            f32 height;
+        };
+    };
 } rect;
 
 /* General */
-inline f32 f32_clamp(f32 value, f32 min, f32 max)
+inline f32 clamp_f32(f32 value, f32 min, f32 max)
 {
     f32 result = value;
 
@@ -19,7 +36,62 @@ inline f32 f32_clamp(f32 value, f32 min, f32 max)
     return result;
 }
 
+inline f32 abs_f32(f32 x)
+{
+    f32 result = fabsf(x);
+    return result;
+}
+
+inline f32 sq_f32(f32 x)
+{
+    f32 result = x*x;
+    return result;
+}
+
+inline f32 sin_f32(f32 x)
+{
+    f32 result = sinf(x);
+    return result;
+}
+
+inline f32 cos_f32(f32 x)
+{
+    f32 result = cosf(x);
+    return result;
+}
+
+inline f32 tan_f32(f32 x)
+{
+    f32 result = tanf(x);
+    return result;
+}
+
+inline f32 atan_f32(f32 y, f32 x)
+{
+    ASSERT(x != 0.0f);
+    f32 result = atan2f(y, x);
+    return result;
+}
+
 /* v2 */
+inline v2 v2_full(f32 fill_value)
+{
+    v2 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v2 v2_zero(void)
+{
+    v2 result = glms_vec2_zero();
+    return result;
+}
+
+inline v2 v2_one(void)
+{
+    v2 result = glms_vec2_one();
+    return result;
+}
+
 inline v2 v2_add(v2 a, v2 b)
 {
     v2 result = glms_vec2_add(a, b);
@@ -35,6 +107,12 @@ inline v2 v2_sub(v2 a, v2 b)
 inline v2 v2_neg(v2 v)
 {
     v2 result = glms_vec2_negate(v);
+    return result;
+}
+
+inline v2 v2_abs(v2 v)
+{
+    v2 result = (v2){fabsf(v.x), fabsf(v.y)};
     return result;
 }
 
@@ -68,11 +146,152 @@ inline v2 v2_clamp_to_rect(v2 v, rect r)
 {
     v2 result = v;
 
-    if (v.x < r.min.x) result.x = r.min.x;
-    if (v.y < r.min.y) result.y = r.min.y;
-    if (v.x > r.max.x) result.x = r.max.x;
-    if (v.y > r.max.y) result.y = r.max.y;
+    v2 min = r.position;
+    v2 max = v2_add(r.position, r.size);
 
+    if (v.x < min.x) result.x = min.x;
+    if (v.y < min.y) result.y = min.y;
+    if (v.x > max.x) result.x = max.x;
+    if (v.y > max.y) result.y = max.y;
+
+    return result;
+}
+
+/* v3 */
+inline v3 v3_full(f32 fill_value)
+{
+    v3 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v3 v3_zero(void)
+{
+    v3 result = glms_vec3_zero();
+    return result;
+}
+
+inline v3 v3_one(void)
+{
+    v3 result = glms_vec3_one();
+    return result;
+}
+
+inline v3 v3_add(v3 a, v3 b)
+{
+    v3 result = glms_vec3_add(a, b);
+    return result;
+}
+
+inline v3 v3_sub(v3 a, v3 b)
+{
+    v3 result = glms_vec3_sub(a, b);
+    return result;
+}
+
+inline v3 v3_neg(v3 v)
+{
+    v3 result = glms_vec3_negate(v);
+    return result;
+}
+
+inline v3 v3_abs(v3 v)
+{
+    v3 result = (v3){fabsf(v.x), fabsf(v.y)};
+    return result;
+}
+
+inline v3 v3_scale(v3 v, f32 s)
+{
+    v3 result = glms_vec3_scale(v, s);
+    return result;
+}
+
+inline f32 v3_dot(v3 a, v3 b)
+{
+    f32 result = glms_vec3_dot(a, b);
+    return result;
+}
+
+inline f32 v3_mag_sq(v3 v)
+{
+    f32 result = v3_dot(v, v);
+    return result;
+}
+
+inline v3 v3_reflect(v3 v, v3 r)
+{
+    v3 result = {0};
+    v3 vrr = v3_scale(r, 2.0f*v3_dot(v, r));
+    result = v3_sub(v, vrr);
+    return result;
+}
+
+/* v4 */
+inline v4 v4_full(f32 fill_value)
+{
+    v4 result = {fill_value, fill_value};
+    return result;
+}
+
+inline v4 v4_zero(void)
+{
+    v4 result = glms_vec4_zero();
+    return result;
+}
+
+inline v4 v4_one(void)
+{
+    v4 result = glms_vec4_one();
+    return result;
+}
+
+inline v4 v4_add(v4 a, v4 b)
+{
+    v4 result = glms_vec4_add(a, b);
+    return result;
+}
+
+inline v4 v4_sub(v4 a, v4 b)
+{
+    v4 result = glms_vec4_sub(a, b);
+    return result;
+}
+
+inline v4 v4_neg(v4 v)
+{
+    v4 result = glms_vec4_negate(v);
+    return result;
+}
+
+inline v4 v4_abs(v4 v)
+{
+    v4 result = (v4){fabsf(v.x), fabsf(v.y)};
+    return result;
+}
+
+inline v4 v4_scale(v4 v, f32 s)
+{
+    v4 result = glms_vec4_scale(v, s);
+    return result;
+}
+
+inline f32 v4_dot(v4 a, v4 b)
+{
+    f32 result = glms_vec4_dot(a, b);
+    return result;
+}
+
+inline f32 v4_mag_sq(v4 v)
+{
+    f32 result = v4_dot(v, v);
+    return result;
+}
+
+inline v4 v4_reflect(v4 v, v4 r)
+{
+    v4 result = {0};
+    v4 vrr = v4_scale(r, 2.0f*v4_dot(v, r));
+    result = v4_sub(v, vrr);
     return result;
 }
 
@@ -118,8 +337,8 @@ inline rect rect_min_max(v2 min, v2 max)
 {
     rect result = {0};
 
-    result.min = min;
-    result.max = max;
+    result.position = min;
+    result.size = v2_sub(max, min);
 
     return result;
 }
@@ -128,8 +347,8 @@ inline rect rect_center_half_dim(v2 center, v2 half_dim)
 {
     rect result = {0};
 
-    result.min = v2_sub(center, half_dim);
-    result.max = v2_add(center, half_dim);
+    result.position = v2_sub(center, half_dim);
+    result.size = v2_scale(half_dim, 2.0f);
 
     return result;
 }
@@ -148,8 +367,8 @@ inline rect rect_min_dim(v2 min, v2 dim)
 {
     rect result = {0};
 
-    result.min = min;
-    result.max = v2_add(min, dim);
+    result.position = min;
+    result.size = v2_add(min, dim);
 
     return result;
 }
@@ -159,10 +378,13 @@ inline rect rect_min_dim(v2 min, v2 dim)
 // will always result in being inside only one rect and not the other.
 inline b32 rect_point_in_bounds(rect bounds, v2 test)
 {
-    b32 result = ((test.x >= bounds.min.x) &&
-                  (test.y >= bounds.min.y) &&
-                  (test.x <  bounds.max.x) && 
-                  (test.y <  bounds.max.y));
+    v2 min = bounds.position;
+    v2 max = v2_add(min, bounds.size);
+
+    b32 result = ((test.x >= min.x) &&
+                  (test.y >= min.y) &&
+                  (test.x <  max.x) && 
+                  (test.y <  max.y));
 
     return result;
 }
