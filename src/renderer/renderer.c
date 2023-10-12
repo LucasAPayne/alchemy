@@ -351,6 +351,7 @@ Renderer renderer_init(int viewport_width, int viewport_height)
     renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
+    renderer.config.rotate_quad_from_center = true;
     renderer.config.circle_line_segments = 128;
     renderer.config.msaa_level = 16;
 
@@ -466,19 +467,32 @@ void renderer_clear(v4 color)
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color)
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     v2 length = v2_abs(v2_sub(start, end));
-    m4 model = m4_identity();
-    model = m4_translate(model, (v3){start.x, start.y, 0.0f});
-    model = m4_scale(model, (v3){length.x, length.y, 1.0f});
 
-    shader_set_m4(renderer->line_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->line_renderer.shader, "color", color);
+    // NOTE(lucas): Horizontal and vertical lines need special treatment
+    // since they will cause trig functions to be undefined
+    v2 size = v2_zero();
+    f32 rotation = 0.0f;
 
-    glBindVertexArray(renderer->line_renderer.vao);
-    glDrawElements(GL_LINES, 2, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    // NOTE(lucas): atan is undefined for vertical lines,
+    // so only call it if the line has slope
+    if (length.x)
+        rotation = atan_f32(length.y, length.x);
+
+    if (length.x && length.y) // Diagonal line
+        size = (v2){length.y / sin_f32(rotation), thickness};
+    else if (length.x && !length.y) // Horizontal line
+        size = (v2){length.x, thickness};
+    else if (length.y && !length.x) // Vertical line
+        size = (v2){thickness, length.y};
+
+    // NOTE(lucas): Draw a quad, but rotate from origin instead of center
+    b32 user_rot_setting = renderer->config.rotate_quad_from_center;
+    renderer->config.rotate_quad_from_center = false;
+    draw_quad(renderer, start, size, color, glm_deg(rotation));
+    renderer->config.rotate_quad_from_center = user_rot_setting;
 }
 
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
@@ -533,20 +547,27 @@ void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     free(indices);
 }
 
-void draw_rect(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
+void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){position.x, position.y, 0.0f});
 
-    // NOTE(lucas): The origin of a quad is at the top left,
-    // but we want the origin to appear in the center of the quad
-    // for rotation. So, before rotation, translate the quad right and down by half its size.
-    // After the rotation, undo this translation.
-    model = m4_translate(model, (v3){0.5f*size.x, 0.5f*size.y, 0.0f});
-    model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
-    model = m4_translate(model, (v3){-0.5f*size.x, -0.5f*size.y, 0.0f});
+    if (renderer->config.rotate_quad_from_center)
+    {
+        // NOTE(lucas): The origin of a quad is at the bottom left,
+        // but we want the origin to appear in the center of the quad
+        // for rotation. So, before rotation, translate the quad right and up by half its size.
+        // After the rotation, undo this translation.
+        model = m4_translate(model, (v3){0.5f*size.x, 0.5f*size.y, 0.0f});
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-0.5f*size.x, -0.5f*size.y, 0.0f});
+    }
+    else
+    {
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+    }
 
-    // Scale sprite to appropriate size
+    // Scale quad to appropriate size
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
     // Set model matrix and color shader values

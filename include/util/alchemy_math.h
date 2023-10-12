@@ -24,7 +24,7 @@ typedef struct rect
 } rect;
 
 /* General */
-inline f32 f32_clamp(f32 value, f32 min, f32 max)
+inline f32 clamp_f32(f32 value, f32 min, f32 max)
 {
     f32 result = value;
 
@@ -33,6 +33,18 @@ inline f32 f32_clamp(f32 value, f32 min, f32 max)
     else if (value > max)
         result = max;
     
+    return result;
+}
+
+inline f32 abs_f32(f32 x)
+{
+    f32 result = fabsf(x);
+    return result;
+}
+
+inline f32 sq_f32(f32 x)
+{
+    f32 result = x*x;
     return result;
 }
 
@@ -48,9 +60,16 @@ inline f32 cos_f32(f32 x)
     return result;
 }
 
-inline f32 abs_f32(f32 x)
+inline f32 tan_f32(f32 x)
 {
-    f32 result = fabsf(x);
+    f32 result = tanf(x);
+    return result;
+}
+
+inline f32 atan_f32(f32 y, f32 x)
+{
+    ASSERT(x != 0.0f);
+    f32 result = atan2f(y, x);
     return result;
 }
 

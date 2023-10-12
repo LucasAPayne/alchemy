@@ -33,7 +33,7 @@ typedef struct ExampleState
 
     Sprite logo;
     v2 logo_direction;
-    v3* colors;
+    v4 colors[7];
     int last_color_index;
 
     Player player;

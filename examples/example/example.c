@@ -9,10 +9,6 @@
 #include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
 
-global v4 colors[7] = {{1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f},
-                                {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f},
-                                {0.0f, 1.0f, 1.0f, 1.0f}};
-
 internal void bounce_dvd(ExampleState* state, f32* direction)
 {
     // Bounce off screen boundary
@@ -22,7 +18,7 @@ internal void bounce_dvd(ExampleState* state, f32* direction)
     // Make sure new color is different. Incredibly efficient
     while (color_index == state->last_color_index)
         color_index = rand() % 7;
-    state->logo.color = colors[color_index];
+    state->logo.color = state->colors[color_index];
     state->last_color_index = color_index;
 }
 
@@ -34,7 +30,6 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
                                            (f32)(window_height - state->logo.size.y)});
 
     state->logo.position = v2_add(state->logo.position, v2_scale(state->logo_direction, speed*delta_time));
-
 
     v2 min = window_bounds.position;
     v2 max = v2_add(min, window_bounds.size);
@@ -92,7 +87,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
     // Update player rotation
     player->rotation -= 2.0f * gamepad->right_trigger_val;
     player->rotation += 2.0f * gamepad->left_trigger_val;
-    player->rotation = f32_clamp(player->rotation, -45.0f, 45.0f);
+    player->rotation = clamp_f32(player->rotation, -45.0f, 45.0f);
     if (!gamepad_button_pressed(gamepad->left_trigger) &&
         !gamepad_button_pressed(gamepad->right_trigger))
     {
@@ -130,8 +125,16 @@ void example_state_init(ExampleState* state, Window window)
 
     state->logo_direction = (v2){-1.0f, -1.0f};
 
+    state->colors[0] = color_white();
+    state->colors[1] = color_red();
+    state->colors[2] = color_green();
+    state->colors[3] = color_blue();
+    state->colors[4] = color_yellow();
+    state->colors[5] = color_magenta();
+    state->colors[6] = color_cyan();
+
     state->player.size = (v2){50.0f, 50.0f};
-    state->player.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+    state->player.color = color_white();
 
     state->player.dash_counter = 0;
     state->player.dash_frames = 15;
@@ -214,7 +217,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     draw_sprite(&state->renderer, state->logo);
 
     Player* player = &state->player;
-    draw_rect(&state->renderer, player->position, player->size, player->color, player->rotation);
+    draw_quad(&state->renderer, player->position, player->size, player->color, player->rotation);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);

@@ -26,6 +26,7 @@ typedef struct Framebuffer
 typedef struct RendererConfig
 {
     b32 wireframe_mode;
+    b32 rotate_quad_from_center;
     u32 circle_line_segments;
     int msaa_level;
 } RendererConfig;
@@ -62,6 +63,51 @@ void renderer_viewport(rect viewport);
 void renderer_clear(v4 color);
 
 // TODO(lucas): Line, Triangle, Quad structs?
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color);
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
-void draw_rect(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
+void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
+
+inline v4 color_red(void)
+{
+    return (v4){1.0f, 0.0f, 0.0f, 1.0f};
+}
+
+inline v4 color_green(void)
+{
+    return (v4){0.0f, 1.0f, 0.0f, 1.0f};
+}
+
+inline v4 color_blue(void)
+{
+    return (v4){0.0f, 0.0f, 1.0f, 1.0f};
+}
+
+inline v4 color_black(void)
+{
+    return (v4){0.0f, 0.0f, 0.0f, 1.0f};
+}
+
+inline v4 color_white(void)
+{
+    return (v4){1.0f, 1.0f, 1.0f, 1.0f};
+}
+
+inline v4 color_cyan(void)
+{
+    return (v4){0.0f, 1.0f, 1.0f, 1.0f};
+}
+
+inline v4 color_magenta(void)
+{
+    return (v4){1.0f, 0.0f, 1.0f, 1.0f};
+}
+
+inline v4 color_yellow(void)
+{
+    return (v4){1.0f, 1.0f, 0.0f, 1.0f};
+}
+
+inline v4 color_transparent(void)
+{
+    return (v4){0.0f, 0.0f, 0.0f, 0.0f};
+}

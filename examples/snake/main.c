@@ -2,7 +2,7 @@
 #include "input.h"
 #include "renderer/renderer.h"
 
-internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 color)
+internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 color, f32 line_thickness)
 {
     // NOTE(lucas): This function assumes a square viewport
     f32 cell_size = (end.x - start.x) / (f32)slices;
@@ -10,13 +10,19 @@ internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 col
     f32 x = start.x;
     f32 y = start.y;
 
-    for (u32 slice = 0; slice <= slices; ++slice)
+    for (u32 slice = 0; slice < slices; ++slice)
     {
-        draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color);
-        draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color);
+        draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color, line_thickness);
+        draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color, line_thickness);
         x += cell_size;
         y += cell_size;
     }
+
+    // Subtract thickness before drawing final lines so they appear properly at the viewport edges
+    x -= line_thickness;
+    y -= line_thickness;
+    draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color, line_thickness);
+    draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color, line_thickness);
 }
 
 int main(void)
@@ -45,7 +51,7 @@ int main(void)
 
         renderer_new_frame(&renderer, window);
 
-        draw_grid(&renderer, v2_one(), (v2){(f32)window.width, (f32)window.height}, 5, (v4){1.0f, 0.0f, 0.0f, 1.0f});
+        draw_grid(&renderer, v2_one(), (v2){(f32)window.width, (f32)window.height}, 3, color_red(), 1.0f);
         draw_circle(&renderer, (v2){400.0f, 400.0f}, 80.0f, (v4){1.0f, 0.0f, 0.0f, 1.0f});
 
         renderer_render(&renderer);
