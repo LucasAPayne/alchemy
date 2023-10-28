@@ -6,6 +6,10 @@ typedef struct Window
 {
     int width;
     int height;
+    int min_width;
+    int min_height;
+    int max_width;
+    int max_height;
     b32 open;
 
     // Timing information used to calculate delta seconds for each frame.
@@ -19,6 +23,9 @@ typedef struct Window
 // TODO(lucas): Window styles
 void window_init(Window* window, const char* title, int width, int height);
 void window_render(Window* window);
+
+void window_set_min_size(Window* window, int min_width, int min_height);
+void window_set_max_size(Window* window, int max_width, int max_height);
 
 // TODO(lucas): Set window attributes
 void* window_icon_load_from_file(const char* filename);

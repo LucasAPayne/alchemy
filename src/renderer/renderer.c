@@ -239,32 +239,6 @@ internal RenderObject font_renderer_init(u32 shader)
     return font_renderer;
 }
 
-internal RenderObject line_renderer_init(u32 shader)
-{
-    RenderObject line_renderer = {0};
-    line_renderer.shader = shader;
-    line_renderer.vao = vao_init();
-
-    f32 vertices[] =
-    {
-        0.0f, 0.0f,
-        1.0f, 1.0f
-    };
-
-    u32 indices[] =
-    {
-        0, 1
-    };
-
-    line_renderer.vbo = vbo_init(vertices, sizeof(vertices));
-    line_renderer.ibo = ibo_init(indices, sizeof(indices));
-
-    vertex_layout_set(0, 2, 2*sizeof(f32), 0);
-    glBindVertexArray(0);
-
-    return line_renderer;
-}
-
 internal RenderObject circle_renderer_init(u32 shader, u32 segs)
 {
     RenderObject circle_renderer = {0};
@@ -337,8 +311,9 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     fbo_delete(&framebuffer->id);
 }
 
-void renderer_viewport(rect viewport)
+void renderer_viewport(Renderer* renderer, rect viewport)
 {
+    renderer->viewport = viewport;
     glViewport((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
 }
 
@@ -367,7 +342,6 @@ Renderer renderer_init(int viewport_width, int viewport_height)
     u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
 
-    renderer.line_renderer        = line_renderer_init(poly_shader);
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.rect_renderer        = rect_renderer_init(poly_shader);
     renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
@@ -383,7 +357,6 @@ Renderer renderer_init(int viewport_width, int viewport_height)
 
 void renderer_delete(Renderer* renderer)
 {
-    render_object_delete(&renderer->line_renderer);
     render_object_delete(&renderer->circle_renderer);
     render_object_delete(&renderer->rect_renderer);
     render_object_delete(&renderer->sprite_renderer);
@@ -400,14 +373,18 @@ void renderer_new_frame(Renderer* renderer, Window window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glEnable(GL_MULTISAMPLE);
-    renderer->viewport.width = (f32)window.width;
-    renderer->viewport.height = (f32)window.height;
+
+    // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
+    // fit the viewport to the window.
+    if (rect_is_zero(renderer->viewport))
+    {
+        rect viewport = rect_min_dim(v2_zero(), (v2){(f32)window.width, (f32)window.height});
+        renderer_viewport(renderer, viewport);
+    }
 
     fbo_bind(renderer->framebuffer.id);
 
     rect viewport = renderer->viewport;
-    renderer_viewport(viewport);
-
     int msaa = renderer->config.msaa_level;
     texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, msaa);
     texture_fill_empty_data(&renderer->intermediate_framebuffer.texture, (int)viewport.width, (int)viewport.height, 0);
@@ -416,7 +393,9 @@ void renderer_new_frame(Renderer* renderer, Window window)
     rbo_update((int)viewport.width, (int)viewport.height, msaa);
     rbo_unbind();
 
-    m4 projection = m4_ortho(0.0f, viewport.width, 0.0f, viewport.height, -1.0f, 1.0f);
+    // NOTE(lucas): If the viewport does not start at (0, 0), offset the projection matrix by the viewport origin
+    m4 projection = m4_ortho(viewport.x, viewport.x + viewport.width, viewport.y, viewport.y + viewport.height,
+                             -1.0f, 1.0f);
 
     // NOTE(lucas): Most shapes use the same shader,
     // so no need to set the uniform for each shape
@@ -425,7 +404,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
     shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
 
     // Clear viewport
-    renderer_clear(renderer->clear_color);
+    renderer_clear(color_black());
 }
 
 void renderer_render(Renderer* renderer)
@@ -444,7 +423,6 @@ void renderer_render(Renderer* renderer)
     }
 
     fbo_unbind();
-    renderer_viewport(viewport);
     renderer_clear(renderer->clear_color);
 
     shader_bind(renderer->framebuffer_renderer.shader);
@@ -459,6 +437,10 @@ void renderer_render(Renderer* renderer)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_unbind();
+
+    // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
+    // window dimensions if the user does not resize the viewport themselves 
+    renderer->viewport = rect_zero();
 }
 
 void renderer_clear(v4 color)
@@ -482,7 +464,7 @@ void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
         rotation = atan_f32(length.y, length.x);
 
     if (length.x && length.y) // Diagonal line
-        size = (v2){length.y / sin_f32(rotation), thickness};
+        size = (v2){v2_mag(length), thickness};
     else if (length.x && !length.y) // Horizontal line
         size = (v2){length.x, thickness};
     else if (length.y && !length.x) // Vertical line

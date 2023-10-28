@@ -121,7 +121,7 @@ void example_state_init(ExampleState* state, Window window)
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
     state->logo.position = (v2){0.0f, (f32)window.height};
-    state->logo.size = (iv2){300, 150};
+    state->logo.size = (v2){300.0f, 150.0f};
 
     state->logo_direction = (v2){-1.0f, -1.0f};
 

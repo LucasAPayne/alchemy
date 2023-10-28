@@ -48,6 +48,12 @@ inline f32 sq_f32(f32 x)
     return result;
 }
 
+inline f32 sqrt_f32(f32 x)
+{
+    f32 result = sqrtf(x);
+    return result;
+}
+
 inline f32 sin_f32(f32 x)
 {
     f32 result = sinf(x);
@@ -112,7 +118,7 @@ inline v2 v2_neg(v2 v)
 
 inline v2 v2_abs(v2 v)
 {
-    v2 result = (v2){fabsf(v.x), fabsf(v.y)};
+    v2 result = (v2){abs_f32(v.x), abs_f32(v.y)};
     return result;
 }
 
@@ -131,6 +137,12 @@ inline f32 v2_dot(v2 a, v2 b)
 inline f32 v2_mag_sq(v2 v)
 {
     f32 result = v2_dot(v, v);
+    return result;
+}
+
+inline f32 v2_mag(v2 v)
+{
+    f32 result = sqrt_f32(v2_mag_sq(v));
     return result;
 }
 
@@ -196,7 +208,7 @@ inline v3 v3_neg(v3 v)
 
 inline v3 v3_abs(v3 v)
 {
-    v3 result = (v3){fabsf(v.x), fabsf(v.y)};
+    v3 result = (v3){abs_f32(v.x), abs_f32(v.y), abs_f32(v.z)};
     return result;
 }
 
@@ -215,6 +227,12 @@ inline f32 v3_dot(v3 a, v3 b)
 inline f32 v3_mag_sq(v3 v)
 {
     f32 result = v3_dot(v, v);
+    return result;
+}
+
+inline f32 v3_mag(v3 v)
+{
+    f32 result = sqrt_f32(v3_mag_sq(v));
     return result;
 }
 
@@ -265,7 +283,7 @@ inline v4 v4_neg(v4 v)
 
 inline v4 v4_abs(v4 v)
 {
-    v4 result = (v4){fabsf(v.x), fabsf(v.y)};
+    v4 result = (v4){abs_f32(v.x), abs_f32(v.y), abs_f32(v.z), abs_f32(v.w)};
     return result;
 }
 
@@ -284,6 +302,12 @@ inline f32 v4_dot(v4 a, v4 b)
 inline f32 v4_mag_sq(v4 v)
 {
     f32 result = v4_dot(v, v);
+    return result;
+}
+
+inline f32 v4_mag(v4 v)
+{
+    f32 result = sqrt_f32(v4_mag_sq(v));
     return result;
 }
 
@@ -371,6 +395,19 @@ inline rect rect_min_dim(v2 min, v2 dim)
     result.size = v2_add(min, dim);
 
     return result;
+}
+
+inline b32 rect_is_zero(rect rect)
+{
+    b32 result = (rect.x == 0.0f && rect.y == 0.0f &&
+                  rect.width == 0.0f && rect.height == 0.0f);
+    return result;
+}
+
+inline rect rect_zero(void)
+{
+    rect r = {0};
+    return r;
 }
 
 // NOTE(lucas): Rects are non-inclusive of the max value.

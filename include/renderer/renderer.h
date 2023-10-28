@@ -33,7 +33,6 @@ typedef struct RendererConfig
 
 typedef struct Renderer
 {
-    RenderObject line_renderer;
     RenderObject circle_renderer;
     RenderObject rect_renderer;
     RenderObject sprite_renderer;
@@ -48,6 +47,8 @@ typedef struct Renderer
     Framebuffer intermediate_framebuffer;
 
     rect viewport;
+    int window_width;
+    int window_height;
     v4 clear_color;
 
     RendererConfig config;
@@ -59,7 +60,7 @@ void renderer_delete(Renderer* renderer);
 void renderer_new_frame(Renderer* renderer, Window window);
 void renderer_render(Renderer* renderer);
 
-void renderer_viewport(rect viewport);
+void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
 
 // TODO(lucas): Line, Triangle, Quad structs?
