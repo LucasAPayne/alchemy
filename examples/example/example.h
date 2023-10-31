@@ -28,6 +28,7 @@ typedef struct ExampleState
 
     Font immortal_font;
     Font cardinal_font;
+    Font matrix_font;
 
     Texture logo_tex;
 

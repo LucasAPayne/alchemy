@@ -117,6 +117,7 @@ void example_state_init(ExampleState* state, Window window)
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
+    state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
 
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
@@ -178,8 +179,8 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
-    update_dvd(state, delta_time, window.width, window.height);
-    update_player(state, delta_time, window.width, window.height);  
+    // update_dvd(state, delta_time, window.width, window.height);
+    // update_player(state, delta_time, window.width, window.height);  
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -242,6 +243,23 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(&state->renderer, stopwatch_text);
+
+    /* Text justification Test */
+    rect text_bounds = rect_min_dim(v2_full(200.0f), v2_full(200.0f));
+    draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
+
+    u32 text_size = 20;
+    v2 text_begin = {text_bounds.position.x, text_bounds.position.y + text_bounds.height - (f32)text_size};
+    char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
+                "Forbidden One\", and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
+                "this duel.";
+    Text text = text_init(str, &state->matrix_font, text_begin, text_size);
+    text.color = color_black();
+
+    // TODO(lucas): Test with extra whitespace
+    TextArea text_area = text_area_init(text_bounds, text);
+    draw_text_area(&state->renderer, text_area);
+    // draw_text(&state->renderer, text);
 
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);

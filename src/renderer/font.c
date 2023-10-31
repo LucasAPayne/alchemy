@@ -1,8 +1,13 @@
 #include "renderer/font.h"
 #include "renderer/renderer.h"
+#include "util/alchemy_math.h"
 #include "util/types.h"
 
 #include <glad/glad.h>
+
+// TODO(lucas): Replace with custom methods
+#include <string.h> // strncpy
+#include <stdlib.h> // malloc
 
 Font font_load_from_file(const char* filename)
 {
@@ -22,7 +27,32 @@ Font font_load_from_file(const char* filename)
     return font;
 }
 
-Text text_init(const char* string, Font* font, v2 position, u32 px)
+// NOTE(lucas): Determine width of string in pixels
+internal f32 text_get_width(Text text)
+{
+    f32 result = 0.0f;
+
+    FT_Set_Pixel_Sizes(text.font->face, 0, text.px);
+    FT_GlyphSlot glyph = text.font->face->glyph;
+
+    for (char* c = text.string; *c; ++c)
+    {
+        if (!FT_Load_Char(text.font->face, *c, FT_LOAD_NO_BITMAP))
+        {
+            // TODO(lucas): Diagnostic, could not load character
+        }
+
+        // TODO(lucas): Other types of whitespace
+        if (*c == ' ')
+            result += (f32)text.px/2;
+        else
+            result += (f32)glyph->metrics.width/64;
+    }
+
+    return result;
+}
+
+Text text_init(char* string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
 
@@ -31,6 +61,8 @@ Text text_init(const char* string, Font* font, v2 position, u32 px)
     text.position = position;
     text.px = px;
     text.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+
+    text.string_width = text_get_width(text);
 
     return text;
 }
@@ -49,8 +81,10 @@ void draw_text(Renderer* renderer, Text text)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     Texture texture = texture_generate(0);
 
-    const char* c;
-    for (c = text.string; *c; ++c)
+    f32 x = text.position.x;
+    f32 y = text.position.y;
+
+    for (char* c = text.string; *c; ++c)
     {
         if (!FT_Load_Char(text.font->face, *c, FT_LOAD_RENDER))
         {
@@ -67,8 +101,8 @@ void draw_text(Renderer* renderer, Text text)
                      GL_UNSIGNED_BYTE,
                      glyph->bitmap.buffer);
 
-        f32 x2 = text.position.x + glyph->bitmap_left;
-        f32 y2 = text.position.y + glyph->bitmap_top;
+        f32 x2 = x + glyph->bitmap_left;
+        f32 y2 = y + glyph->bitmap_top;
         f32 w = (f32)glyph->bitmap.width;
         f32 h = (f32)glyph->bitmap.rows;
 
@@ -88,11 +122,197 @@ void draw_text(Renderer* renderer, Text text)
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Advance cursor for next glyph
-        text.position.x += glyph->advance.x/64;
-        text.position.y += glyph->advance.y/64;
+        if ((*c == '\r') && (*(c+1) == '\n'))
+        {
+            // If \r\n is used to end a line, need to skip the next character (\n)
+            y -= text.font->face->size->metrics.height/64;
+            x = text.position.x;
+            ++c;
+        }
+        else if ((*c == '\n') || (*c == '\r'))
+        {
+            y -= text.font->face->size->metrics.height/64;
+            x = text.position.x;
+        }
+        else
+            x += glyph->advance.x/64;
     }
 
     glBindVertexArray(0);
     texture_unbind(0);
     texture_delete(&texture);
 }
+
+typedef struct TextNode TextNode;
+struct TextNode
+{
+    Text text;
+    TextNode* next;
+};
+
+typedef struct Tokenizer
+{
+    char* at;
+} Tokenizer;
+
+typedef struct ParsedText
+{
+    TextNode* first_node;
+} ParsedText;
+
+internal void parsed_text_push(ParsedText* parsed_text, Text* text)
+{
+    TextNode* new_node = malloc(sizeof(TextNode));
+    ASSERT(new_node);
+    new_node->text = *text;
+    new_node->next = 0;
+
+    TextNode* it = parsed_text->first_node;
+    if (!it)
+        parsed_text->first_node = new_node;
+    else
+    {
+        while (it->next)
+            it = it->next;
+        
+        it->next = new_node;
+    }
+}
+
+internal void parsed_text_clear(ParsedText* parsed_text)
+{
+    TextNode* current = parsed_text->first_node;
+    TextNode* next = 0;
+
+    while (current)
+    {
+        next = current->next;
+        free(current);
+        current = next;
+    }
+
+    parsed_text->first_node = 0;
+}
+
+internal b32 char_is_whitespace(char c)
+{
+    b32 result = (c == ' ' ) || (c == '\t') || (c == '\v') || (c == '\f');
+    return result;
+}
+
+internal b32 text_is_whitespace(Text text)
+{
+    b32 result = false;
+
+    for (char* c = text.string; *c; ++c)
+    {
+        if (!char_is_whitespace(*c))
+            break;
+
+        result = true;
+    }
+
+    return result;
+}
+
+// NOTE(lucas): Null-terminate text after len characters
+internal void text_chop(Text* text, usize len)
+{
+    char* new_str = malloc(len);
+    ASSERT(new_str);
+    strncpy(new_str, text->string, len);
+    new_str[len] = '\0';
+    text->string = new_str;
+}
+
+internal void tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text* token)
+{
+    // TODO(lucas): Memory arena and prevent memory leak
+    // TODO(lucas): Custom strncpy
+    usize word_len = tokenizer->at - token->string;
+    text_chop(token, word_len);
+
+    token->string_width = text_get_width(*token);
+
+    // Push new token onto parsed_text and put the string at the tokenizer position
+    parsed_text_push(parsed_text, token);
+    token->string = tokenizer->at;
+    token->position.x += token->string_width;
+}
+
+internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area)
+{
+    ParsedText parsed_text = {0};
+    Text token = text_area.text;
+    token.string = tokenizer->at;
+
+    u32 words_on_line = 0;
+    u32 line = 0;
+
+    // NOTE(lucas): Break up into words. For now, keep punctuation with the word as one node.
+    b32 parsing = true;
+    while (parsing)
+    {
+        switch(tokenizer->at[0])
+        {
+            // NOTE(lucas): Separate into words based on whitespace.
+            // Also catch null terminator to get the last word in the string.
+            case ' ':
+            case '\t':
+            case '\v':
+            case '\f':
+            case '\0':
+            {
+                tokenizer_process_token(tokenizer, &parsed_text, &token);
+                ++words_on_line;
+
+                // TODO(lucas): IMPORTANT(lucas): Put whitespace between words into their own token
+                while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
+                    ++tokenizer->at;
+
+                tokenizer_process_token(tokenizer, &parsed_text, &token);
+
+                if (tokenizer->at[0] == '\0')
+                    parsing = false;
+            } break;
+
+            default: ++tokenizer->at; break;
+        };
+
+        if (words_on_line == 5)
+        {
+            parsing = false;
+        }
+    }
+
+    return parsed_text;
+}
+
+TextArea text_area_init(rect bounds, Text text)
+{
+    TextArea result = {0};
+    result.bounds = bounds;
+    result.text = text;
+    return result;
+}
+
+void draw_text_area(Renderer* renderer, TextArea text_area)
+{
+    // NOTE(lucas): Parse and process the text in the text area,
+    // then reconstruct one Text object and render it.
+    Tokenizer tokenizer = {0};
+    tokenizer.at = text_area.text.string;
+    f32 line_start_x = text_area.text.position.x;
+    
+    while (tokenizer.at[0])
+    {
+        ParsedText parsed_text = parse_text(&tokenizer, text_area);
+        for (TextNode* node = parsed_text.first_node; node; node = node->next)
+            draw_text(renderer, node->text);
+
+        text_area.text.position.y -= text_area.text.font->face->size->metrics.height/64;
+
+        parsed_text_clear(&parsed_text);
+    }
+}
+ 
