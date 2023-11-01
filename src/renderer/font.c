@@ -44,7 +44,7 @@ internal f32 text_get_width(Text text)
 
         // TODO(lucas): Other types of whitespace
         if (*c == ' ')
-            result += (f32)text.px/2;
+            result += text.font->face->glyph->advance.x/64;
         else
             result += (f32)glyph->metrics.width/64;
     }
@@ -63,6 +63,7 @@ Text text_init(char* string, Font* font, v2 position, u32 px)
     text.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
 
     text.string_width = text_get_width(text);
+    text.line_height = (f32)font->face->size->metrics.height/64;
 
     return text;
 }
@@ -71,7 +72,11 @@ void draw_text(Renderer* renderer, Text text)
 {
     // Set font size in pixels
     FT_Set_Pixel_Sizes(text.font->face, 0, text.px);
-    FT_GlyphSlot glyph = text.font->face->glyph;
+    FT_Face face = text.font->face;
+    FT_GlyphSlot glyph = face->glyph;
+    FT_Bool use_kerning = FT_HAS_KERNING(text.font->face);
+    FT_UInt glyph_index = 0;
+    FT_UInt previous_glyph_index = 0;
 
     shader_set_v4(renderer->font_renderer.shader, "text_color", text.color);
     glBindVertexArray(renderer->font_renderer.vao);
@@ -86,7 +91,19 @@ void draw_text(Renderer* renderer, Text text)
 
     for (char* c = text.string; *c; ++c)
     {
-        if (!FT_Load_Char(text.font->face, *c, FT_LOAD_RENDER))
+        glyph_index = FT_Get_Char_Index(face, *c);
+
+        // When appropriate, retrieve kerning information and advance cursor
+        if (use_kerning && previous_glyph_index && glyph_index)
+        {
+            FT_Vector delta;
+            FT_Get_Kerning(face, previous_glyph_index, glyph_index, FT_KERNING_DEFAULT, &delta);
+            x += (f32)delta.x/64;
+        }
+
+        previous_glyph_index = glyph_index;
+
+        if (!FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER))
         {
             // TODO(lucas): Diagnostic, could not load character
         }
@@ -125,13 +142,13 @@ void draw_text(Renderer* renderer, Text text)
         if ((*c == '\r') && (*(c+1) == '\n'))
         {
             // If \r\n is used to end a line, need to skip the next character (\n)
-            y -= text.font->face->size->metrics.height/64;
+            y -= text.line_height;
             x = text.position.x;
             ++c;
         }
         else if ((*c == '\n') || (*c == '\r'))
         {
-            y -= text.font->face->size->metrics.height/64;
+            y -= text.line_height;
             x = text.position.x;
         }
         else
@@ -149,6 +166,12 @@ struct TextNode
     Text text;
     TextNode* next;
 };
+
+typedef struct OverflowText
+{
+    Text word;
+    Text space;
+} OverflowText;
 
 typedef struct Tokenizer
 {
@@ -225,29 +248,35 @@ internal void text_chop(Text* text, usize len)
     text->string = new_str;
 }
 
-internal void tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text* token)
+internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token)
 {
     // TODO(lucas): Memory arena and prevent memory leak
     // TODO(lucas): Custom strncpy
-    usize word_len = tokenizer->at - token->string;
-    text_chop(token, word_len);
+    Text result = token;
+    usize word_len = tokenizer->at - token.string;
+    text_chop(&result, word_len);
 
-    token->string_width = text_get_width(*token);
+    result.string_width = text_get_width(result);
 
-    // Push new token onto parsed_text and put the string at the tokenizer position
-    parsed_text_push(parsed_text, token);
-    token->string = tokenizer->at;
-    token->position.x += token->string_width;
+    return result;
 }
 
-internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area)
+internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text)
 {
     ParsedText parsed_text = {0};
     Text token = text_area.text;
     token.string = tokenizer->at;
 
-    u32 words_on_line = 0;
-    u32 line = 0;
+    f32 line_width = 0.0f;
+
+    if (overflow_text->word.string)
+    {
+        parsed_text_push(&parsed_text, &overflow_text->word);
+        parsed_text_push(&parsed_text, &overflow_text->space);
+        f32 width = overflow_text->word.string_width + overflow_text->space.string_width;
+        token.position.x += width;
+        line_width += width;
+    }
 
     // NOTE(lucas): Break up into words. For now, keep punctuation with the word as one node.
     b32 parsing = true;
@@ -263,14 +292,43 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area)
             case '\f':
             case '\0':
             {
-                tokenizer_process_token(tokenizer, &parsed_text, &token);
-                ++words_on_line;
+                Text word = tokenizer_process_token(tokenizer, &parsed_text, token);
+                line_width += word.string_width;
+                token.string = tokenizer->at;
 
-                // TODO(lucas): IMPORTANT(lucas): Put whitespace between words into their own token
                 while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
                     ++tokenizer->at;
 
-                tokenizer_process_token(tokenizer, &parsed_text, &token);
+                Text space = tokenizer_process_token(tokenizer, &parsed_text, token);
+                line_width += space.string_width;
+                token.string = tokenizer->at;
+
+                // TODO(lucas): Find remaining space and distribute it according to chosen alignment.
+                // Justified: Evenly distribute additional space across all spaces except any trailing space.
+                // Right: Add all additional space to the leftmost (first) space.
+                // Center: Divide all additional space between the leftmost (fisrt) and rightmost (last) spaces. 
+                if (line_width >= text_area.bounds.width)
+                {
+                    // NOTE(lucas): Parsing line will usually leave a word and space leftover.
+                    // If this is the case, they need to be added at the beginning
+                    // of the next line.
+                    word.position.x = text_area.text.position.x;
+                    word.position.y -= text_area.text.line_height;
+                    space.position.x = text_area.text.position.x + word.string_width;
+                    space.position.y -= text_area.text.line_height;
+
+                    overflow_text->word = word;
+                    overflow_text->space = space;
+
+                    parsing = false;
+                }
+                else
+                {
+                    // Push new tokens onto parsed_text and put the string at the tokenizer position
+                    parsed_text_push(&parsed_text, &word);
+                    parsed_text_push(&parsed_text, &space);
+                    token.position.x = text_area.text.position.x + line_width;
+                }
 
                 if (tokenizer->at[0] == '\0')
                     parsing = false;
@@ -278,11 +336,6 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area)
 
             default: ++tokenizer->at; break;
         };
-
-        if (words_on_line == 5)
-        {
-            parsing = false;
-        }
     }
 
     return parsed_text;
@@ -302,15 +355,15 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     // then reconstruct one Text object and render it.
     Tokenizer tokenizer = {0};
     tokenizer.at = text_area.text.string;
-    f32 line_start_x = text_area.text.position.x;
     
+    OverflowText overflow = {0};
     while (tokenizer.at[0])
     {
-        ParsedText parsed_text = parse_text(&tokenizer, text_area);
+        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow);
         for (TextNode* node = parsed_text.first_node; node; node = node->next)
             draw_text(renderer, node->text);
 
-        text_area.text.position.y -= text_area.text.font->face->size->metrics.height/64;
+        text_area.text.position.y -= text_area.text.line_height;
 
         parsed_text_clear(&parsed_text);
     }

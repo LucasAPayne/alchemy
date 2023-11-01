@@ -117,7 +117,7 @@ void example_state_init(ExampleState* state, Window window)
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
-    state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
+    state->matrix_font = font_load_from_file("fonts/matrix_regular.ttf");
 
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
@@ -248,11 +248,11 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     rect text_bounds = rect_min_dim(v2_full(200.0f), v2_full(200.0f));
     draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    u32 text_size = 20;
+    u32 text_size = 24;
     v2 text_begin = {text_bounds.position.x, text_bounds.position.y + text_bounds.height - (f32)text_size};
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\", and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "this duel.";
+                "the Duel.";
     Text text = text_init(str, &state->matrix_font, text_begin, text_size);
     text.color = color_black();
 

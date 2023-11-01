@@ -22,13 +22,23 @@ typedef struct Text
     v4 color;
     char* string;
     f32 string_width;
+    f32 line_height;
 } Text;
+
+typedef enum TextAlignment
+{
+    TEXT_ALIGN_LEFT = 0,
+    TEXT_ALIGN_RIGHT,
+    TEXT_ALIGN_CENTER,
+    TEXT_ALIGN_JUSTIFIED
+} TextAlignment;
 
 typedef struct TextArea
 {
     // TODO(lucas): Properties/flags like alignment
     rect bounds;
     Text text;
+    TextAlignment alignment;
 } TextArea;
 
 Font font_load_from_file(const char* filename);
