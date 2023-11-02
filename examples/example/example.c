@@ -245,19 +245,21 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     draw_text(&state->renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim(v2_full(200.0f), v2_full(200.0f));
+    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(500.0f));
     draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     u32 text_size = 24;
     v2 text_begin = {text_bounds.position.x, text_bounds.position.y + text_bounds.height - (f32)text_size};
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
-                "Forbidden One\", and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
+                "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
                 "the Duel.";
+
     Text text = text_init(str, &state->matrix_font, text_begin, text_size);
     text.color = color_black();
 
     // TODO(lucas): Test with extra whitespace
     TextArea text_area = text_area_init(text_bounds, text);
+    text_area.alignment = TEXT_ALIGN_JUSTIFIED;
     draw_text_area(&state->renderer, text_area);
     // draw_text(&state->renderer, text);
 

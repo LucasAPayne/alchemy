@@ -392,7 +392,7 @@ inline rect rect_min_dim(v2 min, v2 dim)
     rect result = {0};
 
     result.position = min;
-    result.size = v2_add(min, dim);
+    result.size = dim;
 
     return result;
 }

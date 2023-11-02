@@ -263,19 +263,23 @@ internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_t
 
 internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text)
 {
+    // TODO(lucas): Can nesting be reduced here?
+
     ParsedText parsed_text = {0};
     Text token = text_area.text;
     token.string = tokenizer->at;
 
     f32 line_width = 0.0f;
+    int num_spaces = 0;
 
     if (overflow_text->word.string)
     {
         parsed_text_push(&parsed_text, &overflow_text->word);
         parsed_text_push(&parsed_text, &overflow_text->space);
         f32 width = overflow_text->word.string_width + overflow_text->space.string_width;
-        token.position.x += width;
         line_width += width;
+        token.position.x = text_area.text.position.x + line_width;
+        ++num_spaces;
     }
 
     // NOTE(lucas): Break up into words. For now, keep punctuation with the word as one node.
@@ -300,11 +304,11 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     ++tokenizer->at;
 
                 Text space = tokenizer_process_token(tokenizer, &parsed_text, token);
+                ++num_spaces;
                 line_width += space.string_width;
                 token.string = tokenizer->at;
 
                 // TODO(lucas): Find remaining space and distribute it according to chosen alignment.
-                // Justified: Evenly distribute additional space across all spaces except any trailing space.
                 // Right: Add all additional space to the leftmost (first) space.
                 // Center: Divide all additional space between the leftmost (fisrt) and rightmost (last) spaces. 
                 if (line_width >= text_area.bounds.width)
@@ -319,6 +323,33 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
 
                     overflow_text->word = word;
                     overflow_text->space = space;
+
+                    // NOTE(lucas): Number of spaced is overcounted by 2: space after final word and overflow space
+                    num_spaces -= 2;
+
+                    // Subtract back the width of the overflow word and space to get the actual line width
+                    line_width -= (word.string_width + 2.0f*space.string_width);
+                    f32 width_remaining = text_area.bounds.width - line_width;
+
+                    // TODO(lucas): Can this be pulled out to the end of the loop with the other alignment methods?
+                    // TODO(lucas): Draw while aligning?
+                    if (text_area.alignment == TEXT_ALIGN_JUSTIFIED)
+                    {
+                        f32 width_per_space = width_remaining / (f32)num_spaces;
+                        int count = 1;
+
+                        // NOTE(lucas): Evenly distribute remaining width to all spaces except any trailing space.
+                        // For each node, if it is a space, increase the position of the next node (if it exists)
+                        for (TextNode* node = parsed_text.first_node; node; node = node->next)
+                        {
+                            // TODO(lucas): Consider other whitespace
+                            if ((node->text.string[0] == ' ') && node->next)
+                            {
+                                node->next->text.position.x += width_per_space * (f32)count;
+                                ++count;
+                            }
+                        }
+                    }
 
                     parsing = false;
                 }
@@ -336,6 +367,15 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
 
             default: ++tokenizer->at; break;
         };
+    }
+
+    f32 width_remaining = text_area.bounds.width - line_width;
+    if (text_area.alignment == TEXT_ALIGN_RIGHT)
+    {
+        // NOTE(lucas): Add all additional space to the leftmost (first) space by
+        // shifting each word over by the entire width remaining
+        for (TextNode* node = parsed_text.first_node; node; node = node->next)
+            node->text.position.x += width_remaining;
     }
 
     return parsed_text;
