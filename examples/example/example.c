@@ -257,11 +257,9 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     Text text = text_init(str, &state->matrix_font, text_begin, text_size);
     text.color = color_black();
 
-    // TODO(lucas): Test with extra whitespace
     TextArea text_area = text_area_init(text_bounds, text);
     text_area.alignment = TEXT_ALIGN_JUSTIFIED;
     draw_text_area(&state->renderer, text_area);
-    // draw_text(&state->renderer, text);
 
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);

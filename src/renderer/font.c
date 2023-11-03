@@ -263,14 +263,13 @@ internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_t
 
 internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text)
 {
-    // TODO(lucas): Can nesting be reduced here?
-
     ParsedText parsed_text = {0};
     Text token = text_area.text;
     token.string = tokenizer->at;
 
     f32 line_width = 0.0f;
     int num_spaces = 0;
+    b32 line_overflowed = false;
 
     if (overflow_text->word.string)
     {
@@ -288,12 +287,17 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
     {
         switch(tokenizer->at[0])
         {
+            // TODO(lucas): Start a new line and adjust cursor when \n or \r\n is encountered.
+            // A line containing a newline should not be justified.
+
             // NOTE(lucas): Separate into words based on whitespace.
             // Also catch null terminator to get the last word in the string.
             case ' ':
             case '\t':
             case '\v':
             case '\f':
+            case '\n':
+            case '\r':
             case '\0':
             {
                 Text word = tokenizer_process_token(tokenizer, &parsed_text, token);
@@ -308,11 +312,9 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                 line_width += space.string_width;
                 token.string = tokenizer->at;
 
-                // TODO(lucas): Find remaining space and distribute it according to chosen alignment.
-                // Right: Add all additional space to the leftmost (first) space.
-                // Center: Divide all additional space between the leftmost (fisrt) and rightmost (last) spaces. 
-                if (line_width >= text_area.bounds.width)
+                if (line_width - space.string_width > text_area.bounds.width)
                 {
+                    line_overflowed = true;
                     // NOTE(lucas): Parsing line will usually leave a word and space leftover.
                     // If this is the case, they need to be added at the beginning
                     // of the next line.
@@ -324,33 +326,10 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     overflow_text->word = word;
                     overflow_text->space = space;
 
-                    // NOTE(lucas): Number of spaced is overcounted by 2: space after final word and overflow space
+                    // NOTE(lucas): Number of spaces is overcounted by 2: space after final word and overflow space
+                    // Subtract back the width of the overflow word and 2 spaces to get the actual line width
                     num_spaces -= 2;
-
-                    // Subtract back the width of the overflow word and space to get the actual line width
                     line_width -= (word.string_width + 2.0f*space.string_width);
-                    f32 width_remaining = text_area.bounds.width - line_width;
-
-                    // TODO(lucas): Can this be pulled out to the end of the loop with the other alignment methods?
-                    // TODO(lucas): Draw while aligning?
-                    if (text_area.alignment == TEXT_ALIGN_JUSTIFIED)
-                    {
-                        f32 width_per_space = width_remaining / (f32)num_spaces;
-                        int count = 1;
-
-                        // NOTE(lucas): Evenly distribute remaining width to all spaces except any trailing space.
-                        // For each node, if it is a space, increase the position of the next node (if it exists)
-                        for (TextNode* node = parsed_text.first_node; node; node = node->next)
-                        {
-                            // TODO(lucas): Consider other whitespace
-                            if ((node->text.string[0] == ' ') && node->next)
-                            {
-                                node->next->text.position.x += width_per_space * (f32)count;
-                                ++count;
-                            }
-                        }
-                    }
-
                     parsing = false;
                 }
                 else
@@ -361,21 +340,67 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     token.position.x = text_area.text.position.x + line_width;
                 }
 
+                // NOTE(lucas): End the line if the null terminator or newline is encountered.
+                // In the latter case, advance the tokenizer past the newline escapes
                 if (tokenizer->at[0] == '\0')
                     parsing = false;
+                else if (tokenizer->at[0] == '\n')
+                {
+                    ++tokenizer->at;
+                    parsing = false;
+                }
+                else if (tokenizer->at[0] == '\r' && tokenizer->at[1] == '\n')
+                {
+                    tokenizer->at += 2;
+                    parsing = false;
+                }
             } break;
 
             default: ++tokenizer->at; break;
         };
     }
 
+    // TODO(lucas): Draw while aligning?
     f32 width_remaining = text_area.bounds.width - line_width;
-    if (text_area.alignment == TEXT_ALIGN_RIGHT)
+    switch(text_area.alignment)
     {
-        // NOTE(lucas): Add all additional space to the leftmost (first) space by
-        // shifting each word over by the entire width remaining
-        for (TextNode* node = parsed_text.first_node; node; node = node->next)
-            node->text.position.x += width_remaining;
+        case TEXT_ALIGN_JUSTIFIED:
+        {
+            // Line is only justified if it does not overflow to another line
+            if (!line_overflowed)
+                break;
+
+            f32 width_per_space = width_remaining / (f32)num_spaces;
+            int count = 1;
+
+            // NOTE(lucas): Evenly distribute remaining width to all spaces except any trailing space.
+            // For each node, if it is a space, increase the position of the next node (if it exists)
+            for (TextNode* node = parsed_text.first_node; node; node = node->next)
+            {
+                // TODO(lucas): Consider other whitespace
+                if ((node->text.string[0] == ' ') && node->next)
+                {
+                    node->next->text.position.x += width_per_space * (f32)count;
+                    ++count;
+                }
+            }
+        } break;
+
+        case TEXT_ALIGN_RIGHT:
+        {
+            // NOTE(lucas): Add all additional space to the leftmost (first) space by
+            // shifting each word over by the entire width remaining
+            for (TextNode* node = parsed_text.first_node; node; node = node->next)
+                node->text.position.x += width_remaining;
+        } break;
+
+        case TEXT_ALIGN_CENTER:
+        {
+            // NOTE(lucas): Divide all additional space between the leftmost (first) and rightmost (last) spaces by
+            // shifting each word over by half the width remaining.
+            for (TextNode* node = parsed_text.first_node; node; node = node->next)
+                node->text.position.x += 0.5f*width_remaining;
+        } break;
     }
 
     return parsed_text;
