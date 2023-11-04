@@ -245,7 +245,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     draw_text(&state->renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(500.0f));
+    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
     draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     u32 text_size = 24;
@@ -259,6 +259,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
 
     TextArea text_area = text_area_init(text_bounds, text);
     text_area.alignment = TEXT_ALIGN_JUSTIFIED;
+    text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(&state->renderer, text_area);
 
     ui_overview(ctx, window.width);

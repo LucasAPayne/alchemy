@@ -17,12 +17,16 @@ typedef struct Font
 typedef struct Text
 {
     Font* font;
-    u32 px;
+
     v2 position;
     v4 color;
-    char* string;
+
+    u32 px;
+    u32 px_width;
     f32 string_width;
     f32 line_height;
+
+    char* string;
 } Text;
 
 typedef enum TextAlignment
@@ -33,12 +37,19 @@ typedef enum TextAlignment
     TEXT_ALIGN_JUSTIFIED
 } TextAlignment;
 
+// TODO(lucas): Background style?
+typedef enum TextAreaStyle
+{
+    TEXT_AREA_WRAP          = (1 << 0),
+    TEXT_AREA_SHRINK_TO_FIT = (1 << 1),
+} TextAreaStyle;
+
 typedef struct TextArea
 {
-    // TODO(lucas): Properties/flags like alignment
     rect bounds;
     Text text;
     TextAlignment alignment;
+    TextAreaStyle style;
 } TextArea;
 
 Font font_load_from_file(const char* filename);
