@@ -4,7 +4,7 @@
 #include <glad/glad.h>
 
 #include <stdio.h>  // File I/O
-#include <stdlib.h> // malloc()
+#include <stdlib.h> // malloc
 
 // NOTE(lucas): This is a temporary file loading function that will probably be changed or replaced
 /*

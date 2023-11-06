@@ -2,7 +2,6 @@
 
 #include <cglm/struct.h>
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
@@ -11,22 +10,32 @@
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
 #endif
 
+#define INVALID_CODE_PATH() ASSERT(!"Invalid Code Path")
+
+#define KILOBYTES(value) ((u64)(value)*1024)
+#define MEGABYTES(value) ((u64)KILOBYTES(value)*1024)
+#define GIGABYTES(value) ((u64)MEGABYTES(value)*1024)
+#define TERABYTES(value) ((u64)GIGABYTES(value)*1024)
+
 #define internal static
 #define persist  static
 #define global   static
 
-typedef bool b8;
-typedef int32_t b32;
+#define true  1
+#define false 0
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
 typedef size_t usize;
 
 typedef int8_t  i8;
 typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
+typedef int32_t  b32;
 
 typedef float f32;
 typedef double f64;

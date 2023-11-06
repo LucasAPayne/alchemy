@@ -155,6 +155,8 @@ void example_state_init(ExampleState* state, Window window)
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
+    state->transient_arena = memory_arena_alloc(MEGABYTES(1));
+
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
     state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
@@ -176,6 +178,8 @@ void example_state_delete(ExampleState* state)
 
 void example_update_and_render(ExampleState* state, Window window, f32 delta_time)
 {
+    memory_arena_clear(&state->transient_arena);
+
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
@@ -260,7 +264,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     TextArea text_area = text_area_init(text_bounds, text);
     text_area.alignment = TEXT_ALIGN_JUSTIFIED;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(&state->renderer, text_area);
+    draw_text_area(&state->renderer, text_area, &state->transient_arena);
 
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);

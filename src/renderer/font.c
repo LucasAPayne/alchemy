@@ -1,13 +1,13 @@
 #include "renderer/font.h"
 #include "renderer/renderer.h"
 #include "util/alchemy_math.h"
+#include "util/alchemy_memory.h"
 #include "util/types.h"
 
 #include <glad/glad.h>
 
 // TODO(lucas): Replace with custom methods
 #include <string.h> // strncpy
-#include <stdlib.h> // malloc
 
 Font font_load_from_file(const char* filename)
 {
@@ -194,9 +194,9 @@ typedef struct ParsedText
     TextNode* first_node;
 } ParsedText;
 
-internal void parsed_text_push(ParsedText* parsed_text, Text* text)
+internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena* arena)
 {
-    TextNode* new_node = malloc(sizeof(TextNode));
+    TextNode* new_node = push_struct(arena, TextNode);
     ASSERT(new_node);
     new_node->text = *text;
     new_node->next = 0;
@@ -211,21 +211,6 @@ internal void parsed_text_push(ParsedText* parsed_text, Text* text)
         
         it->next = new_node;
     }
-}
-
-internal void parsed_text_clear(ParsedText* parsed_text)
-{
-    TextNode* current = parsed_text->first_node;
-    TextNode* next = 0;
-
-    while (current)
-    {
-        next = current->next;
-        free(current);
-        current = next;
-    }
-
-    parsed_text->first_node = 0;
 }
 
 internal b32 char_is_whitespace(char c)
@@ -250,29 +235,28 @@ internal b32 text_is_whitespace(Text text)
 }
 
 // NOTE(lucas): Null-terminate text after len characters
-internal void text_chop(Text* text, usize len)
+internal void text_chop(Text* text, usize len, MemoryArena* arena)
 {
-    char* new_str = malloc(len);
+    char* new_str = push_size(arena, len+1);
     ASSERT(new_str);
     strncpy(new_str, text->string, len);
     new_str[len] = '\0';
     text->string = new_str;
 }
 
-internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token)
+internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
 {
-    // TODO(lucas): Memory arena and prevent memory leak
     // TODO(lucas): Custom strncpy
     Text result = token;
     usize word_len = tokenizer->at - token.string;
-    text_chop(&result, word_len);
+    text_chop(&result, word_len, arena);
 
     result.string_width = text_get_width(result);
 
     return result;
 }
 
-internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text)
+internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text, MemoryArena* arena)
 {
     ParsedText parsed_text = {0};
     Text token = text_area.text;
@@ -283,8 +267,8 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
 
     if (overflow_text->word.string)
     {
-        parsed_text_push(&parsed_text, &overflow_text->word);
-        parsed_text_push(&parsed_text, &overflow_text->space);
+        parsed_text_push(&parsed_text, &overflow_text->word, arena);
+        parsed_text_push(&parsed_text, &overflow_text->space, arena);
         parsed_text.width += overflow_text->word.string_width + overflow_text->space.string_width;
         token.position.x = text_area.text.position.x + parsed_text.width;
         ++num_spaces;
@@ -306,14 +290,14 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
             case '\r':
             case '\0':
             {
-                Text word = tokenizer_process_token(tokenizer, &parsed_text, token);
+                Text word = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 parsed_text.width += word.string_width;
                 token.string = tokenizer->at;
 
                 while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
                     ++tokenizer->at;
 
-                Text space = tokenizer_process_token(tokenizer, &parsed_text, token);
+                Text space = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 ++num_spaces;
                 parsed_text.width += space.string_width;
                 token.string = tokenizer->at;
@@ -342,8 +326,8 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                 else
                 {
                     // Push new tokens onto parsed_text and put the string at the tokenizer position
-                    parsed_text_push(&parsed_text, &word);
-                    parsed_text_push(&parsed_text, &space);
+                    parsed_text_push(&parsed_text, &word, arena);
+                    parsed_text_push(&parsed_text, &space, arena);
                     token.position.x = text_area.text.position.x + parsed_text.width;
                 }
 
@@ -421,7 +405,8 @@ TextArea text_area_init(rect bounds, Text text)
     return result;
 }
 
-void draw_text_area(Renderer* renderer, TextArea text_area)
+// NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
+void draw_text_area(Renderer* renderer, TextArea text_area, MemoryArena* arena)
 {
     // NOTE(lucas): Parse and process the text in the text area,
     // then reconstruct one Text object and render it.
@@ -460,7 +445,7 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     OverflowText overflow = {0};
     while (tokenizer.at[0])
     {
-        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow);
+        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, arena);
         for (TextNode* node = parsed_text.first_node; node; node = node->next)
         {
             node->text.px = text_area.text.px;
@@ -468,7 +453,6 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         }
 
         text_area.text.position.y -= text_area.text.line_height;
-        parsed_text_clear(&parsed_text);
 
         // NOTE(lucas): This should only be hit if NOT shrink to fit.
         // Discard any text that overflows y bound

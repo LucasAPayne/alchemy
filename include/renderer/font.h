@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/alchemy_math.h"
+#include "util/alchemy_memory.h"
 #include "util/types.h"
 
 #include <ft2build.h>
@@ -59,4 +60,4 @@ Text text_init(char* string, Font* font, v2 position, u32 px);
 void draw_text(Renderer* renderer, Text text);
 
 TextArea text_area_init(rect bounds, Text text);
-void draw_text_area(Renderer* renderer, TextArea text_area);
+void draw_text_area(Renderer* renderer, TextArea text_area, MemoryArena* arena);
