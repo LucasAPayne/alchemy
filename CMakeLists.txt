@@ -15,6 +15,7 @@ add_executable(${PROJECT_NAME}
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
                ${PROJECT_SOURCE_DIR}/src/util/time.c

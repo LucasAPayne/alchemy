@@ -196,6 +196,30 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
             PostQuitMessage(0);
         } break;
 
+        case WM_GETMINMAXINFO:
+        {
+            LPMINMAXINFO mmi = (LPMINMAXINFO)lparam;
+            Window* window = (Window*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+            if (window)
+            {
+                // NOTE(lucas): LPMINMAXINFO includes border size,
+                // so need to find border size and add it to desired min/max size,
+                // which the user supplies as client size
+                RECT client;
+                RECT wind;
+                POINT diff;
+                GetClientRect(hwnd, &client);
+                GetWindowRect(hwnd, &wind);
+                diff.x = (wind.right - wind.left) - client.right;
+                diff.y = (wind.bottom - wind.top) - client.bottom;
+
+                if (window->min_width > 0)  mmi->ptMinTrackSize.x = window->min_width  + diff.x;
+                if (window->min_height > 0) mmi->ptMinTrackSize.y = window->min_height + diff.y;
+                if (window->max_width > 0)  mmi->ptMaxTrackSize.x = window->max_width  + diff.x;
+                if (window->max_height > 0) mmi->ptMaxTrackSize.y = window->max_height + diff.y;
+            }
+        } break;
+
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
@@ -249,7 +273,7 @@ void window_init(Window* window, const char* title, int width, int height)
 
     HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW,
                             window_class.lpszClassName,
-                            "Alchemy",
+                            title,
                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                             CW_USEDEFAULT, CW_USEDEFAULT,
                             initial_window_width, 
@@ -278,6 +302,18 @@ void window_render(Window* window)
     HDC device_context = GetDC(window->ptr);
     SwapBuffers(device_context);
     ReleaseDC(window->ptr, device_context);
+}
+
+void window_set_min_size(Window* window, int min_width, int min_height)
+{
+    window->min_width = min_width;
+    window->min_height = min_height;
+}
+
+void window_set_max_size(Window* window, int max_width, int max_height)
+{
+    window->max_width = max_width;
+    window->max_height = max_height;
 }
 
 void* window_icon_load_from_file(const char* filename)

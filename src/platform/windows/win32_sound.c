@@ -1,4 +1,5 @@
 #include "sound.h"
+#include "util/alchemy_memory.h"
 #include "util/types.h"
 
 #include <windows.h>
@@ -49,10 +50,7 @@ internal XAudio2State xaudio2_state_init(void)
 
     // Initialize COM
     if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
-    {
-        // Could not initialize COM
         MessageBoxA(0, "CoInitializeEx failed", "COM error", MB_OK);
-    }
 
     if (FAILED(XAudio2Create(&xaudio2_state.xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
         MessageBoxA(0, "Xaudio2Create failed", "XAudio2 error", MB_OK);
@@ -67,7 +65,7 @@ internal XAudio2State xaudio2_state_init(void)
 
     xaudio2_state.initialized = true;
 
-    return xaudio2_state;    
+    return xaudio2_state;
 }
 
 internal b32 find_chunk(HANDLE file, DWORD fourcc, DWORD* chunk_size, DWORD* chunk_data_pos)
@@ -121,7 +119,7 @@ internal b32 find_chunk(HANDLE file, DWORD fourcc, DWORD* chunk_size, DWORD* chu
                     hr = HRESULT_FROM_WIN32(GetLastError());
                     return 0;
                 }
-            }
+            } break;
         }
 
         offset += 2 * sizeof(DWORD);
@@ -156,15 +154,17 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-void sound_output_process(SoundOutput* sound_output)
+// TODO(lucas): IMPORTANT(lucas): Looks like there is a memory leak in or around this function.
+void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
 {
     persist XAudio2State xaudio2_state = {0};
     if (!xaudio2_state.initialized)
         xaudio2_state = xaudio2_state_init();
 
-    WAVEFORMATEX wave = {0};
+    WAVEFORMATEXTENSIBLE wave = {0};
     XAUDIO2_BUFFER buffer = {0};
-    HANDLE sound_file = CreateFileA(sound_output->filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    HANDLE sound_file = CreateFileA(sound_output->filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL, NULL);
 
     // If handle is invalid, or file poitner cannot be set, return
     if (sound_file == INVALID_HANDLE_VALUE)
@@ -194,15 +194,15 @@ void sound_output_process(SoundOutput* sound_output)
 
     // Locate "data" chunk and read contents into buffer
     find_chunk(sound_file, FOURCC_DATA, &chunk_size, &chunk_pos);
-    ubyte* data_buffer = (ubyte*)malloc(chunk_size);
+    ubyte* data_buffer = push_size(arena, chunk_size);
     read_chunk_data(sound_file, data_buffer, chunk_size, chunk_pos);
 
     buffer.AudioBytes = chunk_size;
     buffer.pAudioData = data_buffer;
-    buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source void not to expect data after this buffer
+    buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source voice not to expect data after this buffer
     
     IXAudio2SourceVoice* source_voice;
-    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, &wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
+    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
                                           &xaudio_callbacks, NULL, NULL)))
     {
         // TODO(lucas): Diagnostic
@@ -225,4 +225,6 @@ void sound_output_process(SoundOutput* sound_output)
     {
         // TODO(lucas): Diagnostic
     }
+
+    CloseHandle(sound_file);
 }

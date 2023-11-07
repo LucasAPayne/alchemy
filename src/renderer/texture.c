@@ -42,7 +42,9 @@ Texture texture_load_from_file(const char* filename)
     Texture tex = {0};
 
     // Load image for texture
-    ubyte* tex_data = stbi_load(filename, &tex.size.x, &tex.size.y, &tex.channels, 0);
+    int size_x, size_y;
+    ubyte* tex_data = stbi_load(filename, &size_x, &size_y, &tex.channels, 0);
+    tex.size = (v2){(f32)size_x, (f32)size_y};
 
     if (!tex_data)
     {
@@ -70,7 +72,7 @@ Texture texture_load_from_file(const char* filename)
     }
 
     // TODO(lucas): Internal format is supposed to be like GL_RGBA8
-    glTexImage2D(GL_TEXTURE_2D, 0, format, tex.size.x, tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex_data);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex_data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     if (tex_data)

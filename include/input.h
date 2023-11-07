@@ -19,7 +19,7 @@ typedef struct MouseButtonState
 } MouseButtonState;
 
 /* Keyboard */
-/* IMPORTANT(lucas): This enum is used for array indexing.
+/* NOTE(lucas): IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
 */ 
@@ -80,7 +80,7 @@ inline b32 key_released(Keyboard* input, int key)
 }
 
 /* Mouse */
-/* IMPORTANT(lucas): This enum is used for array indexing.
+/* NOTE(lucas): IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
 */ 

@@ -6,7 +6,7 @@ typedef struct Texture
 {
     u32 id;
     i32 channels;
-    iv2 size;
+    v2 size;
 } Texture;
 
 Texture texture_generate(int samples);

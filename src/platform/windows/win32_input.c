@@ -55,16 +55,16 @@ internal void win32_process_key(ButtonState* key, b32 is_down, b32 was_down)
     key->released = was_down && !is_down;
 }
 
-internal WORD map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam)
+internal UINT map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam)
 {
     /* NOTE(lucas): Processing keys through PeekMessage does not distinguish between left and right keys.
      * For example, VK_LSHIFT and VK_RSHIFT are just converted to VK_SHIFT, which is true if either shift key is
      * pressed.
      * This function converts generic virtual-key codes to specific left and right ones.
      */ 
-    WORD vk = LOWORD(wparam); // virtual-key code
+    UINT vk = LOWORD(wparam); // virtual-key code
     WORD key_flags = HIWORD(lparam);
-    WORD scan_code = LOBYTE(key_flags); // scancode
+    UINT scan_code = LOBYTE(key_flags); // scancode
     BOOL extended = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
     
     if (extended)
@@ -78,19 +78,19 @@ internal WORD map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam
         case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
         {
             win32_process_key(&keyboard->keys[KEY_SHIFT], is_down, was_down);
-            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
+            vk = MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
         } break;
 
         case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
         {
             win32_process_key(&keyboard->keys[KEY_CONTROL], is_down, was_down);
-            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
+            vk = MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
         } break;
 
-        case VK_MENU:    // converts to VK_LMENU or VK_RMENU
+        case VK_MENU: // converts to VK_LMENU or VK_RMENU
         {
             win32_process_key(&keyboard->keys[KEY_ALT], is_down, was_down);
-            vk = LOWORD(MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
+            vk = MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
         } break;
 
         default: break;

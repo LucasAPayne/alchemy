@@ -3,6 +3,7 @@
 #include "input.h"
 #include "sound.h"
 #include "ui.h"
+#include "util/alchemy_memory.h"
 #include "util/types.h"
 #include "util/time.h"
 #include "renderer/renderer.h"
@@ -28,6 +29,7 @@ typedef struct ExampleState
 
     Font immortal_font;
     Font cardinal_font;
+    Font matrix_font;
 
     Texture logo_tex;
 
@@ -47,6 +49,8 @@ typedef struct ExampleState
 
     struct nk_alchemy_state alchemy_state;
     struct nk_font* immortal;
+
+    MemoryArena transient_arena;
 } ExampleState;
 
 void example_state_init(ExampleState* state, Window window);

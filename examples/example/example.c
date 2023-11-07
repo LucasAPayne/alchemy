@@ -117,11 +117,12 @@ void example_state_init(ExampleState* state, Window window)
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
+    state->matrix_font = font_load_from_file("fonts/matrix_regular.ttf");
 
     state->logo_tex = texture_load_from_file("textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
     state->logo.position = (v2){0.0f, (f32)window.height};
-    state->logo.size = (iv2){300, 150};
+    state->logo.size = (v2){300.0f, 150.0f};
 
     state->logo_direction = (v2){-1.0f, -1.0f};
 
@@ -154,6 +155,8 @@ void example_state_init(ExampleState* state, Window window)
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
+    state->transient_arena = memory_arena_alloc(MEGABYTES(1));
+
     // nuklear example
     state->alchemy_state = (nk_alchemy_state){0};
     state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
@@ -175,11 +178,13 @@ void example_state_delete(ExampleState* state)
 
 void example_update_and_render(ExampleState* state, Window window, f32 delta_time)
 {
+    memory_arena_clear(&state->transient_arena);
+
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
-    update_dvd(state, delta_time, window.width, window.height);
-    update_player(state, delta_time, window.width, window.height);  
+    // update_dvd(state, delta_time, window.width, window.height);
+    // update_player(state, delta_time, window.width, window.height);  
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -242,6 +247,24 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(&state->renderer, stopwatch_text);
+
+    /* Text justification Test */
+    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
+    draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
+
+    u32 text_size = 24;
+    v2 text_begin = {text_bounds.position.x, text_bounds.position.y + text_bounds.height - (f32)text_size};
+    char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
+                "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
+                "the Duel.";
+
+    Text text = text_init(str, &state->matrix_font, text_begin, text_size);
+    text.color = color_black();
+
+    TextArea text_area = text_area_init(text_bounds, text);
+    text_area.alignment = TEXT_ALIGN_JUSTIFIED;
+    text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
+    draw_text_area(&state->renderer, text_area, &state->transient_arena);
 
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);

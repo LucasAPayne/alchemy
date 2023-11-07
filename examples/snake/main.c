@@ -28,10 +28,11 @@ internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 col
 int main(void)
 {
     Window window = {0};
-    // TODO(lucas): Allow 16:9 aspect ratio, but confine grid/play area to a square aspect ratio
     int initial_window_width = 800;
     int initial_window_height = 800;
-    window_init(&window, "Alchemy", initial_window_width, initial_window_height);
+
+    window_init(&window, "Snake", initial_window_width, initial_window_height);
+    window_set_min_size(&window, initial_window_width, initial_window_height);
     
     void* potion_icon = window_icon_load_from_file("icons/potion.ico");
     window_icon_set_from_memory(&window, potion_icon);
@@ -49,10 +50,15 @@ int main(void)
         if (key_pressed(&input.keyboard, KEY_MENU) && key_released(&input.keyboard, KEY_Z))
             renderer.config.wireframe_mode = !renderer.config.wireframe_mode;
 
+        // NOTE(lucas): Fix viewport at 800x800 for now
+        rect viewport = rect_min_dim(v2_zero(), v2_full((f32)initial_window_width));
+        viewport.x = ((f32)window.width - viewport.width) / 2.0f;
+        viewport.y = ((f32)window.height - viewport.width) / 2.0f;
+        renderer_viewport(&renderer, viewport);
         renderer_new_frame(&renderer, window);
 
-        draw_grid(&renderer, v2_one(), (v2){(f32)window.width, (f32)window.height}, 3, color_red(), 1.0f);
-        draw_circle(&renderer, (v2){400.0f, 400.0f}, 80.0f, (v4){1.0f, 0.0f, 0.0f, 1.0f});
+        draw_grid(&renderer, v2_one(), (v2){(f32)viewport.width, (f32)viewport.height}, 5, color_red(), 1.0f);
+        draw_circle(&renderer, v2_full(400.0f), 80.0f, color_red());
 
         renderer_render(&renderer);
         window_render(&window);

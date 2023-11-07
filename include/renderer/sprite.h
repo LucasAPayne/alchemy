@@ -10,7 +10,7 @@ typedef struct Sprite
     Texture* texture;
     v4 color;
     v2 position;
-    iv2 size;
+    v2 size;
     f32 rotation; // Rotation in degrees
 } Sprite;
 

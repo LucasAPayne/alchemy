@@ -24,7 +24,7 @@ int main(void)
         f32 delta_time = get_frame_seconds(&window);
         example_update_and_render(&state, window, delta_time);
 
-        sound_output_process(&state.sound_output);
+        sound_output_process(&state.sound_output, &state.transient_arena);
 
         window_render(&window);
 
