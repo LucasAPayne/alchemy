@@ -2,6 +2,11 @@
 
 #include "types.h"
 
+#define KILOBYTES(value) ((u64)(value)*1024)
+#define MEGABYTES(value) ((u64)KILOBYTES(value)*1024)
+#define GIGABYTES(value) ((u64)MEGABYTES(value)*1024)
+#define TERABYTES(value) ((u64)GIGABYTES(value)*1024)
+
 typedef struct MemoryArena
 {
     usize size;

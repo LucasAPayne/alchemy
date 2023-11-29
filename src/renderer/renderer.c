@@ -1,5 +1,6 @@
 #include "renderer/renderer.h"
 #include "util/alchemy_math.h"
+#include "util/alchemy_memory.h"
 
 #include <glad/glad.h>
 
@@ -323,6 +324,10 @@ Renderer renderer_init(int viewport_width, int viewport_height)
 
     glEnable(GL_MULTISAMPLE);
 
+    // TODO(lucas): What's the best way to initialize this? Maybe in config?
+    // Don't want it to be necessary to define a memory arena to pass in to here.
+    renderer.scratch_arena = memory_arena_alloc(MEGABYTES(1));
+
     renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
@@ -441,6 +446,7 @@ void renderer_render(Renderer* renderer)
     // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
     // window dimensions if the user does not resize the viewport themselves 
     renderer->viewport = rect_zero();
+    memory_arena_clear(&renderer->scratch_arena);
 }
 
 void renderer_clear(v4 color)
@@ -493,8 +499,8 @@ void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     u32 tris = segs - 2;
     u32 n_verts = 2*segs;
     u32 n_indices = 3*tris;
-    f32* vertices = malloc(n_verts*sizeof(f32));
-    u32* indices = malloc(n_indices*sizeof(f32));
+    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
+    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
 
     // Construct points from angles of tris
     f32 angle = 360.0f / segs;
@@ -524,9 +530,6 @@ void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-
-    free(vertices);
-    free(indices);
 }
 
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)

@@ -406,7 +406,7 @@ TextArea text_area_init(rect bounds, Text text)
 }
 
 // NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
-void draw_text_area(Renderer* renderer, TextArea text_area, MemoryArena* arena)
+void draw_text_area(Renderer* renderer, TextArea text_area)
 {
     // NOTE(lucas): Parse and process the text in the text area,
     // then reconstruct one Text object and render it.
@@ -445,7 +445,8 @@ void draw_text_area(Renderer* renderer, TextArea text_area, MemoryArena* arena)
     OverflowText overflow = {0};
     while (tokenizer.at[0])
     {
-        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, arena);
+        // ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
+        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
         for (TextNode* node = parsed_text.first_node; node; node = node->next)
         {
             node->text.px = text_area.text.px;

@@ -52,6 +52,7 @@ typedef struct Renderer
     v4 clear_color;
 
     RendererConfig config;
+    MemoryArena scratch_arena;
 } Renderer;
 
 Renderer renderer_init(int viewport_width, int viewport_height);
