@@ -52,7 +52,7 @@ internal f32 text_get_width(Text text)
     return result;
 }
 
-internal void text_set_px(Text* text, u32 px)
+void text_set_size_px(Text* text, u32 px)
 {
     text->px = px;
     FT_Set_Pixel_Sizes(text->font->face, 0, text->px);
@@ -72,7 +72,7 @@ Text text_init(char* string, Font* font, v2 position, u32 px)
     text.position = position;
     text.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
 
-    text_set_px(&text, px);
+    text_set_size_px(&text, px);
 
     return text;
 }
@@ -397,11 +397,13 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
     return parsed_text;
 }
 
-TextArea text_area_init(rect bounds, Text text)
+TextArea text_area_init(rect bounds, char* str, Font* font, u32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;
-    result.text = text;
+    v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
+    result.text = text_init(str, font, text_pos, text_size_px);
+    result.text.color = color_black();
     return result;
 }
 
@@ -416,6 +418,14 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     
     if (text_area.style & TEXT_AREA_SHRINK_TO_FIT)
     {
+        if (text_area.text.px > (u32)text_area.bounds.height)
+        {
+            f32 delta = (f32)text_area.text.px - text_area.bounds.height;
+            u32 new_size = text_area.text.px - (u32)delta;
+            text_area.text.position.y += delta;
+            text_set_size_px(&text_area.text, new_size);
+        }
+
         // NOTE(lucas): Wrap text and shrink to fit.
         // Wrap text, and if text height exceeds bounds, decrease font size.
         if (text_area.style & TEXT_AREA_WRAP)
@@ -424,7 +434,7 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
             f32 text_height = lines_req * text_area.text.line_height;
             while (text_height > text_area.bounds.height)
             {
-                text_set_px(&text_area.text, text_area.text.px-1);
+                text_set_size_px(&text_area.text, text_area.text.px-1);
                 // NOTE(lucas): Lines required must be rounded up to be accurate.
                 lines_req = text_area.text.string_width / text_area.bounds.width + 0.5f;
                 text_height = lines_req * text_area.text.line_height;
