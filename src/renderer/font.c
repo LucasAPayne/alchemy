@@ -62,6 +62,12 @@ void text_set_size_px(Text* text, u32 px)
     text->line_height = (f32)text->font->face->size->metrics.height/64;
 }
 
+void text_scale(Text* text, f32 factor)
+{
+    u32 new_size = (u32)((f32)text->px*factor);
+    text_set_size_px(text, new_size);
+}
+
 Text text_init(char* string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
@@ -70,7 +76,7 @@ Text text_init(char* string, Font* font, v2 position, u32 px)
 
     text.font = font;
     text.position = position;
-    text.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+    text.color = color_black();
 
     text_set_size_px(&text, px);
 
@@ -403,8 +409,13 @@ TextArea text_area_init(rect bounds, char* str, Font* font, u32 text_size_px)
     result.bounds = bounds;
     v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
     result.text = text_init(str, font, text_pos, text_size_px);
-    result.text.color = color_black();
     return result;
+}
+
+void text_area_scale(TextArea* text_area, f32 factor)
+{
+    text_area->bounds.size = v2_scale(text_area->bounds.size, factor);
+    text_scale(&text_area->text, factor);
 }
 
 // NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
@@ -415,7 +426,9 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     Tokenizer tokenizer = {0};
     Tokenizer test_tokenizer = {0};
     tokenizer.at = test_tokenizer.at = text_area.text.string;
-    
+    text_area.text.position = text_area.bounds.position;
+    text_area.text.position.y += text_area.bounds.height - (f32)text_area.text.px;
+
     if (text_area.style & TEXT_AREA_SHRINK_TO_FIT)
     {
         if (text_area.text.px > (u32)text_area.bounds.height)
