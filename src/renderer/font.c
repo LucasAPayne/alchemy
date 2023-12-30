@@ -359,14 +359,17 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
 
     // TODO(lucas): Draw while aligning?
     f32 width_remaining = text_area.bounds.width - parsed_text.width;
-    switch(text_area.alignment)
+    switch(text_area.horiz_alignment)
     {
-        case TEXT_ALIGN_JUSTIFIED:
+        case TEXT_ALIGN_HORIZ_JUSTIFIED:
         {
             // Line is only justified if it does not overflow to another line
             if (!line_overflowed)
                 break;
 
+            // TODO(lucas): Sometimes, it looks like the amount of space added is slightly underestimated.
+            // Probably a precision issue, but could be with fonts.
+            // Some fonts also just give completely incorrect results, so look into improving this later.
             f32 width_per_space = width_remaining / (f32)num_spaces;
             int count = 1;
 
@@ -383,7 +386,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
             }
         } break;
 
-        case TEXT_ALIGN_RIGHT:
+        case TEXT_ALIGN_HORIZ_RIGHT:
         {
             // NOTE(lucas): Add all additional space to the leftmost (first) space by
             // shifting each word over by the entire width remaining
@@ -391,13 +394,16 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                 node->text.position.x += width_remaining;
         } break;
 
-        case TEXT_ALIGN_CENTER:
+        case TEXT_ALIGN_HORIZ_CENTER:
         {
             // NOTE(lucas): Divide all additional space between the leftmost (first) and rightmost (last) spaces by
             // shifting each word over by half the width remaining.
             for (TextNode* node = parsed_text.first_node; node; node = node->next)
                 node->text.position.x += 0.5f*width_remaining;
         } break;
+
+        // NOTE(lucas): Assume left-align and do nothing.
+        default: break;
     }
 
     return parsed_text;
@@ -427,8 +433,12 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     Tokenizer test_tokenizer = {0};
     tokenizer.at = test_tokenizer.at = text_area.text.string;
     text_area.text.position = text_area.bounds.position;
-    text_area.text.position.y += text_area.bounds.height - (f32)text_area.text.px;
+    // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
+    // size is used. It also seems to vary slightly across different fonts.
+    // Figure out a way to be more exact about this.
+    text_area.text.position.y += text_area.bounds.height - 0.65f*(f32)text_area.text.px;
 
+    f32 text_height = 0.0f;
     if (text_area.style & TEXT_AREA_SHRINK_TO_FIT)
     {
         if (text_area.text.px > (u32)text_area.bounds.height)
@@ -443,19 +453,21 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         // Wrap text, and if text height exceeds bounds, decrease font size.
         if (text_area.style & TEXT_AREA_WRAP)
         {
-            f32 lines_req = text_area.text.string_width / text_area.bounds.width;
-            f32 text_height = lines_req * text_area.text.line_height;
+            i32 lines_req = ceil_f32(text_area.text.string_width / text_area.bounds.width) + 1;
+            text_height = (f32)(lines_req - 1) * text_area.text.line_height + text_area.text.px;
             while (text_height > text_area.bounds.height)
             {
                 text_set_size_px(&text_area.text, text_area.text.px-1);
                 // NOTE(lucas): Lines required must be rounded up to be accurate.
-                lines_req = text_area.text.string_width / text_area.bounds.width + 0.5f;
-                text_height = lines_req * text_area.text.line_height;
+                // lines_req = text_area.text.string_width / text_area.bounds.width + 0.5f;
+                lines_req = ceil_f32(text_area.text.string_width / text_area.bounds.width) + 1;
+                text_height = (f32)(lines_req - 1) * text_area.text.line_height + text_area.text.px;
             }
         }
         else
         {
             // NOTE(lucas): Don't wrap but shrink text to fit.
+            text_height = (f32)text_area.text.px;
             f32 text_width = text_get_width(text_area.text);
             while (text_width > text_area.bounds.width)
             {
@@ -465,10 +477,28 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         }
     }
 
+    // TODO(lucas): Something weird is going on with calculating the vertical space remaining.
+    // For now, the spacing is fudged a little bit to look right, but this needs to be revisited and made more exact.
+    f32 vert_space_remaining = text_area.bounds.height - text_height;
+    switch (text_area.vert_alignment)
+    {
+        case TEXT_ALIGN_VERT_BOTTOM:
+        {
+            text_area.text.position.y -= 1.25f*vert_space_remaining;
+        } break;
+
+        case TEXT_ALIGN_VERT_CENTER:
+        {
+            text_area.text.position.y -= 0.7f*vert_space_remaining;
+        } break;
+
+        // NOTE(lucas): Assume top align and do nothing.
+        default: break; 
+    }
+
     OverflowText overflow = {0};
     while (tokenizer.at[0])
     {
-        // ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
         ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
         for (TextNode* node = parsed_text.first_node; node; node = node->next)
         {

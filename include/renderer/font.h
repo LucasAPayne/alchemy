@@ -30,13 +30,20 @@ typedef struct Text
     char* string;
 } Text;
 
-typedef enum TextAlignment
+typedef enum TextAlignmentHoriz
 {
-    TEXT_ALIGN_LEFT = 0,
-    TEXT_ALIGN_RIGHT,
-    TEXT_ALIGN_CENTER,
-    TEXT_ALIGN_JUSTIFIED
-} TextAlignment;
+    TEXT_ALIGN_HORIZ_LEFT = 0,
+    TEXT_ALIGN_HORIZ_RIGHT,
+    TEXT_ALIGN_HORIZ_CENTER,
+    TEXT_ALIGN_HORIZ_JUSTIFIED
+} TextAlignmentHoriz;
+
+typedef enum TextAlignmentVert
+{
+    TEXT_ALIGN_VERT_TOP = 0,
+    TEXT_ALIGN_VERT_BOTTOM,
+    TEXT_ALIGN_VERT_CENTER
+} TextAlignmentVert;
 
 // TODO(lucas): Background style?
 typedef enum TextAreaStyle
@@ -45,11 +52,13 @@ typedef enum TextAreaStyle
     TEXT_AREA_SHRINK_TO_FIT = (1 << 1),
 } TextAreaStyle;
 
+// TODO(lucas): Margins, borders, and other options
 typedef struct TextArea
 {
     rect bounds;
     Text text;
-    TextAlignment alignment;
+    TextAlignmentHoriz horiz_alignment;
+    TextAlignmentVert vert_alignment;
     TextAreaStyle style;
 } TextArea;
 

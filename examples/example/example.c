@@ -254,13 +254,14 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "the Duel.";
+                "the Duel. ";
 
     TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 30);
-    text_area.alignment = TEXT_ALIGN_JUSTIFIED;
+    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_BOTTOM;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(&state->renderer, text_area);
-
+    
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
     renderer_render(&state->renderer);
