@@ -11,6 +11,7 @@
 #endif
 
 #define INVALID_CODE_PATH() ASSERT(!"Invalid Code Path")
+#define INVALID_DEFAULT_CASE() default: {INVALID_CODE_PATH();} break
 
 #define internal static
 #define persist  static

@@ -15,4 +15,4 @@ typedef struct Sprite
 } Sprite;
 
 Sprite sprite_init(Texture* tex);
-void draw_sprite(Renderer* renderer, Sprite sprite);
+void output_sprite(Renderer* renderer, Sprite sprite);

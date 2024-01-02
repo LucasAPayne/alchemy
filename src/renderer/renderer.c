@@ -312,21 +312,207 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     fbo_delete(&framebuffer->id);
 }
 
-void renderer_viewport(Renderer* renderer, rect viewport)
+internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
-    renderer->viewport = viewport;
-    glViewport((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
+
+    if (renderer->config.rotate_quad_from_center)
+    {
+        // NOTE(lucas): The origin of a quad is at the bottom left,
+        // but we want the origin to appear in the center of the quad
+        // for rotation. So, before rotation, translate the quad right and up by half its size.
+        // After the rotation, undo this translation.
+        model = m4_translate(model, (v3){0.5f*size.x, 0.5f*size.y, 0.0f});
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-0.5f*size.x, -0.5f*size.y, 0.0f});
+    }
+    else
+    {
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+    }
+
+    // Scale quad to appropriate size
+    model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
+
+    // Set model matrix and color shader values
+    shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
+    shader_set_v4(renderer->rect_renderer.shader, "color", color);
+
+    glBindVertexArray(renderer->rect_renderer.vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 }
 
-Renderer renderer_init(int viewport_width, int viewport_height)
+internal void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
+{
+    v2 length = v2_abs(v2_sub(start, end));
+
+    // NOTE(lucas): Horizontal and vertical lines need special treatment
+    // since they will cause trig functions to be undefined
+    v2 size = v2_zero();
+    f32 rotation = 0.0f;
+
+    // NOTE(lucas): atan is undefined for vertical lines,
+    // so only call it if the line has slope
+    if (length.x)
+        rotation = atan_f32(length.y, length.x);
+
+    if (length.x && length.y) // Diagonal line
+        size = (v2){v2_mag(length), thickness};
+    else if (length.x && !length.y) // Horizontal line
+        size = (v2){length.x, thickness};
+    else if (length.y && !length.x) // Vertical line
+        size = (v2){thickness, length.y};
+
+    // NOTE(lucas): Draw a quad, but rotate from origin instead of center
+    b32 user_rot_setting = renderer->config.rotate_quad_from_center;
+    renderer->config.rotate_quad_from_center = false;
+    output_quad(renderer, start, size, color, glm_deg(rotation));
+    renderer->config.rotate_quad_from_center = user_rot_setting;
+}
+
+internal void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
+{
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
+    model = m4_scale(model, (v3){radius, radius, 1.0f});
+
+    // Set model matrix and color shader values
+    shader_set_m4(renderer->rect_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->rect_renderer.shader, "color", color);
+
+    // The number of triangles is 2 less than the number of line segments or points
+    u32 segs = renderer->config.circle_line_segments;
+    u32 tris = segs - 2;
+    u32 n_verts = 2*segs;
+    u32 n_indices = 3*tris;
+    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
+    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
+
+    // Construct points from angles of tris
+    f32 angle = 360.0f / segs;
+    for (u32 i = 0; i < 2*segs; i += 2)
+    {
+        f32 a = glm_rad(angle*i);
+        vertices[i] = cos_f32(a);
+        vertices[i+1] = sin_f32(a);
+    }
+
+    // Construct tris using indices, where the first vertex is shared by all tris
+    u32 index = 1;
+    for (u32 i = 0; i < 3*tris; i+= 3)
+    {
+        indices[i] = 0;
+        indices[i+1] = index++;
+        indices[i+2] = index;
+    }
+
+    glBindVertexArray(renderer->circle_renderer.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->circle_renderer.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
+{
+    // RenderCommandBuffer* result = push_struct(arena, RenderCommandBuffer);
+    RenderCommandBuffer result = {0};
+    result.base = (u8*)push_size(arena, max_size);
+    // result.size = sizeof(RenderCommandBuffer);
+    result.size = 0;
+    result.max_size = max_size;
+    return result;
+}
+
+internal void render_command_buffer_clear(RenderCommandBuffer* command_buffer)
+{
+    command_buffer->size = 0;
+}
+
+#define render_command_push(buffer, type) (type*)render_command_push_(buffer, sizeof(type), RENDER_COMMAND_##type)
+internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer, usize size, RenderCommandType type)
+{
+    RenderCommand* result = 0;
+    if (command_buffer->size + size < command_buffer->max_size)
+    {
+        result = (RenderCommand*)(command_buffer->base + command_buffer->size);
+        result->type = type;
+        command_buffer->size += size;
+    }
+    else
+    {
+        INVALID_CODE_PATH();
+    }
+    return result;
+}
+
+internal void render_command_buffer_output(Renderer* renderer)
+{
+    RenderCommandBuffer* command_buffer = &renderer->command_buffer;
+    for (usize base_address = 0; base_address < command_buffer->size;)
+    {
+        RenderCommand* header = (RenderCommand*)(command_buffer->base + base_address);
+        switch(header->type)
+        {
+            case RENDER_COMMAND_RenderCommandLine:
+            {
+                RenderCommandLine* cmd = (RenderCommandLine*)header;
+                output_line(renderer, cmd->start, cmd->end, cmd->color, cmd->line_thickness);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandQuad:
+            {
+                RenderCommandQuad* cmd = (RenderCommandQuad*)header;
+                output_quad(renderer, cmd->position, cmd->size, cmd->color, cmd->rotation);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandCircle:
+            {
+                RenderCommandCircle* cmd = (RenderCommandCircle*)header;
+                output_circle(renderer, cmd->position, cmd->radius, cmd->color);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandSprite:
+            {
+                RenderCommandSprite* cmd = (RenderCommandSprite*)header;
+                output_sprite(renderer, cmd->sprite);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandText:
+            {
+                RenderCommandText* cmd = (RenderCommandText*)header;
+                output_text(renderer, cmd->text);
+                base_address += sizeof(*cmd);
+            } break;
+
+            INVALID_DEFAULT_CASE();
+        }
+    }    
+}
+
+Renderer renderer_init(int viewport_width, int viewport_height, usize command_buffer_size)
 {
     Renderer renderer = {0};
 
     glEnable(GL_MULTISAMPLE);
 
+    renderer.command_buffer_arena = memory_arena_alloc(command_buffer_size);
+    renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_size);
+
     // TODO(lucas): What's the best way to initialize this? Maybe in config?
     // Don't want it to be necessary to define a memory arena to pass in to here.
-    renderer.scratch_arena = memory_arena_alloc(MEGABYTES(1));
+    renderer.scratch_arena = memory_arena_alloc(MEGABYTES(4));
 
     renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
@@ -416,6 +602,8 @@ void renderer_render(Renderer* renderer)
 {
     rect viewport = renderer->viewport;
 
+    render_command_buffer_output(renderer);
+
     // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the
     // intermediate framebuffer
     if (renderer->config.msaa_level > 0)
@@ -447,6 +635,14 @@ void renderer_render(Renderer* renderer)
     // window dimensions if the user does not resize the viewport themselves 
     renderer->viewport = rect_zero();
     memory_arena_clear(&renderer->scratch_arena);
+    memory_arena_clear(&renderer->command_buffer_arena);
+    render_command_buffer_clear(&renderer->command_buffer);
+}
+
+void renderer_viewport(Renderer* renderer, rect viewport)
+{
+    renderer->viewport = viewport;
+    glViewport((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
 }
 
 void renderer_clear(v4 color)
@@ -457,109 +653,48 @@ void renderer_clear(v4 color)
 
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
-    v2 length = v2_abs(v2_sub(start, end));
-
-    // NOTE(lucas): Horizontal and vertical lines need special treatment
-    // since they will cause trig functions to be undefined
-    v2 size = v2_zero();
-    f32 rotation = 0.0f;
-
-    // NOTE(lucas): atan is undefined for vertical lines,
-    // so only call it if the line has slope
-    if (length.x)
-        rotation = atan_f32(length.y, length.x);
-
-    if (length.x && length.y) // Diagonal line
-        size = (v2){v2_mag(length), thickness};
-    else if (length.x && !length.y) // Horizontal line
-        size = (v2){length.x, thickness};
-    else if (length.y && !length.x) // Vertical line
-        size = (v2){thickness, length.y};
-
-    // NOTE(lucas): Draw a quad, but rotate from origin instead of center
-    b32 user_rot_setting = renderer->config.rotate_quad_from_center;
-    renderer->config.rotate_quad_from_center = false;
-    draw_quad(renderer, start, size, color, glm_deg(rotation));
-    renderer->config.rotate_quad_from_center = user_rot_setting;
-}
-
-void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
-{
-    m4 model = m4_identity();
-    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
-    model = m4_scale(model, (v3){radius, radius, 1.0f});
-
-    // Set model matrix and color shader values
-    shader_set_m4(renderer->rect_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->rect_renderer.shader, "color", color);
-
-
-    // The number of triangles is 2 less than the number of line segments or points
-    u32 segs = renderer->config.circle_line_segments;
-    u32 tris = segs - 2;
-    u32 n_verts = 2*segs;
-    u32 n_indices = 3*tris;
-    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
-    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
-
-    // Construct points from angles of tris
-    f32 angle = 360.0f / segs;
-    for (u32 i = 0; i < 2*segs; i += 2)
-    {
-        f32 a = glm_rad(angle*i);
-        vertices[i] = cos_f32(a);
-        vertices[i+1] = sin_f32(a);
-    }
-
-    // Construct tris using indices, where the first vertex is shared by all tris
-    u32 index = 1;
-    for (u32 i = 0; i < 3*tris; i+= 3)
-    {
-        indices[i] = 0;
-        indices[i+1] = index++;
-        indices[i+2] = index;
-    }
-
-    glBindVertexArray(renderer->circle_renderer.vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
-    glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->circle_renderer.ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
-
-    glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
+    if (!cmd)
+        return;
+    cmd->line_thickness = thickness;
+    cmd->start = start;
+    cmd->end = end;
+    cmd->color = color;
 }
 
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
-    m4 model = m4_identity();
-    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
+    RenderCommandQuad* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuad);
+    if (!cmd)
+        return; 
+    cmd->position = position;
+    cmd->size = size;
+    cmd->color = color;
+    cmd->rotation = rotation;
+}
 
-    if (renderer->config.rotate_quad_from_center)
-    {
-        // NOTE(lucas): The origin of a quad is at the bottom left,
-        // but we want the origin to appear in the center of the quad
-        // for rotation. So, before rotation, translate the quad right and up by half its size.
-        // After the rotation, undo this translation.
-        model = m4_translate(model, (v3){0.5f*size.x, 0.5f*size.y, 0.0f});
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
-        model = m4_translate(model, (v3){-0.5f*size.x, -0.5f*size.y, 0.0f});
-    }
-    else
-    {
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
-    }
+void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
+{
+    RenderCommandCircle* cmd = render_command_push(&renderer->command_buffer, RenderCommandCircle);
+    if (!cmd)
+        return;
+    cmd->position = position;
+    cmd->radius = radius;
+    cmd->color = color;
+}
 
-    // Scale quad to appropriate size
-    model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
+void draw_sprite(Renderer* renderer, Sprite sprite)
+{
+    RenderCommandSprite* cmd = render_command_push(&renderer->command_buffer, RenderCommandSprite);
+    if (!cmd)
+        return;
+    cmd->sprite = sprite;
+}
 
-    // Set model matrix and color shader values
-    shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
-    shader_set_v4(renderer->rect_renderer.shader, "color", color);
-
-    glBindVertexArray(renderer->rect_renderer.vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+void draw_text(Renderer* renderer, Text text)
+{
+    RenderCommandText* cmd = render_command_push(&renderer->command_buffer, RenderCommandText);
+    if (!cmd)
+        return;
+    cmd->text = text;
 }

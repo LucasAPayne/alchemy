@@ -21,7 +21,7 @@ inline void memory_arena_clear(MemoryArena* arena)
     arena->used = 0;
 }
 
-inline void* push_size(MemoryArena* arena, usize size)
+inline void* push_size_(MemoryArena* arena, usize size)
 {
     // First free part of the arena is the base plus whatever was already being used
     ASSERT((arena->used + size) <= arena->size);
@@ -32,7 +32,7 @@ inline void* push_size(MemoryArena* arena, usize size)
     return result;
 }
 
-inline void zero_size(usize size, void* ptr)
+inline void zero_size_(usize size, void* ptr)
 {
     // TODO(lucas): Check this guy for performance
     u8* byte = (u8*)ptr;
@@ -41,6 +41,7 @@ inline void zero_size(usize size, void* ptr)
 }
 
 // Define macro to cast to correct type and get correct size
-#define push_struct(arena, type) (type*)push_size(arena, sizeof(type))
-#define push_array(arena, count, type) (type*)push_size(arena, (count)*sizeof(type))
-#define zero_struct(instance) zero_size(sizeof((instance)), &(instance))
+#define push_struct(arena, type) (type*)push_size_(arena, sizeof(type))
+#define push_array(arena, count, type) (type*)push_size_(arena, (count)*sizeof(type))
+#define zero_struct(instance) zero_size_(sizeof((instance)), &(instance))
+#define push_size(arena, size) push_size_(arena, size)

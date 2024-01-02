@@ -38,7 +38,7 @@ int main(void)
     window_icon_set_from_memory(&window, potion_icon);
 
     Input input = {0};
-    Renderer renderer = renderer_init(initial_window_width, initial_window_height);
+    Renderer renderer = renderer_init(initial_window_width, initial_window_height, MEGABYTES(4));
     renderer.clear_color = (v4){0.1f, 0.1f, 0.1f, 1.0f};
 
     while(window.open)

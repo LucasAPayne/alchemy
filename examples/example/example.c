@@ -112,7 +112,7 @@ void example_state_init(ExampleState* state, Window window)
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    state->renderer = renderer_init(window.width, window.height);
+    state->renderer = renderer_init(window.width, window.height, MEGABYTES(4));
     state->renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
@@ -184,7 +184,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     
     Gamepad* gamepad = &state->input.gamepads[0];
     // update_dvd(state, delta_time, window.width, window.height);
-    // update_player(state, delta_time, window.width, window.height);  
+    // update_player(state, delta_time, window.width, window.height);
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -254,11 +254,11 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "the Duel. ";
+                "the Duel.";
 
     TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 30);
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_BOTTOM;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(&state->renderer, text_area);
     

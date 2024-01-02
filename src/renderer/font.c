@@ -83,7 +83,7 @@ Text text_init(char* string, Font* font, v2 position, u32 px)
     return text;
 }
 
-void draw_text(Renderer* renderer, Text text)
+void output_text(Renderer* renderer, Text text)
 {
     // Set font size in pixels
     FT_Set_Pixel_Sizes(text.font->face, text.px_width, text.px);
