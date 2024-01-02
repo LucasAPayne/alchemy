@@ -183,6 +183,7 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
+    Keyboard* keyboard = &state->input.keyboard;
     // update_dvd(state, delta_time, window.width, window.height);
     // update_player(state, delta_time, window.width, window.height);
 
