@@ -17,8 +17,6 @@ int main(void)
 
     while(window.open)
     {
-        // Double buffer input to detect buttons held
-        Input old_input = state.input;
         input_process(&window, &state.input);
 
         f32 delta_time = get_frame_seconds(&window);
@@ -27,9 +25,6 @@ int main(void)
         sound_output_process(&state.sound_output, &state.transient_arena);
 
         window_render(&window);
-
-        // The input of this frame becomes the old input for next frame
-        old_input = state.input;
     }
 
     example_state_delete(&state);

@@ -36,6 +36,14 @@ inline f32 clamp_f32(f32 value, f32 min, f32 max)
     return result;
 }
 
+inline i32 ceil_f32(f32 value)
+{
+    i32 result = (i32)value;
+    if (value != (f32)result && value > 0.0f)
+        ++result;
+    return result;
+}
+
 inline f32 abs_f32(f32 x)
 {
     f32 result = fabsf(x);

@@ -38,18 +38,15 @@ int main(void)
     window_icon_set_from_memory(&window, potion_icon);
 
     Input input = {0};
-    Renderer renderer = renderer_init(initial_window_width, initial_window_height);
+    Renderer renderer = renderer_init(initial_window_width, initial_window_height, MEGABYTES(4));
     renderer.clear_color = (v4){0.1f, 0.1f, 0.1f, 1.0f};
 
     while(window.open)
     {
-        // Double buffer input to detect buttons held
-        Input old_input = input;
         input_process(&window, &input);
 
         if (key_pressed(&input.keyboard, KEY_MENU) && key_released(&input.keyboard, KEY_Z))
             renderer.config.wireframe_mode = !renderer.config.wireframe_mode;
-
         // NOTE(lucas): Fix viewport at 800x800 for now
         rect viewport = rect_min_dim(v2_zero(), v2_full((f32)initial_window_width));
         viewport.x = ((f32)window.width - viewport.width) / 2.0f;
@@ -62,9 +59,6 @@ int main(void)
 
         renderer_render(&renderer);
         window_render(&window);
-
-        // The input of this frame becomes the old input for next frame
-        old_input = input;
     }
 
     return 0;

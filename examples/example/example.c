@@ -112,7 +112,7 @@ void example_state_init(ExampleState* state, Window window)
     u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
     u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
-    state->renderer = renderer_init(window.width, window.height);
+    state->renderer = renderer_init(window.width, window.height, MEGABYTES(4));
     state->renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
@@ -183,8 +183,9 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
+    Keyboard* keyboard = &state->input.keyboard;
     // update_dvd(state, delta_time, window.width, window.height);
-    // update_player(state, delta_time, window.width, window.height);  
+    // update_player(state, delta_time, window.width, window.height);
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -252,20 +253,16 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
     rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
     draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    u32 text_size = 24;
-    v2 text_begin = {text_bounds.position.x, text_bounds.position.y + text_bounds.height - (f32)text_size};
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
                 "the Duel.";
 
-    Text text = text_init(str, &state->matrix_font, text_begin, text_size);
-    text.color = color_black();
-
-    TextArea text_area = text_area_init(text_bounds, text);
-    text_area.alignment = TEXT_ALIGN_JUSTIFIED;
+    TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 30);
+    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(&state->renderer, text_area, &state->transient_arena);
-
+    draw_text_area(&state->renderer, text_area);
+    
     ui_overview(ctx, window.width);
     nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
     renderer_render(&state->renderer);
