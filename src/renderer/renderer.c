@@ -152,6 +152,13 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
     return framebuffer_renderer;
 }
 
+internal RenderObject ui_renderer_init(u32 shader)
+{
+    RenderObject ui_renderer = {0};
+    ui_renderer.shader = shader;
+    return ui_renderer;
+}
+
 internal RenderObject sprite_renderer_init(u32 shader)
 {
     RenderObject sprite_renderer = {0};
@@ -310,6 +317,34 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     texture_delete(&framebuffer->texture);
     rbo_delete(&framebuffer->rbo);
     fbo_delete(&framebuffer->id);
+}
+
+internal void renderer_gen_texture(Texture tex)
+{
+    if (!tex.data)
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    // TODO(lucas): Make options configurable
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GLenum format = 0;
+    switch(tex.channels)
+    {
+        case 1: format = GL_RED;  break;
+        case 2: format = GL_RG;   break;
+        case 3: format = GL_RGB;  break;
+        case 4: format = GL_RGBA; break;
+        default: break;
+    }
+
+    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
+    glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
@@ -501,9 +536,11 @@ internal void render_command_buffer_output(Renderer* renderer)
     }    
 }
 
-Renderer renderer_init(int viewport_width, int viewport_height, usize command_buffer_size)
+Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size)
 {
     Renderer renderer = {0};
+
+    opengl_init(window);
 
     glEnable(GL_MULTISAMPLE);
 
@@ -527,21 +564,29 @@ Renderer renderer_init(int viewport_width, int viewport_height, usize command_bu
     if (renderer.config.msaa_level > max_samples)
         renderer.config.msaa_level = max_samples;
 
-    // TODO(lucas): These relative paths might cause problems in the future
+    // TODO(lucas): Get absolute paths to resources
     u32 framebuffer_shader = shader_init("shaders/framebuffer.vert", "shaders/framebuffer.frag");
     u32 poly_shader        = shader_init("shaders/poly.vert", "shaders/poly.frag");
     u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
     u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
+    u32 ui_shader          = shader_init("shaders/ui.vert", "shaders/ui.frag");
 
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.rect_renderer        = rect_renderer_init(poly_shader);
     renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
     renderer.font_renderer        = font_renderer_init(font_shader);
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
+    renderer.ui_renderer          = ui_renderer_init(ui_shader);
     
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
+
+    for (u32 i = 0; i < ARRAY_COUNT(renderer.tex_ids); ++i)
+    {
+        RenderID* tex_id = renderer.tex_ids + i;
+        glGenTextures(1, &tex_id->id);
+    }
 
     return renderer;
 }
@@ -600,6 +645,17 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
 void renderer_render(Renderer* renderer)
 {
+    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+    {
+        RenderID* tex_id = renderer->tex_ids + i;
+        if (tex_id->used)
+        {
+            Texture tex = renderer->textures_to_generate[i];
+            renderer_gen_texture(tex);
+            glGenTextures(1, &tex_id->id);
+        }
+    }
+
     rect viewport = renderer->viewport;
 
     render_command_buffer_output(renderer);
@@ -637,6 +693,9 @@ void renderer_render(Renderer* renderer)
     memory_arena_clear(&renderer->scratch_arena);
     memory_arena_clear(&renderer->command_buffer_arena);
     render_command_buffer_clear(&renderer->command_buffer);
+
+    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+        renderer->textures_to_generate[i] = (Texture){0};
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -697,4 +756,26 @@ void draw_text(Renderer* renderer, Text text)
     if (!cmd)
         return;
     cmd->text = text;
+}
+
+u32 renderer_next_tex_id(Renderer* renderer)
+{
+    u32 id = 0;
+    
+    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    {
+        id = renderer->tex_ids[renderer->tex_index].id;
+        renderer->tex_ids[renderer->tex_index].used = true;
+    }
+
+    return id;
+}
+
+void renderer_push_texture(Renderer* renderer, Texture tex)
+{
+    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    {
+        renderer->textures_to_generate[renderer->tex_index] = tex;
+        ++renderer->tex_index;
+    }
 }

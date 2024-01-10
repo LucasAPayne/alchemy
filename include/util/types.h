@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#define ALCHEMY_EXPORT __declspec(dllexport)
+
 #define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
 
 #if ALCHEMY_DEBUG

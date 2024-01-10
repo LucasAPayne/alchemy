@@ -3,6 +3,7 @@
 #include "input.h"
 #include "sound.h"
 #include "ui.h"
+#include "state.h"
 #include "util/alchemy_memory.h"
 #include "util/types.h"
 #include "util/time.h"
@@ -25,7 +26,7 @@ typedef struct Player
 typedef struct ExampleState
 {
     Input input;
-    Renderer renderer;
+    Renderer* renderer;
 
     Font immortal_font;
     Font cardinal_font;
@@ -53,6 +54,6 @@ typedef struct ExampleState
     MemoryArena transient_arena;
 } ExampleState;
 
-void example_state_init(ExampleState* state, Window window);
-void example_state_delete(ExampleState* state);
-void example_update_and_render(ExampleState* state, Window window, f32 delta_time);
+ALCHEMY_EXPORT UPDATE_AND_RENDER(update_and_render);
+
+// void example_state_delete(ExampleState* state);

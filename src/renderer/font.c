@@ -9,6 +9,26 @@
 // TODO(lucas): Replace with custom methods
 #include <string.h> // strncpy
 
+internal int str_len(char* s)
+{
+    int count = 0;
+    while(*s++)
+        ++count;
+    
+    return count;
+}
+
+internal char* str_copy(char* src, MemoryArena* arena)
+{
+    usize len = str_len(src);
+    char* result = push_array(arena, len+1, char);
+    for (usize i = 0; i < len; ++i)
+        result[i] = src[i];
+
+    result[len] = '\0';
+    return result;
+}
+
 Font font_load_from_file(const char* filename)
 {
     Font font = {0};
@@ -68,11 +88,12 @@ void text_scale(Text* text, f32 factor)
     text_set_size_px(text, new_size);
 }
 
-Text text_init(char* string, Font* font, v2 position, u32 px)
+Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
 
-    text.string = string;
+    // TODO(lucas): Should this be a copy?
+    text.string = str_copy(string, &renderer->scratch_arena);
 
     text.font = font;
     text.position = position;
@@ -409,12 +430,12 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
     return parsed_text;
 }
 
-TextArea text_area_init(rect bounds, char* str, Font* font, u32 text_size_px)
+TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;
     v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
-    result.text = text_init(str, font, text_pos, text_size_px);
+    result.text = text_init(renderer, str, font, text_pos, text_size_px);
     return result;
 }
 

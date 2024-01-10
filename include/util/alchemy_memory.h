@@ -7,6 +7,15 @@
 #define GIGABYTES(value) ((u64)MEGABYTES(value)*1024)
 #define TERABYTES(value) ((u64)GIGABYTES(value)*1024)
 
+typedef struct GameMemory
+{
+    b32 is_initialized;
+    void* permanent_storage;
+    usize permanent_storage_size; // NOTE(lucas): MUST be cleared to 0 at startup
+    void* transient_storage;
+    usize transient_storage_size; // NOTE(lucas): MUST be cleared to 0 at startup
+} GameMemory;
+
 typedef struct MemoryArena
 {
     usize size;
@@ -14,7 +23,17 @@ typedef struct MemoryArena
     u8* memory;
 } MemoryArena;
 
+GameMemory game_memory_init(usize permanent_storage_size, usize transient_storage_size);
 MemoryArena memory_arena_alloc(usize size);
+
+inline MemoryArena memory_arena_init_from_base(void* base, usize size)
+{
+    MemoryArena arena = {0};
+    arena.size = size;
+    arena.memory = (u8*)base;
+    arena.used = 0;
+    return arena;
+}
 
 inline void memory_arena_clear(MemoryArena* arena)
 {

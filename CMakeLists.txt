@@ -26,7 +26,9 @@ add_library(alchemy
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
+               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
                ${PROJECT_SOURCE_DIR}/src/util/time.c
                ${PROJECT_SOURCE_DIR}/src/ui.c)
@@ -69,7 +71,7 @@ if (MSVC)
     if (CMAKE_BUILD_TYPE STREQUAL Debug)
         # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
         target_compile_options(alchemy PRIVATE /Zi /Od /RTCcsu)
-        target_compile_definitions(alchemy PRIVATE ALCHEMY_DEBUG)
+        target_compile_definitions(alchemy PUBLIC ALCHEMY_DEBUG)
     endif()
 endif()
 

@@ -1,9 +1,10 @@
 #include "example.h"
 #include "renderer/renderer.h"
+#include "state.h"
 #include "util/alchemy_math.h"
 #include "util/types.h"
 
-#include "ui_overview.h"
+// #include "ui_overview.h"
 
 #include <stdlib.h> // rand
 #include <stdio.h>  // Temporary: sprintf_s
@@ -104,27 +105,23 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-void example_state_init(ExampleState* state, Window window)
+internal void example_state_init(ExampleState* state, GameMemory* memory, Renderer* renderer, Window window)
 {
     srand(0);
 
-    // Compile and Load shaders
-    u32 font_shader = shader_init("shaders/font.vert", "shaders/font.frag");
-    u32 ui_shader = shader_init("shaders/ui.vert", "shaders/ui.frag");
-
-    state->renderer = renderer_init(window.width, window.height, MEGABYTES(4));
-    state->renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
+    state->renderer = renderer;
+    state->renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
     state->matrix_font = font_load_from_file("fonts/matrix_regular.ttf");
 
-    state->logo_tex = texture_load_from_file("textures/dvd.png");
+    state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
-    state->logo.position = (v2){0.0f, (f32)window.height};
     state->logo.size = (v2){300.0f, 150.0f};
+    state->logo.position = (v2){0.0f, (f32)window.height - state->logo.size.y};
 
-    state->logo_direction = (v2){-1.0f, -1.0f};
+    state->logo_direction = (v2){1.0f, -1.0f};
 
     state->colors[0] = color_white();
     state->colors[1] = color_red();
@@ -155,37 +152,39 @@ void example_state_init(ExampleState* state, Window window)
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
-    state->transient_arena = memory_arena_alloc(MEGABYTES(1));
+    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, MEGABYTES(1));
 
     // nuklear example
-    state->alchemy_state = (nk_alchemy_state){0};
-    state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
-    struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
-    nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
-    state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
-    nk_alchemy_font_stash_end(&state->alchemy_state);
-    nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
-    state->alchemy_state.keyboard = &state->input.keyboard;
-    state->alchemy_state.mouse = &state->input.mouse;
+    // state->alchemy_state = (nk_alchemy_state){0};
+    // // state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
+    // struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
+    // nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
+    // state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
+    // nk_alchemy_font_stash_end(&state->alchemy_state);
+    // nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
+    // state->alchemy_state.keyboard = &state->input.keyboard;
+    // state->alchemy_state.mouse = &state->input.mouse;
 }
 
-void example_state_delete(ExampleState* state)
+UPDATE_AND_RENDER(update_and_render)
 {
-    renderer_delete(&state->renderer);
-    texture_delete(&state->logo_tex);
-    nk_alchemy_shutdown(&state->alchemy_state);
-}
+    ExampleState* state = (ExampleState*)memory->permanent_storage;
+    if (!memory->is_initialized)
+    {
+        example_state_init(state, memory, renderer, window);
+        memory->is_initialized = true;
+    }
 
-void example_update_and_render(ExampleState* state, Window window, f32 delta_time)
-{
+    input_process(&window, &state->input);
+
     memory_arena_clear(&state->transient_arena);
 
     stopwatch_update(&state->stopwatch, delta_time);
     
     Gamepad* gamepad = &state->input.gamepads[0];
     Keyboard* keyboard = &state->input.keyboard;
-    // update_dvd(state, delta_time, window.width, window.height);
-    // update_player(state, delta_time, window.width, window.height);
+    update_dvd(state, delta_time, window.width, window.height);
+    update_player(state, delta_time, window.width, window.height);
 
     if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -214,56 +213,52 @@ void example_update_and_render(ExampleState* state, Window window, f32 delta_tim
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */
-    nk_alchemy_new_frame(&state->alchemy_state, window.width, window.height);
     struct nk_context* ctx = &state->alchemy_state.ctx;
 
-    // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
-    renderer_new_frame(&state->renderer, window);
-
-    draw_sprite(&state->renderer, state->logo);
+    draw_sprite(state->renderer, state->logo);
 
     Player* player = &state->player;
-    draw_quad(&state->renderer, player->position, player->size, player->color, player->rotation);
+    draw_quad(state->renderer, player->position, player->size, player->color, player->rotation);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
+    Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
     engine_text.color = font_color;
-    draw_text(&state->renderer, engine_text);
-    
+    draw_text(state->renderer, engine_text);
+
     char buffer[512];
-    sprintf_s(buffer, sizeof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
+    sprintf_s(buffer, ARRAY_COUNT(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    Text frame_time = text_init(renderer, buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
     frame_time.color = font_color;
-    draw_text(&state->renderer, frame_time);
+    draw_text(state->renderer, frame_time);
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
+    Text cooldown_text = text_init(renderer, cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
-        draw_text(&state->renderer, cooldown_text);
+        draw_text(state->renderer, cooldown_text);
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
+    Text stopwatch_text = text_init(renderer, stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
     stopwatch_text.color = font_color;
-    draw_text(&state->renderer, stopwatch_text);
+    draw_text(state->renderer, stopwatch_text);
 
     /* Text justification Test */
     rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
-    draw_quad(&state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
+    draw_quad(state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
                 "the Duel.";
 
-    TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 30);
+    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 30);
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
     text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(&state->renderer, text_area);
+    draw_text_area(state->renderer, text_area);
     
-    ui_overview(ctx, window.width);
-    nk_alchemy_render(&state->alchemy_state, NK_ANTI_ALIASING_ON);
-    renderer_render(&state->renderer);
+    // ui_overview(ctx, window.width);
+
+    sound_output_process(&state->sound_output, &state->transient_arena);
 }
