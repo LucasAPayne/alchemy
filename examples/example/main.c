@@ -22,6 +22,7 @@ int main(void)
     GameCode game = game_code_load("example_dll.dll", "example_dll_temp.dll", "example_dll_lock.tmp");
     while(window.open)
     {
+        game_code_update(&game);
         // TODO(lucas): Sizing window up looks wonky while dragging but fine after releasing mouse.
         // TODO(lucas): Combine these calls?
         // nk_alchemy_new_frame(&state.alchemy_state, window.width, window.height);

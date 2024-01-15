@@ -26,3 +26,5 @@ if (MSVC)
         # target_compile_definitions(example PRIVATE ALCHEMY_DEBUG)
     endif()
 endif()
+
+RANDOMIZE_PDB_NAME(example_dll)

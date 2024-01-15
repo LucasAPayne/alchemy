@@ -75,5 +75,18 @@ if (MSVC)
     endif()
 endif()
 
+add_custom_target(hot_reload ALL COMMAND cd .. && cmake -B build)
+
+macro(RANDOMIZE_PDB_NAME target)
+    string(RANDOM random_string)
+    set(pdbname "${target}_")
+    string(APPEND pdbname ${random_string})
+    set_target_properties(${target}
+        PROPERTIES
+        COMPILE_PDB_NAME ${pdbname}
+        PDB_NAME ${pdbname}
+    )
+endmacro()
+
 add_subdirectory(examples/example)
 add_subdirectory(examples/snake)

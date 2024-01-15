@@ -180,7 +180,6 @@ UPDATE_AND_RENDER(update_and_render)
     memory_arena_clear(&state->transient_arena);
 
     stopwatch_update(&state->stopwatch, delta_time);
-    
     Gamepad* gamepad = &state->input.gamepads[0];
     Keyboard* keyboard = &state->input.keyboard;
     update_dvd(state, delta_time, window.width, window.height);

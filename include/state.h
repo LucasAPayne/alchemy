@@ -24,7 +24,12 @@ typedef struct GameCode
 
     char exe_filename[MAX_FILENAME_LEN];
     char* one_past_last_slash;
+
+    char dll_full_path[MAX_FILENAME_LEN];
+    char temp_dll_full_path[MAX_FILENAME_LEN];
+    char lock_file_full_path[MAX_FILENAME_LEN];
 } GameCode;
 
 GameCode game_code_load(char* source_dll_name, char* temp_dll_name, char* lock_file_full_path);
 void game_code_unload(GameCode* game_code);
+void game_code_update(GameCode* game_code);
