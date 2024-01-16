@@ -3,8 +3,9 @@
 #include "window.h"
 #include "renderer/font.h"
 #include "renderer/shader.h"
-#include "renderer/texture.h"
 #include "renderer/sprite.h"
+#include "renderer/texture.h"
+#include "renderer/ui.h"
 #include "util/alchemy_math.h"
 #include "util/types.h"
 
@@ -118,6 +119,8 @@ typedef struct Renderer
     RenderObject font_renderer;
     RenderObject framebuffer_renderer;
     RenderObject ui_renderer;
+
+    UIRenderState ui_render_state;
 
     // NOTE(lucas): If MSAA is disabled, then the intermediate framebuffer is unused.
     // Otherwise, the main framebufer is used for multisampling operations and is

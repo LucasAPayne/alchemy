@@ -2,7 +2,7 @@
 
 #include "input.h"
 #include "sound.h"
-#include "ui.h"
+#include "renderer/ui.h"
 #include "state.h"
 #include "util/alchemy_memory.h"
 #include "util/types.h"
@@ -47,9 +47,6 @@ typedef struct ExampleState
     Stopwatch stopwatch;
 
     void* sword_cursor;
-
-    struct nk_alchemy_state alchemy_state;
-    struct nk_font* immortal;
 
     MemoryArena transient_arena;
 } ExampleState;

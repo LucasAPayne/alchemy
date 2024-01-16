@@ -1,5 +1,5 @@
 add_library(example_dll SHARED
-            # ui_overview.c
+            ui_overview.c
             example.c)
 add_executable(example main.c)
 

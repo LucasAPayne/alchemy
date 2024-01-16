@@ -155,15 +155,9 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Render
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, MEGABYTES(1));
 
     // nuklear example
-    // state->alchemy_state = (nk_alchemy_state){0};
-    // // state->alchemy_state.ctx = nk_alchemy_init(&state->alchemy_state, ui_shader);
-    // struct nk_font_atlas* atlas = &state->alchemy_state.atlas;
-    // nk_alchemy_font_stash_begin(&state->alchemy_state, &atlas);
-    // state->immortal = nk_font_atlas_add_from_file(atlas, "fonts/immortal.ttf", 14, 0);
-    // nk_alchemy_font_stash_end(&state->alchemy_state);
-    // nk_style_set_font(&state->alchemy_state.ctx, &state->immortal->handle);
-    // state->alchemy_state.keyboard = &state->input.keyboard;
-    // state->alchemy_state.mouse = &state->input.mouse;
+    UIRenderState* ui_render_state = &renderer->ui_render_state;
+    ui_render_state->keyboard = &state->input.keyboard;
+    ui_render_state->mouse = &state->input.mouse;
 }
 
 UPDATE_AND_RENDER(update_and_render)
@@ -212,7 +206,7 @@ UPDATE_AND_RENDER(update_and_render)
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */
-    struct nk_context* ctx = &state->alchemy_state.ctx;
+    struct nk_context* ctx = &renderer->ui_render_state.ctx;
 
     draw_sprite(state->renderer, state->logo);
 
@@ -257,7 +251,7 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(state->renderer, text_area);
     
-    // ui_overview(ctx, window.width);
+    ui_overview(ctx, window.width);
 
     sound_output_process(&state->sound_output, &state->transient_arena);
 }

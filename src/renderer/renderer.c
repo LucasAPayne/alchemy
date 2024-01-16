@@ -578,6 +578,8 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
     renderer.ui_renderer          = ui_renderer_init(ui_shader);
     
+    renderer.ui_render_state = ui_render_state_init(ui_shader);
+
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
@@ -601,6 +603,7 @@ void renderer_delete(Renderer* renderer)
 
     framebuffer_delete(&renderer->framebuffer);
     framebuffer_delete(&renderer->intermediate_framebuffer);
+    ui_render_state_shutdown(&renderer->ui_render_state);
 }
 
 void renderer_new_frame(Renderer* renderer, Window window)
@@ -638,6 +641,8 @@ void renderer_new_frame(Renderer* renderer, Window window)
     shader_set_m4(renderer->rect_renderer.shader,   "projection", projection, false);
     shader_set_m4(renderer->sprite_renderer.shader, "projection", projection, false);
     shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
+
+    ui_new_frame(renderer, window.width, window.height);
 
     // Clear viewport
     renderer_clear(color_black());
@@ -696,6 +701,10 @@ void renderer_render(Renderer* renderer)
 
     for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
         renderer->textures_to_generate[i] = (Texture){0};
+
+    // TODO(lucas): Use renderer AA settings
+    ui_render(renderer, NK_ANTI_ALIASING_ON);
+    
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)

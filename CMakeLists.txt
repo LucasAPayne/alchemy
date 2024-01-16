@@ -24,14 +24,14 @@ add_library(alchemy
                ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
                ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
                ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
+               ${PROJECT_SOURCE_DIR}/src/renderer/ui.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
                ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
-               ${PROJECT_SOURCE_DIR}/src/util/time.c
-               ${PROJECT_SOURCE_DIR}/src/ui.c)
+               ${PROJECT_SOURCE_DIR}/src/util/time.c)
 
 target_include_directories(alchemy PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
