@@ -15,62 +15,67 @@ project(alchemy VERSION 0.1)
 
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
-add_library(alchemy
-               ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
-               ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
-               ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/font.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/renderer.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
-               ${PROJECT_SOURCE_DIR}/src/renderer/ui.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
-               ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
-               ${PROJECT_SOURCE_DIR}/src/util/time.c)
+set(ALCHEMY_SOURCE
+    ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
+    ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
+    ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/font.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/renderer.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/shader.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/sprite.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/texture.c
+    ${PROJECT_SOURCE_DIR}/src/renderer/ui.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
+    ${PROJECT_SOURCE_DIR}/src/util/time.c)
 
+set(ALCHEMY_LIBS
+    user32.lib
+    gdi32.lib
+    opengl32.lib
+    xinput.lib
+    xaudio2.lib
+    cglm_headers)
+
+# C4100 and C4189 are about unused parameters/variables and are not particularly useful
+# C4116 is unnamed type definitions in parenthetical expressions. Disabled because of nuklear
+# /Oi: Generate intrinsic functions
+set(COMMON_COMPILER_FLAGS
+    /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116
+    /D_CRT_SECURE_NO_WARNINGS)
+
+# In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
+# Specify the multithreaded debug version of CRT (MTd) and perform all available run-time error checks (RTC1)
+set(DEBUG_COMPILER_FLAGS /MTd /Zi /Od /RTC1)
+
+add_library(alchemy ${ALCHEMY_SOURCE})
 target_include_directories(alchemy PUBLIC ${PROJECT_SOURCE_DIR}/include)
-
 target_include_directories(alchemy SYSTEM PUBLIC
                             ${PROJECT_SOURCE_DIR}/lib
                             ${PROJECT_SOURCE_DIR}/lib/glad/include
                             ${PROJECT_SOURCE_DIR}/lib/cglm
                             ${PROJECT_SOURCE_DIR}/lib/freetype/include)
 
-target_link_libraries(alchemy PRIVATE
-                        user32.lib
-                        gdi32.lib
-                        opengl32.lib
-                        xinput.lib
-                        xaudio2.lib
-                        cglm_headers
-                        ${PROJECT_SOURCE_DIR}/lib/freetype/freetype.lib)
+target_link_libraries(alchemy PRIVATE ${ALCHEMY_LIBS})
+
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    target_link_libraries(alchemy PRIVATE ${PROJECT_SOURCE_DIR}/lib/freetype/debug/freetype.lib)
+else()
+    target_link_libraries(alchemy PRIATE ${PROJECT_SOURCE_DIR}/lib/freetype/release/freetype.lib)
+endif()
 
 option(CGLM_STATIC "Static build" ON)
 add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 
-set_target_properties(alchemy PROPERTIES 
-                        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}
-                        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res)
-
-# TODO(lucas): Pull out common flags
 if (MSVC)
-    # C4100 and C4189 are about unused parameters/variables and are not particularly useful
-    # C4116 is unnamed type definitions in parenthetical expressions. Disabled because of nuklear
-    # /Oi: Generate intrinsic functions
-    # LNK4099 is about linking without debug info. Disabled because of freetype
-    target_compile_options(alchemy PRIVATE
-                            /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116
-                            /D_CRT_SECURE_NO_WARNINGS)
-    target_link_options(alchemy PRIVATE /subsystem:windows /entry:mainCRTStartup /ignore:4099)
+    target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
 
     if (CMAKE_BUILD_TYPE STREQUAL Debug)
-        # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
-        target_compile_options(alchemy PRIVATE /Zi /Od /RTCcsu)
+        target_compile_options(alchemy PRIVATE ${DEBUG_COMPILER_FLAGS})
         target_compile_definitions(alchemy PUBLIC ALCHEMY_DEBUG)
     endif()
 endif()
@@ -84,8 +89,7 @@ macro(RANDOMIZE_PDB_NAME target)
     set_target_properties(${target}
         PROPERTIES
         COMPILE_PDB_NAME ${pdbname}
-        PDB_NAME ${pdbname}
-    )
+        PDB_NAME ${pdbname})
 endmacro()
 
 add_subdirectory(examples/example)

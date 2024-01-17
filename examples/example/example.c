@@ -4,7 +4,7 @@
 #include "util/alchemy_math.h"
 #include "util/types.h"
 
-// #include "ui_overview.h"
+#include "ui_overview.h"
 
 #include <stdlib.h> // rand
 #include <stdio.h>  // Temporary: sprintf_s
