@@ -48,7 +48,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
 
     timer_update(&player->dash_cooldown, delta_time, true);
 
-    Gamepad* gamepad = &state->input.gamepads[0];
+    Gamepad* gamepad = &state->input->gamepads[0];
     f32 speed = 250.0f; // pixels per second
 
     rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
@@ -105,11 +105,12 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-internal void example_state_init(ExampleState* state, GameMemory* memory, Renderer* renderer, Window window)
+internal void example_state_init(ExampleState* state, GameMemory* memory, Input* input, Renderer* renderer, Window window)
 {
     srand(0);
 
     state->renderer = renderer;
+    state->input = input;
     state->renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
@@ -156,8 +157,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Render
 
     // nuklear example
     UIRenderState* ui_render_state = &renderer->ui_render_state;
-    ui_render_state->keyboard = &state->input.keyboard;
-    ui_render_state->mouse = &state->input.mouse;
+    ui_render_state->keyboard = &state->input->keyboard;
+    ui_render_state->mouse = &state->input->mouse;
 }
 
 UPDATE_AND_RENDER(update_and_render)
@@ -165,24 +166,22 @@ UPDATE_AND_RENDER(update_and_render)
     ExampleState* state = (ExampleState*)memory->permanent_storage;
     if (!memory->is_initialized)
     {
-        example_state_init(state, memory, renderer, window);
+        example_state_init(state, memory, input, renderer, window);
         memory->is_initialized = true;
     }
-
-    input_process(&window, &state->input);
 
     memory_arena_clear(&state->transient_arena);
 
     stopwatch_update(&state->stopwatch, delta_time);
-    Gamepad* gamepad = &state->input.gamepads[0];
-    Keyboard* keyboard = &state->input.keyboard;
+    Gamepad* gamepad = &state->input->gamepads[0];
+    Keyboard* keyboard = &state->input->keyboard;
     update_dvd(state, delta_time, window.width, window.height);
     update_player(state, delta_time, window.width, window.height);
 
-    if (key_pressed(&state->input.keyboard, KEY_LBRACKET))
+    if (key_pressed(&state->input->keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
 
-    if (key_pressed(&state->input.keyboard, KEY_RBRACKET))
+    if (key_pressed(&state->input->keyboard, KEY_RBRACKET))
         cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;

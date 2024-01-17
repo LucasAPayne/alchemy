@@ -25,7 +25,7 @@ typedef struct Player
 
 typedef struct ExampleState
 {
-    Input input;
+    Input* input;
     Renderer* renderer;
 
     Font immortal_font;

@@ -10,10 +10,12 @@
 typedef struct GameMemory
 {
     b32 is_initialized;
-    void* permanent_storage;
-    usize permanent_storage_size; // NOTE(lucas): MUST be cleared to 0 at startup
-    void* transient_storage;
-    usize transient_storage_size; // NOTE(lucas): MUST be cleared to 0 at startup
+    void* memory_block; // Pointer to the entire block of memory
+    usize total_size;
+    void* permanent_storage; // MUST be cleared to 0 at startup
+    usize permanent_storage_size;
+    void* transient_storage; // MUST be cleared to 0 at startup
+    usize transient_storage_size;
 } GameMemory;
 
 typedef struct MemoryArena

@@ -80,8 +80,6 @@ if (MSVC)
     endif()
 endif()
 
-add_custom_target(hot_reload ALL COMMAND cd .. && cmake -B build)
-
 macro(RANDOMIZE_PDB_NAME target)
     string(RANDOM random_string)
     set(pdbname "${target}_")
