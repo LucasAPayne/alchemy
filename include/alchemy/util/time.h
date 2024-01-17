@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/types.h"
+#include "types.h"
 
 typedef struct Timer
 {

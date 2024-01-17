@@ -1,7 +1,6 @@
-#include "renderer/ui.h"
-
-#include "renderer/renderer.h"
-#include "util/types.h"
+#include "alchemy/renderer/ui.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 

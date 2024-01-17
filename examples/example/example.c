@@ -1,8 +1,8 @@
 #include "example.h"
-#include "renderer/renderer.h"
-#include "state.h"
-#include "util/alchemy_math.h"
-#include "util/types.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/state.h"
+#include "alchemy/util/math.h"
+#include "alchemy/util/types.h"
 
 #include "ui_overview.h"
 

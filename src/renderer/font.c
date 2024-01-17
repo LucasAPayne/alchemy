@@ -1,8 +1,8 @@
-#include "renderer/font.h"
-#include "renderer/renderer.h"
-#include "util/alchemy_math.h"
-#include "util/alchemy_memory.h"
-#include "util/types.h"
+#include "alchemy/renderer/font.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/math.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 

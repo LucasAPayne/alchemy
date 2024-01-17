@@ -1,6 +1,6 @@
-#include "window.h"
-#include "input.h"
-#include "renderer/renderer.h"
+#include "alchemy/window.h"
+#include "alchemy/input.h"
+#include "alchemy/renderer/renderer.h"
 
 internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 color, f32 line_thickness)
 {

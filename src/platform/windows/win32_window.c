@@ -1,5 +1,5 @@
-#include "window.h"
-#include "util/types.h"
+#include "alchemy/window.h"
+#include "alchemy/util/types.h"
 
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN

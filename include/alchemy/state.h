@@ -1,10 +1,10 @@
 #pragma once
 
-#include "input.h"
-#include "window.h"
-#include "renderer/renderer.h"
-#include "util/alchemy_memory.h"
-#include "util/types.h"
+#include "alchemy/input.h"
+#include "alchemy/window.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/types.h"
 
 #define UPDATE_AND_RENDER(name) void name(GameMemory* memory, Input* input, Renderer* renderer, Window window, f32 delta_time)
 typedef UPDATE_AND_RENDER(UpdateAndRender);

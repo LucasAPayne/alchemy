@@ -10,8 +10,8 @@
 #define NK_KEYSTATE_BASED_INPUT
 #include <nuklear/nuklear.h>
 
-#include "input.h"
-#include "renderer/texture.h"
+#include "alchemy/input.h"
+#include "alchemy/renderer/texture.h"
 
 typedef struct Renderer Renderer;
 

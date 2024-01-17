@@ -1,5 +1,5 @@
-#include "renderer/shader.h"
-#include "util/types.h"
+#include "alchemy/renderer/shader.h"
+#include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 

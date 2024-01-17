@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/types.h"
+#include "alchemy/util/types.h"
 
 u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path);
 void shader_bind(u32 id);

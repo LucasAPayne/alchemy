@@ -1,6 +1,6 @@
-#include "renderer/sprite.h"
-#include "renderer/renderer.h"
-#include "util/alchemy_math.h"
+#include "alchemy/renderer/sprite.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/math.h"
 
 #include <glad/glad.h>
 

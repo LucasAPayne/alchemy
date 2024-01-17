@@ -1,5 +1,5 @@
-#include "renderer/texture.h"
-#include "renderer/renderer.h"
+#include "alchemy/renderer/texture.h"
+#include "alchemy/renderer/renderer.h"
 
 #include <glad/glad.h>
 #include <stb_image/stb_image.h>

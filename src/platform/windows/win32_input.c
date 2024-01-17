@@ -1,6 +1,6 @@
-#include "input.h"
-#include "window.h"
-#include "util/types.h"
+#include "alchemy/input.h"
+#include "alchemy/window.h"
+#include "alchemy/util/types.h"
 
 #include <windows.h>
 #include <Windowsx.h>

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "input.h"
-#include "sound.h"
-#include "renderer/ui.h"
-#include "state.h"
-#include "util/alchemy_memory.h"
-#include "util/types.h"
-#include "util/time.h"
-#include "renderer/renderer.h"
+#include "alchemy/input.h"
+#include "alchemy/sound.h"
+#include "alchemy/renderer/ui.h"
+#include "alchemy/state.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/types.h"
+#include "alchemy/util/time.h"
+#include "alchemy/renderer/renderer.h"
 
 typedef struct Player
 {

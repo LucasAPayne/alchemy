@@ -1,9 +1,9 @@
 #include "example.h"
 
-#include "input.h"
-#include "window.h"
-#include "state.h"
-#include "util/types.h"
+#include "alchemy/input.h"
+#include "alchemy/window.h"
+#include "alchemy/state.h"
+#include "alchemy/util/types.h"
 
 int main(void)
 {

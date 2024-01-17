@@ -1,13 +1,13 @@
 #pragma once
 
-#include "window.h"
-#include "renderer/font.h"
-#include "renderer/shader.h"
-#include "renderer/sprite.h"
-#include "renderer/texture.h"
-#include "renderer/ui.h"
-#include "util/alchemy_math.h"
-#include "util/types.h"
+#include "alchemy/window.h"
+#include "alchemy/renderer/font.h"
+#include "alchemy/renderer/shader.h"
+#include "alchemy/renderer/sprite.h"
+#include "alchemy/renderer/texture.h"
+#include "alchemy/renderer/ui.h"
+#include "alchemy/util/math.h"
+#include "alchemy/util/types.h"
 
 typedef struct RenderObject
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "window.h"
-#include "util/types.h"
+#include "alchemy/window.h"
+#include "alchemy/util/types.h"
 
 #define MAX_GAMEPADS 4
 

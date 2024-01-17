@@ -1,5 +1,5 @@
-#include "util/alchemy_memory.h"
-#include "util/types.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/types.h"
 
 #include <windows.h>
 

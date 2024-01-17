@@ -1,5 +1,5 @@
-#include "renderer/renderer.h"
-#include "window.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/window.h"
 
 #include <glad/glad.h>
 
