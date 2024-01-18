@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "memory.h"
 
 // TODO(lucas): Make variants that take an arena and allocate and return the string
 
@@ -30,3 +31,13 @@ inline void str_cat(char* source_a, usize source_a_len, char* source_b, usize so
     dest[total_len++] = 0;
 }
 
+inline char* str_copy(char* src, MemoryArena* arena)
+{
+    usize len = str_len(src);
+    char* result = push_array(arena, len+1, char);
+    for (usize i = 0; i < len; ++i)
+        result[i] = src[i];
+
+    result[len] = '\0';
+    return result;
+}

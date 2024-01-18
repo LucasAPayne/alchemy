@@ -2,32 +2,13 @@
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/util/math.h"
 #include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 
 // TODO(lucas): Replace with custom methods
 #include <string.h> // strncpy
-
-internal int str_len(char* s)
-{
-    int count = 0;
-    while(*s++)
-        ++count;
-    
-    return count;
-}
-
-internal char* str_copy(char* src, MemoryArena* arena)
-{
-    usize len = str_len(src);
-    char* result = push_array(arena, len+1, char);
-    for (usize i = 0; i < len; ++i)
-        result[i] = src[i];
-
-    result[len] = '\0';
-    return result;
-}
 
 Font font_load_from_file(const char* filename)
 {
@@ -92,9 +73,7 @@ Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px
 {
     Text text = {0};
 
-    // TODO(lucas): Should this be a copy?
-    text.string = str_copy(string, &renderer->scratch_arena);
-
+    text.string = string;
     text.font = font;
     text.position = position;
     text.color = color_black();
