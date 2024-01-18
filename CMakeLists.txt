@@ -71,6 +71,9 @@ endif()
 option(CGLM_STATIC "Static build" ON)
 add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 
+target_compile_definitions(alchemy PRIVATE
+                           ALCHEMY_INSTALL_PATH="${CMAKE_CURRENT_LIST_DIR}"
+                           CMAKE_EXPORT_COMPILE_COMMANDS=1)
 if (MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
 

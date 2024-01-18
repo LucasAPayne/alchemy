@@ -1,32 +1,7 @@
 #include "alchemy/state.h"
+#include "alchemy/util/str.h"
 
 #include <windows.h>
-
-// TODO(lucas): Move these out into a string library when necessary
-internal int str_len(char* s)
-{
-    int count = 0;
-    while(*s++)
-        ++count;
-    
-    return count;
-}
-
-internal void str_cat(char* source_a, usize source_a_len, char* source_b, usize source_b_len,
-                 char* dest, usize dest_len)
-{
-    // TODO(lucas): dest bounds checking
-    // TODO(lucas): Check for null terminator before adding
-
-    // For now, just loop through each source string and add each character one at a time to the dest string
-    for (usize i = 0; i < source_a_len; ++i)
-        *dest++ = *source_a++;
-
-    for (usize i = 0; i < source_b_len; ++i)
-        *dest++ = *source_b++;
-
-    *dest++ = 0;
-}
 
 internal char* win32_filename_from_full_path(char* full_path)
 {
@@ -144,7 +119,7 @@ internal void input_loop_begin_recording(GameCode* game_code, GameMemory* game_m
         return;
     }
 
-    char filename[MAX_FILENAME_LEN];
+    char filename[MAX_FILEPATH_LEN];
     input_loop_get_file_location(game_code, true, filename, sizeof(filename));
     replay_buffer->recording_handle = CreateFileA(filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
     replay_buffer->is_recording = true;
@@ -173,7 +148,7 @@ internal void input_loop_begin_playback(GameCode* game_code, GameMemory* game_me
         return;
     }
 
-    char filename[MAX_FILENAME_LEN];
+    char filename[MAX_FILEPATH_LEN];
     input_loop_get_file_location(game_code, true, filename, sizeof(filename));
     game_code->replay_buffer.playback_handle = CreateFileA(filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
     replay_buffer->is_playing = true;

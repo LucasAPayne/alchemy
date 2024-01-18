@@ -11,7 +11,7 @@ typedef UPDATE_AND_RENDER(UpdateAndRender);
 
 // TODO(lucas): This #define is based on MAX_PATH from windows.h
 // This needs to be changed in the future.
-#define MAX_FILENAME_LEN 260
+#define MAX_FILEPATH_LEN 260
 
 typedef struct RecordedInput
 {
@@ -23,7 +23,7 @@ typedef struct ReplayBufer
 {
     void* file_handle;
     void* memory_map;
-    char filename[MAX_FILENAME_LEN];
+    char filename[MAX_FILEPATH_LEN];
     void* memory_block; // Copy of game memory
     usize total_size;
     void* recording_handle;
@@ -43,10 +43,10 @@ typedef struct GameCode
 
     b32 is_valid;
 
-    char exe_full_path[MAX_FILENAME_LEN];
-    char dll_full_path[MAX_FILENAME_LEN];
-    char temp_dll_full_path[MAX_FILENAME_LEN];
-    char lock_file_full_path[MAX_FILENAME_LEN];
+    char exe_full_path[MAX_FILEPATH_LEN];
+    char dll_full_path[MAX_FILEPATH_LEN];
+    char temp_dll_full_path[MAX_FILEPATH_LEN];
+    char lock_file_full_path[MAX_FILEPATH_LEN];
 
     ReplayBuffer replay_buffer;
 } GameCode;

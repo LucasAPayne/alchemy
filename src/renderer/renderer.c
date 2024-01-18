@@ -1,6 +1,8 @@
 #include "alchemy/renderer/renderer.h"
+#include "alchemy/state.h" // MAX_FILEPATH_LEN
 #include "alchemy/util/math.h"
 #include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
 
 #include <glad/glad.h>
 
@@ -536,6 +538,11 @@ internal void render_command_buffer_output(Renderer* renderer)
     }    
 }
 
+internal void path_from_install_dir(char* path, char* dest)
+{
+    str_cat(ALCHEMY_INSTALL_PATH, str_len(ALCHEMY_INSTALL_PATH), path, str_len(path), dest, MAX_FILEPATH_LEN);
+}
+
 Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size)
 {
     Renderer renderer = {0};
@@ -564,12 +571,34 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     if (renderer.config.msaa_level > max_samples)
         renderer.config.msaa_level = max_samples;
 
-    // TODO(lucas): Get absolute paths to resources
-    u32 framebuffer_shader = shader_init("shaders/framebuffer.vert", "shaders/framebuffer.frag");
-    u32 poly_shader        = shader_init("shaders/poly.vert", "shaders/poly.frag");
-    u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
-    u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
-    u32 ui_shader          = shader_init("shaders/ui.vert", "shaders/ui.frag");
+    // TODO(lucas): Better path joining that automatically inserts slashes
+    char framebuffer_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char framebuffer_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char poly_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char poly_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char sprite_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char sprite_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char font_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char font_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char ui_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char ui_frag_shader_full_path[MAX_FILEPATH_LEN];
+
+    path_from_install_dir("/res/shaders/framebuffer.vert", framebuffer_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/framebuffer.frag", framebuffer_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.vert", poly_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.frag", poly_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.vert", sprite_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.frag", sprite_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/font.vert", font_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/font.frag", font_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.vert", ui_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.frag", ui_frag_shader_full_path);
+
+    u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
+    u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
+    u32 sprite_shader      = shader_init(sprite_vert_shader_full_path, sprite_frag_shader_full_path);
+    u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
+    u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
 
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.rect_renderer        = rect_renderer_init(poly_shader);
