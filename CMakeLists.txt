@@ -13,6 +13,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # TODO(lucas): Set C standard and disable C extensions
 project(alchemy VERSION 0.1)
 
+option(ALCHEMY_INCLUDE_EXAMPLES "Include example projects" OFF)
+
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
 set(ALCHEMY_SOURCE
@@ -62,7 +64,7 @@ target_include_directories(alchemy SYSTEM PUBLIC
 
 target_link_libraries(alchemy PRIVATE ${ALCHEMY_LIBS})
 
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
     target_link_libraries(alchemy PRIVATE ${PROJECT_SOURCE_DIR}/lib/freetype/debug/freetype.lib)
 else()
     target_link_libraries(alchemy PRIATE ${PROJECT_SOURCE_DIR}/lib/freetype/release/freetype.lib)
@@ -74,10 +76,10 @@ add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 target_compile_definitions(alchemy PRIVATE
                            ALCHEMY_INSTALL_PATH="${CMAKE_CURRENT_LIST_DIR}"
                            CMAKE_EXPORT_COMPILE_COMMANDS=1)
-if (MSVC)
+if(MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
 
-    if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
         target_compile_options(alchemy PRIVATE ${DEBUG_COMPILER_FLAGS})
         target_compile_definitions(alchemy PUBLIC ALCHEMY_DEBUG)
     endif()
@@ -93,5 +95,7 @@ macro(RANDOMIZE_PDB_NAME target)
         PDB_NAME ${pdbname})
 endmacro()
 
-add_subdirectory(examples/example)
-add_subdirectory(examples/snake)
+if(ALCHEMY_INCLUDE_EXAMPLES)
+    add_subdirectory(examples/example)
+    add_subdirectory(examples/snake)
+endif()

@@ -12,7 +12,7 @@ target_link_libraries(example PRIVATE alchemy cglm_headers)
 # These steps are not necessary, but it makes working with relative paths easier
 set_target_properties(example PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/res)
 
-if (MSVC)
+if(MSVC)
     target_compile_options(example PRIVATE ${COMMON_COMPILER_FLAGS})
     target_compile_options(example_dll PRIVATE ${COMMON_COMPILER_FLAGS})
 
@@ -20,7 +20,7 @@ if (MSVC)
     # /subsystem:windows and /entry:mainCRTStartup
     target_link_options(example PRIVATE /subsystem:windows /entry:mainCRTStartup)
 
-    if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
         target_compile_options(example PRIVATE ${DEBUG_COMPILER_FLAGS})
         target_compile_options(example_dll PRIVATE ${DEBUG_COMPILER_FLAGS})
     endif()
