@@ -1,6 +1,8 @@
-#include "renderer/renderer.h"
-#include "util/alchemy_math.h"
-#include "util/alchemy_memory.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/state.h" // MAX_FILEPATH_LEN
+#include "alchemy/util/math.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
 
 #include <glad/glad.h>
 
@@ -150,6 +152,13 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
     vao_bind(0);    
 
     return framebuffer_renderer;
+}
+
+internal RenderObject ui_renderer_init(u32 shader)
+{
+    RenderObject ui_renderer = {0};
+    ui_renderer.shader = shader;
+    return ui_renderer;
 }
 
 internal RenderObject sprite_renderer_init(u32 shader)
@@ -310,6 +319,34 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     texture_delete(&framebuffer->texture);
     rbo_delete(&framebuffer->rbo);
     fbo_delete(&framebuffer->id);
+}
+
+internal void renderer_gen_texture(Texture tex)
+{
+    if (!tex.data)
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    // TODO(lucas): Make options configurable
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GLenum format = 0;
+    switch(tex.channels)
+    {
+        case 1: format = GL_RED;  break;
+        case 2: format = GL_RG;   break;
+        case 3: format = GL_RGB;  break;
+        case 4: format = GL_RGBA; break;
+        default: break;
+    }
+
+    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
+    glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
@@ -501,9 +538,16 @@ internal void render_command_buffer_output(Renderer* renderer)
     }    
 }
 
-Renderer renderer_init(int viewport_width, int viewport_height, usize command_buffer_size)
+internal void path_from_install_dir(char* path, char* dest)
+{
+    str_cat(ALCHEMY_INSTALL_PATH, str_len(ALCHEMY_INSTALL_PATH), path, str_len(path), dest, MAX_FILEPATH_LEN);
+}
+
+Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size)
 {
     Renderer renderer = {0};
+
+    opengl_init(window);
 
     glEnable(GL_MULTISAMPLE);
 
@@ -527,21 +571,53 @@ Renderer renderer_init(int viewport_width, int viewport_height, usize command_bu
     if (renderer.config.msaa_level > max_samples)
         renderer.config.msaa_level = max_samples;
 
-    // TODO(lucas): These relative paths might cause problems in the future
-    u32 framebuffer_shader = shader_init("shaders/framebuffer.vert", "shaders/framebuffer.frag");
-    u32 poly_shader        = shader_init("shaders/poly.vert", "shaders/poly.frag");
-    u32 sprite_shader      = shader_init("shaders/sprite.vert", "shaders/sprite.frag");
-    u32 font_shader        = shader_init("shaders/font.vert", "shaders/font.frag");
+    // TODO(lucas): Better path joining that automatically inserts slashes
+    char framebuffer_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char framebuffer_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char poly_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char poly_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char sprite_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char sprite_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char font_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char font_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char ui_vert_shader_full_path[MAX_FILEPATH_LEN];
+    char ui_frag_shader_full_path[MAX_FILEPATH_LEN];
+
+    path_from_install_dir("/res/shaders/framebuffer.vert", framebuffer_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/framebuffer.frag", framebuffer_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.vert", poly_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.frag", poly_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.vert", sprite_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.frag", sprite_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/font.vert", font_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/font.frag", font_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.vert", ui_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.frag", ui_frag_shader_full_path);
+
+    u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
+    u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
+    u32 sprite_shader      = shader_init(sprite_vert_shader_full_path, sprite_frag_shader_full_path);
+    u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
+    u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
 
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.rect_renderer        = rect_renderer_init(poly_shader);
     renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
     renderer.font_renderer        = font_renderer_init(font_shader);
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
+    renderer.ui_renderer          = ui_renderer_init(ui_shader);
     
+    renderer.ui_render_state = ui_render_state_init(ui_shader);
+
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
+
+    for (u32 i = 0; i < ARRAY_COUNT(renderer.tex_ids); ++i)
+    {
+        RenderID* tex_id = renderer.tex_ids + i;
+        glGenTextures(1, &tex_id->id);
+    }
 
     return renderer;
 }
@@ -556,6 +632,7 @@ void renderer_delete(Renderer* renderer)
 
     framebuffer_delete(&renderer->framebuffer);
     framebuffer_delete(&renderer->intermediate_framebuffer);
+    ui_render_state_shutdown(&renderer->ui_render_state);
 }
 
 void renderer_new_frame(Renderer* renderer, Window window)
@@ -594,12 +671,25 @@ void renderer_new_frame(Renderer* renderer, Window window)
     shader_set_m4(renderer->sprite_renderer.shader, "projection", projection, false);
     shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
 
+    ui_new_frame(renderer, window.width, window.height);
+
     // Clear viewport
     renderer_clear(color_black());
 }
 
 void renderer_render(Renderer* renderer)
 {
+    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+    {
+        RenderID* tex_id = renderer->tex_ids + i;
+        if (tex_id->used)
+        {
+            Texture tex = renderer->textures_to_generate[i];
+            renderer_gen_texture(tex);
+            glGenTextures(1, &tex_id->id);
+        }
+    }
+
     rect viewport = renderer->viewport;
 
     render_command_buffer_output(renderer);
@@ -637,6 +727,13 @@ void renderer_render(Renderer* renderer)
     memory_arena_clear(&renderer->scratch_arena);
     memory_arena_clear(&renderer->command_buffer_arena);
     render_command_buffer_clear(&renderer->command_buffer);
+
+    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+        renderer->textures_to_generate[i] = (Texture){0};
+
+    // TODO(lucas): Use renderer AA settings
+    ui_render(renderer, NK_ANTI_ALIASING_ON);
+    
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -696,5 +793,29 @@ void draw_text(Renderer* renderer, Text text)
     RenderCommandText* cmd = render_command_push(&renderer->command_buffer, RenderCommandText);
     if (!cmd)
         return;
+    char* text_copy = str_copy(text.string, &renderer->scratch_arena);
     cmd->text = text;
+    cmd->text.string = text_copy;
+}
+
+u32 renderer_next_tex_id(Renderer* renderer)
+{
+    u32 id = 0;
+    
+    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    {
+        id = renderer->tex_ids[renderer->tex_index].id;
+        renderer->tex_ids[renderer->tex_index].used = true;
+    }
+
+    return id;
+}
+
+void renderer_push_texture(Renderer* renderer, Texture tex)
+{
+    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    {
+        renderer->textures_to_generate[renderer->tex_index] = tex;
+        ++renderer->tex_index;
+    }
 }

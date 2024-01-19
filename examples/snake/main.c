@@ -1,6 +1,6 @@
-#include "window.h"
-#include "input.h"
-#include "renderer/renderer.h"
+#include "alchemy/window.h"
+#include "alchemy/input.h"
+#include "alchemy/renderer/renderer.h"
 
 internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 color, f32 line_thickness)
 {
@@ -38,7 +38,7 @@ int main(void)
     window_icon_set_from_memory(&window, potion_icon);
 
     Input input = {0};
-    Renderer renderer = renderer_init(initial_window_width, initial_window_height, MEGABYTES(4));
+    Renderer renderer = renderer_init(window, initial_window_width, initial_window_height, MEGABYTES(4));
     renderer.clear_color = (v4){0.1f, 0.1f, 0.1f, 1.0f};
 
     while(window.open)

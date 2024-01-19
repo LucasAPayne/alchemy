@@ -629,8 +629,10 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
 
                 nk_label(ctx, "Default:", NK_TEXT_LEFT);
-                if (nk_widget_is_hovered(ctx))
-                    cursor_set_from_system(CURSOR_TEXT);
+                // TODO(lucas): Need to detect cursor leaving bounds since the cursor is no longer set
+                // every frame due to animations.
+                // if (nk_widget_is_hovered(ctx))
+                //     cursor_set_from_system(CURSOR_TEXT);
                 nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_default);
                 
                 nk_label(ctx, "Int:", NK_TEXT_LEFT);

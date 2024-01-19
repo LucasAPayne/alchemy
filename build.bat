@@ -1,8 +1,8 @@
 @echo off
 
-set startup=%1
 IF NOT EXIST build mkdir build
 pushd build
-cmake -DCMAKE_BUILD_TYPE=Debug -DSTARTUP:STRING=%startup% ..
-cmake --build . 
+DEL *.pdb >nul 2>&1
+cmake -DCMAKE_BUILD_TYPE=Debug -DALCHEMY_INCLUDE_EXAMPLES=ON ..
+cmake --build . -j
 popd

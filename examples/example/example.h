@@ -1,12 +1,13 @@
 #pragma once
 
-#include "input.h"
-#include "sound.h"
-#include "ui.h"
-#include "util/alchemy_memory.h"
-#include "util/types.h"
-#include "util/time.h"
-#include "renderer/renderer.h"
+#include "alchemy/input.h"
+#include "alchemy/sound.h"
+#include "alchemy/renderer/ui.h"
+#include "alchemy/state.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/types.h"
+#include "alchemy/util/time.h"
+#include "alchemy/renderer/renderer.h"
 
 typedef struct Player
 {
@@ -24,8 +25,8 @@ typedef struct Player
 
 typedef struct ExampleState
 {
-    Input input;
-    Renderer renderer;
+    Input* input;
+    Renderer* renderer;
 
     Font immortal_font;
     Font cardinal_font;
@@ -47,12 +48,9 @@ typedef struct ExampleState
 
     void* sword_cursor;
 
-    struct nk_alchemy_state alchemy_state;
-    struct nk_font* immortal;
-
     MemoryArena transient_arena;
 } ExampleState;
 
-void example_state_init(ExampleState* state, Window window);
-void example_state_delete(ExampleState* state);
-void example_update_and_render(ExampleState* state, Window window, f32 delta_time);
+ALCHEMY_EXPORT UPDATE_AND_RENDER(update_and_render);
+
+// void example_state_delete(ExampleState* state);

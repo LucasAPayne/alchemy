@@ -1,8 +1,9 @@
-#include "renderer/font.h"
-#include "renderer/renderer.h"
-#include "util/alchemy_math.h"
-#include "util/alchemy_memory.h"
-#include "util/types.h"
+#include "alchemy/renderer/font.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/math.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
+#include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 
@@ -68,12 +69,11 @@ void text_scale(Text* text, f32 factor)
     text_set_size_px(text, new_size);
 }
 
-Text text_init(char* string, Font* font, v2 position, u32 px)
+Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
 
     text.string = string;
-
     text.font = font;
     text.position = position;
     text.color = color_black();
@@ -409,12 +409,12 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
     return parsed_text;
 }
 
-TextArea text_area_init(rect bounds, char* str, Font* font, u32 text_size_px)
+TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;
     v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
-    result.text = text_init(str, font, text_pos, text_size_px);
+    result.text = text_init(renderer, str, font, text_pos, text_size_px);
     return result;
 }
 

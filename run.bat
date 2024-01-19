@@ -1,5 +1,6 @@
 @echo off
 
+set example=%1%
 pushd res
-start ../build/alchemy.exe
+start ../build/%example%.exe
 popd ..
