@@ -109,9 +109,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 {
     srand(0);
 
-    state->renderer = renderer;
     state->input = input;
-    state->renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
+    renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
@@ -207,38 +206,38 @@ UPDATE_AND_RENDER(update_and_render)
     /* Draw */
     struct nk_context* ctx = &renderer->ui_render_state.ctx;
 
-    draw_sprite(state->renderer, state->logo);
+    draw_sprite(renderer, state->logo);
 
     Player* player = &state->player;
-    draw_quad(state->renderer, player->position, player->size, player->color, player->rotation);
+    draw_quad_outline(renderer, player->position, player->size, player->color, player->rotation, 5.0f);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
     engine_text.color = font_color;
-    draw_text(state->renderer, engine_text);
+    draw_text(renderer, engine_text);
 
     char buffer[512];
     sprintf_s(buffer, ARRAY_COUNT(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
     Text frame_time = text_init(renderer, buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
     frame_time.color = font_color;
-    draw_text(state->renderer, frame_time);
+    draw_text(renderer, frame_time);
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
     Text cooldown_text = text_init(renderer, cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
-        draw_text(state->renderer, cooldown_text);
+        draw_text(renderer, cooldown_text);
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     Text stopwatch_text = text_init(renderer, stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
     stopwatch_text.color = font_color;
-    draw_text(state->renderer, stopwatch_text);
+    draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
     rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
-    draw_quad(state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
+    draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
@@ -248,7 +247,7 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
     text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(state->renderer, text_area);
+    draw_text_area(renderer, text_area);
     
     ui_overview(ctx, window.width);
 

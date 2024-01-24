@@ -349,30 +349,21 @@ internal void renderer_gen_texture(Texture tex)
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
+void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){position.x, position.y, 0.0f});
+    v2 delta = v2_sub(origin, position);
 
-    if (renderer->config.rotate_quad_from_center)
+    if (rotation)
     {
-        // NOTE(lucas): The origin of a quad is at the bottom left,
-        // but we want the origin to appear in the center of the quad
-        // for rotation. So, before rotation, translate the quad right and up by half its size.
-        // After the rotation, undo this translation.
-        model = m4_translate(model, (v3){0.5f*size.x, 0.5f*size.y, 0.0f});
+        model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
         model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
-        model = m4_translate(model, (v3){-0.5f*size.x, -0.5f*size.y, 0.0f});
-    }
-    else
-    {
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
-    // Scale quad to appropriate size
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
-    // Set model matrix and color shader values
     shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
     shader_set_v4(renderer->rect_renderer.shader, "color", color);
 
@@ -381,9 +372,18 @@ internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f3
     glBindVertexArray(0);
 }
 
-internal void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
+void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness)
+{
+    output_quad(renderer, position, origin, (v2){size.x, thickness}, color, rotation);
+    output_quad(renderer, (v2){position.x + size.x - thickness, position.y}, origin, (v2){thickness, size.y}, color, rotation);
+    output_quad(renderer, (v2){position.x, position.y + size.y - thickness}, origin, (v2){size.x, thickness}, color, rotation);
+    output_quad(renderer, position, origin, (v2){thickness, size.y}, color, rotation);
+}
+
+void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     v2 length = v2_abs(v2_sub(start, end));
+    v2 origin = v2_scale(v2_add(start, end), 0.5f);
 
     // NOTE(lucas): Horizontal and vertical lines need special treatment
     // since they will cause trig functions to be undefined
@@ -402,14 +402,10 @@ internal void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 th
     else if (length.y && !length.x) // Vertical line
         size = (v2){thickness, length.y};
 
-    // NOTE(lucas): Draw a quad, but rotate from origin instead of center
-    b32 user_rot_setting = renderer->config.rotate_quad_from_center;
-    renderer->config.rotate_quad_from_center = false;
-    output_quad(renderer, start, size, color, glm_deg(rotation));
-    renderer->config.rotate_quad_from_center = user_rot_setting;
+    output_quad(renderer, start, origin, size, color, glm_deg(rotation));
 }
 
-internal void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
+void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){position.x, position.y, 0.0f});
@@ -459,10 +455,8 @@ internal void output_circle(Renderer* renderer, v2 position, f32 radius, v4 colo
 
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
 {
-    // RenderCommandBuffer* result = push_struct(arena, RenderCommandBuffer);
     RenderCommandBuffer result = {0};
     result.base = (u8*)push_size(arena, max_size);
-    // result.size = sizeof(RenderCommandBuffer);
     result.size = 0;
     result.max_size = max_size;
     return result;
@@ -501,14 +495,22 @@ internal void render_command_buffer_output(Renderer* renderer)
             case RENDER_COMMAND_RenderCommandLine:
             {
                 RenderCommandLine* cmd = (RenderCommandLine*)header;
-                output_line(renderer, cmd->start, cmd->end, cmd->color, cmd->line_thickness);
+                output_line(renderer, cmd->start, cmd->end, cmd->color, cmd->thickness);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandQuad:
             {
                 RenderCommandQuad* cmd = (RenderCommandQuad*)header;
-                output_quad(renderer, cmd->position, cmd->size, cmd->color, cmd->rotation);
+                output_quad(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandQuadOutline:
+            {
+                RenderCommandQuadOutline* cmd = (RenderCommandQuadOutline*)header;
+                output_quad_outline(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation,
+                                    cmd->thickness);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -561,7 +563,6 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
-    renderer.config.rotate_quad_from_center = true;
     renderer.config.circle_line_segments = 128;
     renderer.config.msaa_level = 16;
 
@@ -753,7 +754,7 @@ void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
         return;
-    cmd->line_thickness = thickness;
+    cmd->thickness = thickness;
     cmd->start = start;
     cmd->end = end;
     cmd->color = color;
@@ -763,11 +764,27 @@ void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
     RenderCommandQuad* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuad);
     if (!cmd)
-        return; 
+        return;
+    v2 origin = v2_add(position, v2_scale(size, 0.5f));
     cmd->position = position;
+    cmd->origin = origin;
     cmd->size = size;
     cmd->color = color;
     cmd->rotation = rotation;
+}
+
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness)
+{
+    RenderCommandQuadOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadOutline);
+    if (!cmd)
+        return;
+    v2 origin = v2_add(position, v2_scale(size, 0.5f));
+    cmd->position = position;
+    cmd->origin = origin;
+    cmd->size = size;
+    cmd->color = color;
+    cmd->rotation = rotation;
+    cmd->thickness = thickness;
 }
 
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)

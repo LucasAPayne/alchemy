@@ -27,7 +27,6 @@ typedef struct Framebuffer
 typedef struct RendererConfig
 {
     b32 wireframe_mode;
-    b32 rotate_quad_from_center;
     u32 circle_line_segments;
     int msaa_level;
 } RendererConfig;
@@ -36,6 +35,7 @@ typedef enum RenderCommandType
 {
     RENDER_COMMAND_RenderCommandLine,
     RENDER_COMMAND_RenderCommandQuad,
+    RENDER_COMMAND_RenderCommandQuadOutline,
     RENDER_COMMAND_RenderCommandCircle,
     RENDER_COMMAND_RenderCommandSprite,
     RENDER_COMMAND_RenderCommandText
@@ -50,7 +50,7 @@ typedef struct RenderCommandLine
 {
     RenderCommand header;
     v4 color;
-    f32 line_thickness;
+    f32 thickness;
     v2 start;
     v2 end;
 } RenderCommandLine;
@@ -58,11 +58,23 @@ typedef struct RenderCommandLine
 typedef struct RenderCommandQuad
 {
     RenderCommand header;
-    f32 rotation;
     v2 position;
+    v2 origin;
     v2 size;
     v4 color;
+    f32 rotation;
 } RenderCommandQuad;
+
+typedef struct RenderCommandQuadOutline
+{
+    RenderCommand header;
+    v2 position;
+    v2 origin;
+    v2 size;
+    v4 color;
+    f32 rotation;
+    f32 thickness;
+} RenderCommandQuadOutline;
 
 typedef struct RenderCommandCircle
 {
@@ -156,8 +168,11 @@ void renderer_clear(v4 color);
 
 // TODO(lucas): Line, Triangle, Quad structs?
 // TODO(lucas): Rounded edges option
+// TODO(lucas): Add additional functions that take in origins,
+// and consider taking rotation out of the default functions
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness);
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
@@ -174,3 +189,9 @@ inline v4 color_cyan(void)        {return (v4){0.0f, 1.0f, 1.0f, 1.0f};}
 inline v4 color_magenta(void)     {return (v4){1.0f, 0.0f, 1.0f, 1.0f};}
 inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
+
+// NOTE(lucas): For internal use only
+void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation);
+void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness);
+void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
+void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
