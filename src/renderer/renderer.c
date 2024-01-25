@@ -193,10 +193,32 @@ internal RenderObject sprite_renderer_init(u32 shader)
     return sprite_renderer;
 }
 
-internal RenderObject rect_renderer_init(u32 shader)
+internal RenderObject triangle_renderer_init(u32 shader)
 {
-    RenderObject rect_renderer = {0};
-    rect_renderer.shader = shader;
+    RenderObject triangle_renderer = {0};
+    triangle_renderer.shader = shader;
+
+    u32 indices[] =
+    {
+        0, 1, 2
+    };
+
+    triangle_renderer.vao = vao_init();
+    triangle_renderer.vbo = vbo_init_empty();
+    triangle_renderer.ibo = ibo_init(indices, sizeof(indices));
+
+    vertex_layout_set(0, 2, 6*sizeof(f32), 0);
+    vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
+
+    vao_bind(0);
+
+    return triangle_renderer;
+}
+
+internal RenderObject quad_renderer_init(u32 shader)
+{
+    RenderObject quad_renderer = {0};
+    quad_renderer.shader = shader;
 
     f32 vertices[] =
     {
@@ -213,16 +235,16 @@ internal RenderObject rect_renderer_init(u32 shader)
         1, 2, 3
     };
 
-    rect_renderer.vao = vao_init();
-    rect_renderer.vbo = vbo_init(vertices, sizeof(vertices));
-    rect_renderer.ibo = ibo_init(indices, sizeof(indices));
+    quad_renderer.vao = vao_init();
+    quad_renderer.vbo = vbo_init(vertices, sizeof(vertices));
+    quad_renderer.ibo = ibo_init(indices, sizeof(indices));
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
+
+    vao_bind(0);    
     
-    glBindVertexArray(0);
-    
-    return rect_renderer;
+    return quad_renderer;
 }
 
 internal RenderObject font_renderer_init(u32 shader)
@@ -245,7 +267,7 @@ internal RenderObject font_renderer_init(u32 shader)
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
 
-    glBindVertexArray(0);
+    vao_bind(0);
 
     return font_renderer;
 }
@@ -260,7 +282,7 @@ internal RenderObject circle_renderer_init(u32 shader, u32 segs)
     circle_renderer.ibo = ibo_init_empty();
 
     vertex_layout_set(0, 2, 2*sizeof(f32), 0);
-    glBindVertexArray(0);
+    vao_bind(0);
 
     return circle_renderer;
 }
@@ -350,6 +372,51 @@ internal void renderer_gen_texture(Texture tex)
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
+void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation)
+{
+    v2 b_rel = v2_sub(b, a);
+    v2 c_rel = v2_sub(c, a);
+    v2 axis = {abs_f32(max(b.x, c.x) - a.x), abs_f32(max(b.y, c.y) - a.y)};
+    f32 inv_axis_mag_sq = 1.0f / v2_mag(axis);
+    v2 a_norm = v2_zero();
+    v2 b_norm = v2_scale(b_rel, inv_axis_mag_sq);
+    v2 c_norm = v2_scale(c_rel, inv_axis_mag_sq);
+
+    f32 vertices[] =
+    {
+        // pos              // color
+        b_norm.x, b_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        a_norm.x, a_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        c_norm.x, c_norm.y, 1.0f, 1.0f, 1.0f, 1.0f  // top
+    };
+
+    vao_bind(renderer->triangle_renderer.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->triangle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){a.x, a.y, 0.0f});
+    v2 delta = v2_abs(v2_sub(origin, a));
+
+    if (rotation)
+    {
+        model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
+    }
+
+    f32 width = b.x - a.x;
+    f32 height = c.y - a.y;
+    model = m4_scale(model, (v3){width, height, 1.0f});
+
+    shader_set_m4(renderer->triangle_renderer.shader, "model", model, 0);
+    shader_set_v4(renderer->triangle_renderer.shader, "color", color);
+
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+    vao_bind(0);
+}
+
 void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation)
 {
     m4 model = m4_identity();
@@ -365,12 +432,12 @@ void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, 
 
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
-    shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
-    shader_set_v4(renderer->rect_renderer.shader, "color", color);
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, 0);
+    shader_set_v4(renderer->quad_renderer.shader, "color", color);
 
-    glBindVertexArray(renderer->rect_renderer.vao);
+    vao_bind(renderer->quad_renderer.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    vao_bind(0);
 }
 
 void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness)
@@ -397,8 +464,8 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
 
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
-    shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
-    shader_set_v4(renderer->rect_renderer.shader, "color", color_white());
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, 0);
+    shader_set_v4(renderer->quad_renderer.shader, "color", color_white());
 
     f32 default_vertices[] =
     {
@@ -419,12 +486,12 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     };
 
     // TODO(lucas): Is there a better way to handle making sure vertex colors do not persist?
-    glBindVertexArray(renderer->rect_renderer.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->rect_renderer.vbo);
+    vao_bind(renderer->quad_renderer.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->quad_renderer.vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    glBindVertexArray(0);
+    vao_bind(0);
 }
 
 void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
@@ -459,8 +526,8 @@ void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     model = m4_scale(model, (v3){radius, radius, 1.0f});
 
     // Set model matrix and color shader values
-    shader_set_m4(renderer->rect_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->rect_renderer.shader, "color", color);
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->quad_renderer.shader, "color", color);
 
     // The number of triangles is 2 less than the number of line segments or points
     u32 segs = renderer->config.circle_line_segments;
@@ -488,7 +555,7 @@ void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
         indices[i+2] = index;
     }
 
-    glBindVertexArray(renderer->circle_renderer.vao);
+    vao_bind(renderer->circle_renderer.vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
     glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
@@ -497,7 +564,7 @@ void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    vao_bind(0);
 }
 
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
@@ -543,6 +610,13 @@ internal void render_command_buffer_output(Renderer* renderer)
             {
                 RenderCommandLine* cmd = (RenderCommandLine*)header;
                 output_line(renderer, cmd->start, cmd->end, cmd->color, cmd->thickness);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandTriangle:
+            {
+                RenderCommandTriangle* cmd = (RenderCommandTriangle*)header;
+                output_triangle(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -656,8 +730,9 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
     u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
 
+    renderer.triangle_renderer     = triangle_renderer_init(poly_shader);
+    renderer.quad_renderer        = quad_renderer_init(poly_shader);
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
-    renderer.rect_renderer        = rect_renderer_init(poly_shader);
     renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
     renderer.font_renderer        = font_renderer_init(font_shader);
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
@@ -681,7 +756,7 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
 void renderer_delete(Renderer* renderer)
 {
     render_object_delete(&renderer->circle_renderer);
-    render_object_delete(&renderer->rect_renderer);
+    render_object_delete(&renderer->quad_renderer);
     render_object_delete(&renderer->sprite_renderer);
     render_object_delete(&renderer->font_renderer);
     render_object_delete(&renderer->framebuffer_renderer);
@@ -723,7 +798,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
     // NOTE(lucas): Most shapes use the same shader,
     // so no need to set the uniform for each shape
-    shader_set_m4(renderer->rect_renderer.shader,   "projection", projection, false);
+    shader_set_m4(renderer->quad_renderer.shader,   "projection", projection, false);
     shader_set_m4(renderer->sprite_renderer.shader, "projection", projection, false);
     shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
 
@@ -813,6 +888,20 @@ void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
     cmd->start = start;
     cmd->end = end;
     cmd->color = color;
+}
+
+void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)
+{
+    RenderCommandTriangle* cmd = render_command_push(&renderer->command_buffer, RenderCommandTriangle);
+    if (!cmd)
+        return;
+    v2 origin = v2_scale(v2_add(v2_add(a, b), c), 1.0f/3.0f);
+    cmd->a = a;
+    cmd->b = b;
+    cmd->c = c;
+    cmd->origin = origin;
+    cmd->color = color;
+    cmd->rotation = rotation;
 }
 
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)

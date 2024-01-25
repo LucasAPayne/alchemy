@@ -34,6 +34,7 @@ typedef struct RendererConfig
 typedef enum RenderCommandType
 {
     RENDER_COMMAND_RenderCommandLine,
+    RENDER_COMMAND_RenderCommandTriangle,
     RENDER_COMMAND_RenderCommandQuad,
     RENDER_COMMAND_RenderCommandQuadOutline,
     RENDER_COMMAND_RenderCommandQuadGradient,
@@ -55,6 +56,17 @@ typedef struct RenderCommandLine
     v2 start;
     v2 end;
 } RenderCommandLine;
+
+typedef struct RenderCommandTriangle
+{
+    RenderCommand header;
+    v2 a;
+    v2 b;
+    v2 c;
+    v2 origin;
+    v4 color;
+    f32 rotation;
+} RenderCommandTriangle;
 
 typedef struct RenderCommandQuad
 {
@@ -139,8 +151,10 @@ typedef struct Renderer
 {
     RenderCommandBuffer command_buffer;
 
+    RenderObject triangle_renderer;
+    RenderObject quad_renderer;
     RenderObject circle_renderer;
-    RenderObject rect_renderer;
+
     RenderObject sprite_renderer;
     RenderObject font_renderer;
     RenderObject framebuffer_renderer;
@@ -180,14 +194,16 @@ void renderer_render(Renderer* renderer);
 void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
 
-// TODO(lucas): Line, Triangle, Quad structs?
 // TODO(lucas): Rounded edges option
-// TODO(lucas): Add additional functions that take in origins,
-// and consider taking rotation out of the default functions
+// TODO(lucas): Add functions to take in rect instead of position/size or start/end
+// TODO(lucas): Add additional functions that take in origins, and consider taking rotation out of the default functions
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
+// NOTE(lucas): Vertices must be specified in couter-clockwise order!
+void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation);
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
 void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness);
-void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right, v4 color_top, f32 rotation);
+void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right,
+                        v4 color_top, f32 rotation);
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
@@ -206,9 +222,10 @@ inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
 
 // NOTE(lucas): For internal use only
+void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
+void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation);
 void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation);
 void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness);
 void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_left, v4 color_bottom,
-                        v4 color_right, v4 color_top, f32 rotation);
-void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
+                          v4 color_right, v4 color_top, f32 rotation);
 void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
