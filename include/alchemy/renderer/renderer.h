@@ -36,6 +36,7 @@ typedef enum RenderCommandType
     RENDER_COMMAND_RenderCommandLine,
     RENDER_COMMAND_RenderCommandQuad,
     RENDER_COMMAND_RenderCommandQuadOutline,
+    RENDER_COMMAND_RenderCommandQuadGradient,
     RENDER_COMMAND_RenderCommandCircle,
     RENDER_COMMAND_RenderCommandSprite,
     RENDER_COMMAND_RenderCommandText
@@ -75,6 +76,19 @@ typedef struct RenderCommandQuadOutline
     f32 rotation;
     f32 thickness;
 } RenderCommandQuadOutline;
+
+typedef struct RenderCommandQuadGradient
+{
+    RenderCommand header;
+    v2 position;
+    v2 origin;
+    v2 size;
+    v4 color_left;
+    v4 color_bottom;
+    v4 color_right;
+    v4 color_top;
+    f32 rotation;
+} RenderCommandQuadGradient;
 
 typedef struct RenderCommandCircle
 {
@@ -173,6 +187,7 @@ void renderer_clear(v4 color);
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
 void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness);
+void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right, v4 color_top, f32 rotation);
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
@@ -193,5 +208,7 @@ inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
 // NOTE(lucas): For internal use only
 void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation);
 void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness);
+void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_left, v4 color_bottom,
+                        v4 color_right, v4 color_top, f32 rotation);
 void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color);

@@ -209,7 +209,9 @@ UPDATE_AND_RENDER(update_and_render)
     draw_sprite(renderer, state->logo);
 
     Player* player = &state->player;
-    draw_quad_outline(renderer, player->position, player->size, player->color, player->rotation, 5.0f);
+    // draw_quad_outline(renderer, player->position, player->size, player->color, player->rotation, 5.0f);
+    draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
+                       player->rotation);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);

@@ -200,11 +200,11 @@ internal RenderObject rect_renderer_init(u32 shader)
 
     f32 vertices[] =
     {
-        // pos
-        1.0f, 1.0f, // top right
-        1.0f, 0.0f, // bottom right
-        0.0f, 0.0f, // bottom left
-        0.0f, 1.0f  // top left
+        // pos      // color
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
+        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f  // top left
     };
 
     u32 indices[] =
@@ -217,7 +217,8 @@ internal RenderObject rect_renderer_init(u32 shader)
     rect_renderer.vbo = vbo_init(vertices, sizeof(vertices));
     rect_renderer.ibo = ibo_init(indices, sizeof(indices));
 
-    vertex_layout_set(0, 2, 2*sizeof(f32), 0);
+    vertex_layout_set(0, 2, 6*sizeof(f32), 0);
+    vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
     
     glBindVertexArray(0);
     
@@ -380,6 +381,52 @@ void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4
     output_quad(renderer, position, origin, (v2){thickness, size.y}, color, rotation);
 }
 
+void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_left, v4 color_bottom,
+                        v4 color_right, v4 color_top, f32 rotation)
+{
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
+    v2 delta = v2_sub(origin, position);
+
+    if (rotation)
+    {
+        model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
+    }
+
+    model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
+
+    shader_set_m4(renderer->rect_renderer.shader, "model", model, 0);
+    shader_set_v4(renderer->rect_renderer.shader, "color", color_white());
+
+    f32 default_vertices[] =
+    {
+        // pos      // color
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
+        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f  // top left
+    };
+
+    f32 gradient_vertices[] =
+    {
+        // pos      // color
+        1.0f, 1.0f, color_right.r,  color_right.g,  color_right.b,  color_right.a,  // top right
+        1.0f, 0.0f, color_bottom.r, color_bottom.g, color_bottom.b, color_bottom.a, // bottom right
+        0.0f, 0.0f, color_left.r,   color_left.g,   color_left.b,   color_left.a,   // bottom left
+        0.0f, 1.0f, color_top.r,    color_top.g,    color_top.b,    color_top.a     // top left
+    };
+
+    // TODO(lucas): Is there a better way to handle making sure vertex colors do not persist?
+    glBindVertexArray(renderer->rect_renderer.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->rect_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
+    glBindVertexArray(0);
+}
+
 void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     v2 length = v2_abs(v2_sub(start, end));
@@ -511,6 +558,14 @@ internal void render_command_buffer_output(Renderer* renderer)
                 RenderCommandQuadOutline* cmd = (RenderCommandQuadOutline*)header;
                 output_quad_outline(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation,
                                     cmd->thickness);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandQuadGradient:
+            {
+                RenderCommandQuadGradient* cmd = (RenderCommandQuadGradient*)header;
+                output_quad_gradient(renderer, cmd->position, cmd->origin, cmd->size, cmd->color_left, cmd->color_bottom,
+                                    cmd->color_right, cmd->color_top, cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -785,6 +840,22 @@ void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 r
     cmd->color = color;
     cmd->rotation = rotation;
     cmd->thickness = thickness;
+}
+
+void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right, v4 color_top, f32 rotation)
+{
+    RenderCommandQuadGradient* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadGradient);
+    if (!cmd)
+        return;
+    v2 origin = v2_add(position, v2_scale(size, 0.5f));
+    cmd->position = position;
+    cmd->origin = origin;
+    cmd->size = size;
+    cmd->color_left = color_left;
+    cmd->color_bottom = color_bottom;
+    cmd->color_right = color_right;
+    cmd->color_top = color_top;
+    cmd->rotation = rotation;
 }
 
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
