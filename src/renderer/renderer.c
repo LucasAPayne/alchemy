@@ -122,6 +122,18 @@ internal void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, ptr);
 }
 
+internal void stencil_buffer_enable_write(void)
+{
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+}
+
+internal void stencil_buffer_disable_write(void)
+{
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilMask(0x00);
+}
+
 internal RenderObject framebuffer_renderer_init(u32 shader)
 {
     RenderObject framebuffer_renderer = {0};
@@ -242,7 +254,7 @@ internal RenderObject quad_renderer_init(u32 shader)
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
 
-    vao_bind(0);    
+    vao_bind(0);
     
     return quad_renderer;
 }
@@ -318,7 +330,7 @@ internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_h
     texture_fill_empty_data(&framebuffer.texture, window_width, window_height, samples);
     framebuffer_attach_texture(&framebuffer, framebuffer.texture, samples);
 
-    // NOTE(lucas): Rendbuffer is used for depth/stencil attachments.
+    // NOTE(lucas): Renderbuffer is used for depth/stencil attachments.
     // The intermediate framebuffer only needs a color attachment
     if (!only_color)
     {
@@ -374,14 +386,33 @@ internal void renderer_gen_texture(Texture tex)
 
 void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation)
 {
-    v2 b_rel = v2_sub(b, a);
-    v2 c_rel = v2_sub(c, a);
-    v2 axis = {abs_f32(max(b.x, c.x) - a.x), abs_f32(max(b.y, c.y) - a.y)};
-    f32 inv_axis_mag_sq = 1.0f / v2_mag(axis);
-    v2 a_norm = v2_zero();
-    v2 b_norm = v2_scale(b_rel, inv_axis_mag_sq);
-    v2 c_norm = v2_scale(c_rel, inv_axis_mag_sq);
+    v2 min_point = v2_full(F32_MAX);
+    v2 max_point = v2_full(-F32_MAX);
 
+    if (a.x < min_point.x) min_point.x = a.x;
+    if (b.x < min_point.x) min_point.x = b.x;
+    if (c.x < min_point.x) min_point.x = c.x;
+
+    if (a.y < min_point.y) min_point.y = a.y;
+    if (b.y < min_point.y) min_point.y = b.y;
+    if (c.y < min_point.y) min_point.y = c.y;
+
+    if (a.x > max_point.x) max_point.x = a.x;
+    if (b.x > max_point.x) max_point.x = b.x;
+    if (c.x > max_point.x) max_point.x = c.x;
+
+    if (a.y > max_point.y) max_point.y = a.y; 
+    if (b.y > max_point.y) max_point.y = b.y; 
+    if (c.y > max_point.y) max_point.y = c.y; 
+
+    v2 scale = v2_sub(max_point, min_point);
+
+    v2 a_norm = {(a.x - min_point.x) / scale.x, (a.y - min_point.y) / scale.y};
+    v2 b_norm = {(b.x - min_point.x) / scale.x, (b.y - min_point.y) / scale.y};
+    v2 c_norm = {(c.x - min_point.x) / scale.x, (c.y - min_point.y) / scale.y};
+
+    // TODO(lucas): Current triangle being drawn should go off the screen to the left.
+    // Should this go from 0 to 1?
     f32 vertices[] =
     {
         // pos              // color
@@ -396,8 +427,8 @@ void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     m4 model = m4_identity();
-    model = m4_translate(model, (v3){a.x, a.y, 0.0f});
-    v2 delta = v2_abs(v2_sub(origin, a));
+    model = m4_translate(model, (v3){min_point.x, min_point.y, 0.0f});
+    v2 delta = v2_abs(v2_sub(origin, min_point));
 
     if (rotation)
     {
@@ -406,15 +437,53 @@ void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, 
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
-    f32 width = b.x - a.x;
-    f32 height = c.y - a.y;
-    model = m4_scale(model, (v3){width, height, 1.0f});
+    // f32 width = b.x - a.x;
+    // f32 height = c.y - a.y;
+    model = m4_scale(model, (v3){scale.x, scale.y, 1.0f});
 
-    shader_set_m4(renderer->triangle_renderer.shader, "model", model, 0);
+    shader_set_m4(renderer->triangle_renderer.shader, "model", model, false);
     shader_set_v4(renderer->triangle_renderer.shader, "color", color);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     vao_bind(0);
+}
+
+void output_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 thickness, f32 rotation)
+{
+    /* NOTE(lucas): To find the vertices of the shrunken triangle, first find incenter of the triangle (the center of
+     * the inscribed circle). Then, find the inradius, the radius of the inscribed circle. Trivially, the two triangles
+     * share angle bisectors and thus incenters. So, we want to find a coefficient that gives us new vertices based on
+     * moving X units along the inradius, where X is the outline thickness, which can be done with the all-too-familiar
+     * linear blend. If A is the old vertex, A' is the new vertx, Q is the incenter, and k is the coefficient, we have
+     * A' = A(1-k) + Qk
+     * More details found here: https://math.stackexchange.com/questions/17561/how-to-shrink-a-triangle
+     */
+    f32 ab = v2_mag(v2_sub(b, a));
+    f32 bc = v2_mag(v2_sub(c, b));
+    f32 ca = v2_mag(v2_sub(c, a));
+
+    v2 incenter = {(ab*c.x + bc*a.x + ca*b.x) / (ab + bc + ca),
+                   (ab*c.y + bc*a.y + ca*b.y) / (ab + bc + ca)};
+
+    f32 semiperimeter = (ab + bc + ca) / 2.0f;
+    f32 inradius = sqrt_f32(((semiperimeter-ab)*(semiperimeter-bc)*(semiperimeter-ca)) / semiperimeter);
+    f32 k = thickness / inradius;
+    v2 qk = v2_scale(incenter, k);
+
+    v2 new_a = v2_add(v2_scale(a, 1.0f-k), qk);
+    v2 new_b = v2_add(v2_scale(b, 1.0f-k), qk);
+    v2 new_c = v2_add(v2_scale(c, 1.0f-k), qk);
+
+    glEnable(GL_DEPTH_TEST);
+    stencil_buffer_enable_write();
+    output_triangle(renderer, new_a, new_b, new_c, origin, color_transparent(), rotation);
+
+    glDisable(GL_DEPTH_TEST);
+    stencil_buffer_disable_write();
+    renderer->triangle_renderer.shader = renderer->poly_border_shader;
+    output_triangle(renderer, a, b, c, origin, color, rotation);
+    stencil_buffer_enable_write();
+    renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
 void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation)
@@ -432,7 +501,7 @@ void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, 
 
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
-    shader_set_m4(renderer->quad_renderer.shader, "model", model, 0);
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
     shader_set_v4(renderer->quad_renderer.shader, "color", color);
 
     vao_bind(renderer->quad_renderer.vao);
@@ -440,12 +509,21 @@ void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, 
     vao_bind(0);
 }
 
-void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation, f32 thickness)
+void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 thickness, f32 rotation)
 {
-    output_quad(renderer, position, origin, (v2){size.x, thickness}, color, rotation);
-    output_quad(renderer, (v2){position.x + size.x - thickness, position.y}, origin, (v2){thickness, size.y}, color, rotation);
-    output_quad(renderer, (v2){position.x, position.y + size.y - thickness}, origin, (v2){size.x, thickness}, color, rotation);
-    output_quad(renderer, position, origin, (v2){thickness, size.y}, color, rotation);
+    v2 new_pos = v2_add(position, v2_full(thickness));
+    v2 new_size = v2_sub(size, v2_full(2.0f*thickness));
+
+    glEnable(GL_DEPTH_TEST);
+    stencil_buffer_enable_write();
+    output_quad(renderer, new_pos, origin, new_size, color_transparent(), rotation);
+
+    glDisable(GL_DEPTH_TEST);
+    stencil_buffer_disable_write();
+    renderer->quad_renderer.shader = renderer->poly_border_shader;
+    output_quad(renderer, position, origin, size, color, rotation);
+    stencil_buffer_enable_write();
+    renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
 void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_left, v4 color_bottom,
@@ -464,7 +542,7 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
 
     model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
 
-    shader_set_m4(renderer->quad_renderer.shader, "model", model, 0);
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
     shader_set_v4(renderer->quad_renderer.shader, "color", color_white());
 
     f32 default_vertices[] =
@@ -494,29 +572,30 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     vao_bind(0);
 }
 
-void output_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
+void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 thickness, f32 rotation)
 {
-    v2 length = v2_abs(v2_sub(start, end));
-    v2 origin = v2_scale(v2_add(start, end), 0.5f);
+    v2 delta = v2_sub(end, start);
 
     // NOTE(lucas): Horizontal and vertical lines need special treatment
     // since they will cause trig functions to be undefined
     v2 size = v2_zero();
-    f32 rotation = 0.0f;
+    f32 initial_rotation = 0.0f;
 
     // NOTE(lucas): atan is undefined for vertical lines,
     // so only call it if the line has slope
-    if (length.x)
-        rotation = atan_f32(length.y, length.x);
+    if (delta.x)
+        initial_rotation = atan_f32(delta.y, delta.x);
 
-    if (length.x && length.y) // Diagonal line
-        size = (v2){v2_mag(length), thickness};
-    else if (length.x && !length.y) // Horizontal line
-        size = (v2){length.x, thickness};
-    else if (length.y && !length.x) // Vertical line
-        size = (v2){thickness, length.y};
+    if (delta.x && delta.y) // Diagonal line
+        size = (v2){v2_mag(delta), thickness};
+    else if (delta.x && !delta.y) // Horizontal line
+        size = (v2){delta.x, thickness};
+    else if (delta.y && !delta.x) // Vertical line
+        size = (v2){thickness, delta.y};
 
-    output_quad(renderer, start, origin, size, color, glm_deg(rotation));
+    // TODO(lucas): The initial rotation needs to be about the starting point,
+    // white the additional rotation needs to be about the origin
+    output_quad(renderer, start, origin, size, color, glm_deg(initial_rotation) + rotation);
 }
 
 void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
@@ -609,7 +688,7 @@ internal void render_command_buffer_output(Renderer* renderer)
             case RENDER_COMMAND_RenderCommandLine:
             {
                 RenderCommandLine* cmd = (RenderCommandLine*)header;
-                output_line(renderer, cmd->start, cmd->end, cmd->color, cmd->thickness);
+                output_line(renderer, cmd->start, cmd->end, cmd->origin, cmd->color, cmd->thickness, cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -617,6 +696,14 @@ internal void render_command_buffer_output(Renderer* renderer)
             {
                 RenderCommandTriangle* cmd = (RenderCommandTriangle*)header;
                 output_triangle(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->rotation);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandTriangleOutline:
+            {
+                RenderCommandTriangleOutline* cmd = (RenderCommandTriangleOutline*)header;
+                output_triangle_outline(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->thickness,
+                                        cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -630,8 +717,8 @@ internal void render_command_buffer_output(Renderer* renderer)
             case RENDER_COMMAND_RenderCommandQuadOutline:
             {
                 RenderCommandQuadOutline* cmd = (RenderCommandQuadOutline*)header;
-                output_quad_outline(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation,
-                                    cmd->thickness);
+                output_quad_outline(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->thickness,
+                                    cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -681,6 +768,9 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     opengl_init(window);
 
     glEnable(GL_MULTISAMPLE);
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     renderer.command_buffer_arena = memory_arena_alloc(command_buffer_size);
     renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_size);
@@ -712,6 +802,7 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     char font_frag_shader_full_path[MAX_FILEPATH_LEN];
     char ui_vert_shader_full_path[MAX_FILEPATH_LEN];
     char ui_frag_shader_full_path[MAX_FILEPATH_LEN];
+    char border_frag_shader_full_path[MAX_FILEPATH_LEN];
 
     path_from_install_dir("/res/shaders/framebuffer.vert", framebuffer_vert_shader_full_path);
     path_from_install_dir("/res/shaders/framebuffer.frag", framebuffer_frag_shader_full_path);
@@ -723,20 +814,25 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     path_from_install_dir("/res/shaders/font.frag", font_frag_shader_full_path);
     path_from_install_dir("/res/shaders/ui.vert", ui_vert_shader_full_path);
     path_from_install_dir("/res/shaders/ui.frag", ui_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/border.frag", border_frag_shader_full_path);
 
     u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
     u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
     u32 sprite_shader      = shader_init(sprite_vert_shader_full_path, sprite_frag_shader_full_path);
     u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
     u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
+    u32 poly_border_shader = shader_init(poly_vert_shader_full_path, border_frag_shader_full_path);
 
-    renderer.triangle_renderer     = triangle_renderer_init(poly_shader);
+    renderer.triangle_renderer    = triangle_renderer_init(poly_shader);
     renderer.quad_renderer        = quad_renderer_init(poly_shader);
     renderer.circle_renderer      = circle_renderer_init(poly_shader, renderer.config.circle_line_segments);
     renderer.sprite_renderer      = sprite_renderer_init(sprite_shader);
     renderer.font_renderer        = font_renderer_init(font_shader);
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
     renderer.ui_renderer          = ui_renderer_init(ui_shader);
+
+    renderer.poly_shader = poly_shader;
+    renderer.poly_border_shader = poly_border_shader;
     
     renderer.ui_render_state = ui_render_state_init(ui_shader);
 
@@ -771,6 +867,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
     if (renderer->config.wireframe_mode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
     // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
@@ -793,18 +890,19 @@ void renderer_new_frame(Renderer* renderer, Window window)
     rbo_unbind();
 
     // NOTE(lucas): If the viewport does not start at (0, 0), offset the projection matrix by the viewport origin
-    m4 projection = m4_ortho(viewport.x, viewport.x + viewport.width, viewport.y, viewport.y + viewport.height,
+    m4 projection = m4_ortho(renderer->viewport.x, renderer->viewport.x + renderer->viewport.width,
+                             renderer->viewport.y, renderer->viewport.y + renderer->viewport.height,
                              -1.0f, 1.0f);
 
-    // NOTE(lucas): Most shapes use the same shader,
-    // so no need to set the uniform for each shape
-    shader_set_m4(renderer->quad_renderer.shader,   "projection", projection, false);
-    shader_set_m4(renderer->sprite_renderer.shader, "projection", projection, false);
-    shader_set_m4(renderer->font_renderer.shader,   "projection", projection, false);
+    // NOTE(lucas): Most shapes use the same shader, so no need to set the uniform for each shape
+    shader_set_m4(renderer->triangle_renderer.shader, "projection", projection, false);
+    shader_set_m4(renderer->poly_border_shader,       "projection", projection, false);
+    shader_set_m4(renderer->sprite_renderer.shader,   "projection", projection, false);
+    shader_set_m4(renderer->font_renderer.shader,     "projection", projection, false);
+    shader_set_m4(renderer->ui_renderer.shader,       "projection", projection, false);
 
     ui_new_frame(renderer, window.width, window.height);
 
-    // Clear viewport
     renderer_clear(color_black());
 }
 
@@ -833,7 +931,7 @@ void renderer_render(Renderer* renderer)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer->intermediate_framebuffer.id);
         glBlitFramebuffer((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
                         (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
-                        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+                        GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
     }
 
     fbo_unbind();
@@ -864,7 +962,6 @@ void renderer_render(Renderer* renderer)
 
     // TODO(lucas): Use renderer AA settings
     ui_render(renderer, NK_ANTI_ALIASING_ON);
-    
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -875,19 +972,22 @@ void renderer_viewport(Renderer* renderer, rect viewport)
 
 void renderer_clear(v4 color)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
         return;
-    cmd->thickness = thickness;
+    v2 origin = v2_scale(v2_add(start, end), 0.5f);
     cmd->start = start;
     cmd->end = end;
+    cmd->origin = origin;
     cmd->color = color;
+    cmd->thickness = thickness;
+    cmd->rotation = rotation;
 }
 
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)
@@ -904,6 +1004,21 @@ void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)
     cmd->rotation = rotation;
 }
 
+void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 thickness, f32 rotation)
+{
+    RenderCommandTriangleOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandTriangleOutline);
+    if (!cmd)
+        return;
+    v2 origin = v2_scale(v2_add(v2_add(a, b), c), 1.0f/3.0f);
+    cmd->a = a;
+    cmd->b = b;
+    cmd->c = c;
+    cmd->origin = origin;
+    cmd->color = color;
+    cmd->thickness = thickness;
+    cmd->rotation = rotation;
+}
+
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
     RenderCommandQuad* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuad);
@@ -917,7 +1032,7 @@ void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
     cmd->rotation = rotation;
 }
 
-void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness)
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 thickness, f32 rotation)
 {
     RenderCommandQuadOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadOutline);
     if (!cmd)
@@ -927,8 +1042,8 @@ void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 r
     cmd->origin = origin;
     cmd->size = size;
     cmd->color = color;
-    cmd->rotation = rotation;
     cmd->thickness = thickness;
+    cmd->rotation = rotation;
 }
 
 void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right, v4 color_top, f32 rotation)

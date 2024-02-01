@@ -80,6 +80,18 @@ inline f32 tan_f32(f32 x)
     return result;
 }
 
+inline f32 asin_f32(f32 x)
+{
+    f32 result = asinf(x);
+    return result;
+}
+
+inline f32 acos_f32(f32 x)
+{
+    f32 result = acosf(x);
+    return result;
+}
+
 inline f32 atan_f32(f32 y, f32 x)
 {
     ASSERT(x != 0.0f);

@@ -206,17 +206,22 @@ UPDATE_AND_RENDER(update_and_render)
     /* Draw */
     struct nk_context* ctx = &renderer->ui_render_state.ctx;
 
-    draw_sprite(renderer, state->logo);
-
     Player* player = &state->player;
-    // draw_quad_outline(renderer, player->position, player->size, player->color, player->rotation, 5.0f);
+    // draw_quad(renderer, player->position, player->size, player->color, player->rotation);
+    // draw_quad_outline(renderer, player->position, player->size, color_red(), 5.0f, player->rotation);
     // draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
     //                    player->rotation);
 
     v2 a = player->position;
-    v2 b = v2_add(player->position, (v2){300.0f, 0.0f});
-    v2 c = v2_add(player->position, (v2){200.0f, 200.0f});
-    draw_triangle(renderer, a, b, c, color_red(), player->rotation);
+    v2 b = v2_add(player->position, (v2){200.0f, -50.0f});
+    v2 c = v2_add(player->position, (v2){-100.0f, 100.0f});
+    // draw_triangle(renderer, a, b, c, player->color, player->rotation);
+    draw_triangle_outline(renderer, a, b, c, color_red(), 5.0f, player->rotation);
+
+    // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
+
+    draw_sprite(renderer, state->logo);
+
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
