@@ -384,6 +384,32 @@ internal void renderer_gen_texture(Texture tex)
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
+void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 thickness, f32 rotation)
+{
+    v2 delta = v2_sub(end, start);
+
+    // NOTE(lucas): Horizontal and vertical lines need special treatment
+    // since they will cause trig functions to be undefined
+    v2 size = v2_zero();
+    f32 initial_rotation = 0.0f;
+
+    // NOTE(lucas): atan is undefined for vertical lines,
+    // so only call it if the line has slope
+    if (delta.x)
+        initial_rotation = atan_f32(delta.y, delta.x);
+
+    if (delta.x && delta.y) // Diagonal line
+        size = (v2){v2_mag(delta), thickness};
+    else if (delta.x && !delta.y) // Horizontal line
+        size = (v2){delta.x, thickness};
+    else if (delta.y && !delta.x) // Vertical line
+        size = (v2){thickness, delta.y};
+
+    // TODO(lucas): The initial rotation needs to be about the starting point,
+    // white the additional rotation needs to be about the origin
+    output_quad(renderer, start, origin, size, color, glm_deg(initial_rotation) + rotation);
+}
+
 void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation)
 {
     v2 min_point = v2_full(F32_MAX);
@@ -484,6 +510,75 @@ void output_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4
     renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
+// TODO(lucas): Think about pulling out common code and default vertices for shape variants
+void output_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color_a, v4 color_b, v4 color_c,
+                              f32 rotation)
+{
+    v2 min_point = v2_full(F32_MAX);
+    v2 max_point = v2_full(-F32_MAX);
+
+    if (a.x < min_point.x) min_point.x = a.x;
+    if (b.x < min_point.x) min_point.x = b.x;
+    if (c.x < min_point.x) min_point.x = c.x;
+
+    if (a.y < min_point.y) min_point.y = a.y;
+    if (b.y < min_point.y) min_point.y = b.y;
+    if (c.y < min_point.y) min_point.y = c.y;
+
+    if (a.x > max_point.x) max_point.x = a.x;
+    if (b.x > max_point.x) max_point.x = b.x;
+    if (c.x > max_point.x) max_point.x = c.x;
+
+    if (a.y > max_point.y) max_point.y = a.y; 
+    if (b.y > max_point.y) max_point.y = b.y; 
+    if (c.y > max_point.y) max_point.y = c.y; 
+
+    v2 scale = v2_sub(max_point, min_point);
+
+    v2 a_norm = {(a.x - min_point.x) / scale.x, (a.y - min_point.y) / scale.y};
+    v2 b_norm = {(b.x - min_point.x) / scale.x, (b.y - min_point.y) / scale.y};
+    v2 c_norm = {(c.x - min_point.x) / scale.x, (c.y - min_point.y) / scale.y};
+
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){min_point.x, min_point.y, 0.0f});
+    v2 delta = v2_abs(v2_sub(origin, min_point));
+
+    if (rotation)
+    {
+        model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
+        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
+    }
+
+    model = m4_scale(model, (v3){scale.x, scale.y, 1.0f});
+
+    shader_set_m4(renderer->triangle_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->triangle_renderer.shader, "color", color_white());
+
+    f32 default_vertices[] =
+    {
+        // pos              // color
+        a_norm.x, a_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        b_norm.x, b_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        c_norm.x, c_norm.y, 1.0f, 1.0f, 1.0f, 1.0f  // top
+    };
+
+    f32 gradient_vertices[] =
+    {
+        // pos              // color
+        a_norm.x, a_norm.y, color_a.r, color_a.g, color_a.b, color_a.a, // bottom left
+        b_norm.x, b_norm.y, color_b.r, color_b.g, color_b.b, color_b.a, // bottom right
+        c_norm.x, c_norm.y, color_c.r, color_c.g, color_c.b, color_c.a  // top
+    };
+
+    vao_bind(renderer->triangle_renderer.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->triangle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
+    vao_bind(0);    
+}
+
 void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation)
 {
     m4 model = m4_identity();
@@ -524,8 +619,8 @@ void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4
     renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
-void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_left, v4 color_bottom,
-                        v4 color_right, v4 color_top, f32 rotation)
+void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_bl, v4 color_br, v4 color_tr,
+                          v4 color_tl, f32 rotation)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){position.x, position.y, 0.0f});
@@ -555,10 +650,10 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     f32 gradient_vertices[] =
     {
         // pos      // color
-        0.0f, 0.0f, color_left.r,   color_left.g,   color_left.b,   color_left.a,   // bottom left
-        1.0f, 0.0f, color_bottom.r, color_bottom.g, color_bottom.b, color_bottom.a, // bottom right
-        1.0f, 1.0f, color_right.r,  color_right.g,  color_right.b,  color_right.a,  // top right
-        0.0f, 1.0f, color_top.r,    color_top.g,    color_top.b,    color_top.a     // top left
+        0.0f, 0.0f, color_bl.r, color_bl.g, color_bl.b, color_bl.a, // bottom left
+        1.0f, 0.0f, color_br.r, color_br.g, color_br.b, color_br.a, // bottom right
+        1.0f, 1.0f, color_tr.r, color_tr.g, color_tr.b, color_tr.a, // top right
+        0.0f, 1.0f, color_tl.r, color_tl.g, color_tl.b, color_tl.a  // top left
     };
 
     // TODO(lucas): Is there a better way to handle making sure vertex colors do not persist?
@@ -568,32 +663,6 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
     vao_bind(0);
-}
-
-void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 thickness, f32 rotation)
-{
-    v2 delta = v2_sub(end, start);
-
-    // NOTE(lucas): Horizontal and vertical lines need special treatment
-    // since they will cause trig functions to be undefined
-    v2 size = v2_zero();
-    f32 initial_rotation = 0.0f;
-
-    // NOTE(lucas): atan is undefined for vertical lines,
-    // so only call it if the line has slope
-    if (delta.x)
-        initial_rotation = atan_f32(delta.y, delta.x);
-
-    if (delta.x && delta.y) // Diagonal line
-        size = (v2){v2_mag(delta), thickness};
-    else if (delta.x && !delta.y) // Horizontal line
-        size = (v2){delta.x, thickness};
-    else if (delta.y && !delta.x) // Vertical line
-        size = (v2){thickness, delta.y};
-
-    // TODO(lucas): The initial rotation needs to be about the starting point,
-    // white the additional rotation needs to be about the origin
-    output_quad(renderer, start, origin, size, color, glm_deg(initial_rotation) + rotation);
 }
 
 void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
@@ -705,6 +774,14 @@ internal void render_command_buffer_output(Renderer* renderer)
                 base_address += sizeof(*cmd);
             } break;
 
+            case RENDER_COMMAND_RenderCommandTriangleGradient:
+            {
+                RenderCommandTriangleGradient* cmd = (RenderCommandTriangleGradient*)header;
+                output_triangle_gradient(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color_a, cmd->color_b,
+                                         cmd->color_c, cmd->rotation);
+                base_address += sizeof(*cmd);
+            } break;
+
             case RENDER_COMMAND_RenderCommandQuad:
             {
                 RenderCommandQuad* cmd = (RenderCommandQuad*)header;
@@ -723,8 +800,8 @@ internal void render_command_buffer_output(Renderer* renderer)
             case RENDER_COMMAND_RenderCommandQuadGradient:
             {
                 RenderCommandQuadGradient* cmd = (RenderCommandQuadGradient*)header;
-                output_quad_gradient(renderer, cmd->position, cmd->origin, cmd->size, cmd->color_left, cmd->color_bottom,
-                                    cmd->color_right, cmd->color_top, cmd->rotation);
+                output_quad_gradient(renderer, cmd->position, cmd->origin, cmd->size, cmd->color_bl, cmd->color_br,
+                                    cmd->color_tr, cmd->color_tl, cmd->rotation);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -1017,6 +1094,22 @@ void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 t
     cmd->rotation = rotation;
 }
 
+void draw_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v4 color_a, v4 color_b, v4 color_c, f32 rotation)
+{
+    RenderCommandTriangleGradient* cmd = render_command_push(&renderer->command_buffer, RenderCommandTriangleGradient);
+    if (!cmd)
+        return;
+    v2 origin = v2_scale(v2_add(v2_add(a, b), c), 1.0f/3.0f);
+    cmd->a = a;
+    cmd->b = b;
+    cmd->c = c;
+    cmd->origin = origin;
+    cmd->color_a = color_a;
+    cmd->color_b = color_b;
+    cmd->color_c = color_c;
+    cmd->rotation = rotation;
+}
+
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
 {
     RenderCommandQuad* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuad);
@@ -1044,7 +1137,8 @@ void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 t
     cmd->rotation = rotation;
 }
 
-void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left, v4 color_bottom, v4 color_right, v4 color_top, f32 rotation)
+void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_bl, v4 color_br, v4 color_tr, v4 color_tl,
+                        f32 rotation)
 {
     RenderCommandQuadGradient* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadGradient);
     if (!cmd)
@@ -1053,10 +1147,10 @@ void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_left,
     cmd->position = position;
     cmd->origin = origin;
     cmd->size = size;
-    cmd->color_left = color_left;
-    cmd->color_bottom = color_bottom;
-    cmd->color_right = color_right;
-    cmd->color_top = color_top;
+    cmd->color_bl = color_bl;
+    cmd->color_br = color_br;
+    cmd->color_tr = color_tr;
+    cmd->color_tl = color_tl;
     cmd->rotation = rotation;
 }
 
