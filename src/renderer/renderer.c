@@ -142,9 +142,9 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
     // These are in normalized device coordinates and will fill the screen
     f32 vertices[] =
     {    // pos       // tex
-         1.0f,  1.0f, 1.0f, 1.0f, // top right
-         1.0f, -1.0f, 1.0f, 0.0f, // bottom right
         -1.0f, -1.0f, 0.0f, 0.0f, // bottom left
+         1.0f, -1.0f, 1.0f, 0.0f, // bottom right
+         1.0f,  1.0f, 1.0f, 1.0f, // top right
         -1.0f,  1.0f, 0.0f, 1.0f  // top left
     };
 
@@ -181,9 +181,9 @@ internal RenderObject sprite_renderer_init(u32 shader)
     f32 vertices[] = 
     { 
         // pos      // tex
-        1.0f, 0.0f, 1.0f, 1.0f, // top right
-        1.0f, 1.0f, 1.0f, 0.0f, // bottom right
         0.0f, 1.0f, 0.0f, 0.0f, // bottom left
+        1.0f, 1.0f, 1.0f, 0.0f, // bottom right
+        1.0f, 0.0f, 1.0f, 1.0f, // top right
         0.0f, 0.0f, 0.0f, 1.0f  // top left
     };
 
@@ -235,9 +235,9 @@ internal RenderObject quad_renderer_init(u32 shader)
     f32 vertices[] =
     {
         // pos      // color
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
-        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
         0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
         0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f  // top left
     };
 
@@ -269,7 +269,7 @@ internal RenderObject font_renderer_init(u32 shader)
     u32 indices[] = 
     {
       0, 1, 3,
-      1, 2, 3  
+      1, 2, 3
     };
 
     font_renderer.vao = vao_init();
@@ -416,8 +416,8 @@ void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, 
     f32 vertices[] =
     {
         // pos              // color
-        b_norm.x, b_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
         a_norm.x, a_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        b_norm.x, b_norm.y, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
         c_norm.x, c_norm.y, 1.0f, 1.0f, 1.0f, 1.0f  // top
     };
 
@@ -437,8 +437,6 @@ void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, 
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
-    // f32 width = b.x - a.x;
-    // f32 height = c.y - a.y;
     model = m4_scale(model, (v3){scale.x, scale.y, 1.0f});
 
     shader_set_m4(renderer->triangle_renderer.shader, "model", model, false);
@@ -548,18 +546,18 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     f32 default_vertices[] =
     {
         // pos      // color
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
-        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
         0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom left
+        1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, // bottom right
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
         0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f  // top left
     };
 
     f32 gradient_vertices[] =
     {
         // pos      // color
-        1.0f, 1.0f, color_right.r,  color_right.g,  color_right.b,  color_right.a,  // top right
-        1.0f, 0.0f, color_bottom.r, color_bottom.g, color_bottom.b, color_bottom.a, // bottom right
         0.0f, 0.0f, color_left.r,   color_left.g,   color_left.b,   color_left.a,   // bottom left
+        1.0f, 0.0f, color_bottom.r, color_bottom.g, color_bottom.b, color_bottom.a, // bottom right
+        1.0f, 1.0f, color_right.r,  color_right.g,  color_right.b,  color_right.a,  // top right
         0.0f, 1.0f, color_top.r,    color_top.g,    color_top.b,    color_top.a     // top left
     };
 
