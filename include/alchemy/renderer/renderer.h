@@ -41,6 +41,7 @@ typedef enum RenderCommandType
     RENDER_COMMAND_RenderCommandQuadOutline,
     RENDER_COMMAND_RenderCommandQuadGradient,
     RENDER_COMMAND_RenderCommandCircle,
+    RENDER_COMMAND_RenderCommandCircleOutline,
     RENDER_COMMAND_RenderCommandSprite,
     RENDER_COMMAND_RenderCommandText
 } RenderCommandType;
@@ -138,6 +139,15 @@ typedef struct RenderCommandCircle
     v4 color;
     f32 radius;
 } RenderCommandCircle;
+
+typedef struct RenderCommandCircleOutline
+{
+    RenderCommand header;
+    v2 position;
+    v4 color;
+    f32 radius;
+    f32 thickness;
+} RenderCommandCircleOutline;
 
 typedef struct RenderCommandSprite
 {
@@ -242,6 +252,7 @@ void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_bl, v
                         f32 rotation);
 
 void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
+void draw_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness);
 
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
@@ -273,3 +284,4 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
                           v4 color_tl, f32 rotation);
 
 void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
+void output_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness);

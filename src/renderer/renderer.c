@@ -713,6 +713,20 @@ void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     vao_bind(0);
 }
 
+void output_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness)
+{
+    glEnable(GL_DEPTH_TEST);
+    stencil_buffer_enable_write();
+    output_circle(renderer, position, radius - thickness, color_transparent());
+
+    glDisable(GL_DEPTH_TEST);
+    stencil_buffer_disable_write();
+    renderer->circle_renderer.shader = renderer->poly_border_shader;
+    output_circle(renderer, position, radius, color);
+    stencil_buffer_enable_write();
+    renderer->circle_renderer.shader = renderer->poly_shader;
+}
+
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
 {
     RenderCommandBuffer result = {0};
@@ -809,6 +823,13 @@ internal void render_command_buffer_output(Renderer* renderer)
             {
                 RenderCommandCircle* cmd = (RenderCommandCircle*)header;
                 output_circle(renderer, cmd->position, cmd->radius, cmd->color);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandCircleOutline:
+            {
+                RenderCommandCircleOutline* cmd = (RenderCommandCircleOutline*)header;
+                output_circle_outline(renderer, cmd->position, cmd->radius, cmd->color, cmd->thickness);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -1162,6 +1183,17 @@ void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     cmd->position = position;
     cmd->radius = radius;
     cmd->color = color;
+}
+
+void draw_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness)
+{
+    RenderCommandCircleOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandCircleOutline);
+    if (!cmd)
+        return;
+    cmd->position = position;
+    cmd->radius = radius;
+    cmd->color = color;
+    cmd->thickness = thickness;
 }
 
 void draw_sprite(Renderer* renderer, Sprite sprite)

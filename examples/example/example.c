@@ -212,14 +212,16 @@ UPDATE_AND_RENDER(update_and_render)
     // draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
                     //    player->rotation);
 
-    v2 a = player->position;
-    v2 b = v2_add(player->position, (v2){200.0f, -50.0f});
-    v2 c = v2_add(player->position, (v2){-100.0f, 100.0f});
+    // v2 a = player->position;
+    // v2 b = v2_add(player->position, (v2){200.0f, -50.0f});
+    // v2 c = v2_add(player->position, (v2){-100.0f, 100.0f});
     // draw_triangle(renderer, a, b, c, player->color, player->rotation);
     // draw_triangle_outline(renderer, a, b, c, color_red(), 5.0f, player->rotation);
-    draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
+    // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
 
     // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
+
+    draw_circle_outline(renderer, player->position, player->size.x, player->color, 5.0f);
 
     draw_sprite(renderer, state->logo);
 
