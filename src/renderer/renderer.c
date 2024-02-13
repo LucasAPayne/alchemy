@@ -384,9 +384,9 @@ internal void renderer_gen_texture(Texture tex)
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 thickness, f32 rotation)
+void output_line(Renderer* renderer, RenderCommandLine* cmd)
 {
-    v2 delta = v2_sub(end, start);
+    v2 delta = v2_sub(cmd->end, cmd->start);
 
     // NOTE(lucas): Horizontal and vertical lines need special treatment
     // since they will cause trig functions to be undefined
@@ -399,43 +399,45 @@ void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 
         initial_rotation = atan_f32(delta.y, delta.x);
 
     if (delta.x && delta.y) // Diagonal line
-        size = (v2){v2_mag(delta), thickness};
+        size = (v2){v2_mag(delta), cmd->thickness};
     else if (delta.x && !delta.y) // Horizontal line
-        size = (v2){delta.x, thickness};
+        size = (v2){delta.x, cmd->thickness};
     else if (delta.y && !delta.x) // Vertical line
-        size = (v2){thickness, delta.y};
+        size = (v2){cmd->thickness, delta.y};
 
     // TODO(lucas): The initial rotation needs to be about the starting point,
     // white the additional rotation needs to be about the origin
-    output_quad(renderer, start, origin, size, color, glm_deg(initial_rotation) + rotation);
+    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, size, cmd->color,
+                                  glm_deg(initial_rotation) + cmd->rotation};
+    output_quad(renderer, &quad_cmd);
 }
 
-void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation)
+void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
 {
     v2 min_point = v2_full(F32_MAX);
     v2 max_point = v2_full(-F32_MAX);
 
-    if (a.x < min_point.x) min_point.x = a.x;
-    if (b.x < min_point.x) min_point.x = b.x;
-    if (c.x < min_point.x) min_point.x = c.x;
+    if (cmd->a.x < min_point.x) min_point.x = cmd->a.x;
+    if (cmd->b.x < min_point.x) min_point.x = cmd->b.x;
+    if (cmd->c.x < min_point.x) min_point.x = cmd->c.x;
 
-    if (a.y < min_point.y) min_point.y = a.y;
-    if (b.y < min_point.y) min_point.y = b.y;
-    if (c.y < min_point.y) min_point.y = c.y;
+    if (cmd->a.y < min_point.y) min_point.y = cmd->a.y;
+    if (cmd->b.y < min_point.y) min_point.y = cmd->b.y;
+    if (cmd->c.y < min_point.y) min_point.y = cmd->c.y;
 
-    if (a.x > max_point.x) max_point.x = a.x;
-    if (b.x > max_point.x) max_point.x = b.x;
-    if (c.x > max_point.x) max_point.x = c.x;
+    if (cmd->a.x > max_point.x) max_point.x = cmd->a.x;
+    if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
+    if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (a.y > max_point.y) max_point.y = a.y; 
-    if (b.y > max_point.y) max_point.y = b.y; 
-    if (c.y > max_point.y) max_point.y = c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
 
     v2 scale = v2_sub(max_point, min_point);
 
-    v2 a_norm = {(a.x - min_point.x) / scale.x, (a.y - min_point.y) / scale.y};
-    v2 b_norm = {(b.x - min_point.x) / scale.x, (b.y - min_point.y) / scale.y};
-    v2 c_norm = {(c.x - min_point.x) / scale.x, (c.y - min_point.y) / scale.y};
+    v2 a_norm = {(cmd->a.x - min_point.x) / scale.x, (cmd->a.y - min_point.y) / scale.y};
+    v2 b_norm = {(cmd->b.x - min_point.x) / scale.x, (cmd->b.y - min_point.y) / scale.y};
+    v2 c_norm = {(cmd->c.x - min_point.x) / scale.x, (cmd->c.y - min_point.y) / scale.y};
 
     // TODO(lucas): Current triangle being drawn should go off the screen to the left.
     // Should this go from 0 to 1?
@@ -454,25 +456,25 @@ void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, 
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){min_point.x, min_point.y, 0.0f});
-    v2 delta = v2_abs(v2_sub(origin, min_point));
+    v2 delta = v2_abs(v2_sub(cmd->origin, min_point));
 
-    if (rotation)
+    if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
     model = m4_scale(model, (v3){scale.x, scale.y, 1.0f});
 
     shader_set_m4(renderer->triangle_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->triangle_renderer.shader, "color", color);
+    shader_set_v4(renderer->triangle_renderer.shader, "color", cmd->color);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     vao_bind(0);
 }
 
-void output_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 thickness, f32 rotation)
+void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
 {
     /* NOTE(lucas): To find the vertices of the shrunken triangle, first find incenter of the triangle (the center of
      * the inscribed circle). Then, find the inradius, the radius of the inscribed circle. Trivially, the two triangles
@@ -482,71 +484,75 @@ void output_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4
      * A' = A(1-k) + Qk
      * More details found here: https://math.stackexchange.com/questions/17561/how-to-shrink-a-triangle
      */
-    f32 ab = v2_mag(v2_sub(b, a));
-    f32 bc = v2_mag(v2_sub(c, b));
-    f32 ca = v2_mag(v2_sub(c, a));
+    f32 ab = v2_mag(v2_sub(cmd->b, cmd->a));
+    f32 bc = v2_mag(v2_sub(cmd->c, cmd->b));
+    f32 ca = v2_mag(v2_sub(cmd->c, cmd->a));
 
-    v2 incenter = {(ab*c.x + bc*a.x + ca*b.x) / (ab + bc + ca),
-                   (ab*c.y + bc*a.y + ca*b.y) / (ab + bc + ca)};
+    v2 incenter = {(ab*cmd->c.x + bc*cmd->a.x + ca*cmd->b.x) / (ab + bc + ca),
+                   (ab*cmd->c.y + bc*cmd->a.y + ca*cmd->b.y) / (ab + bc + ca)};
 
     f32 semiperimeter = (ab + bc + ca) / 2.0f;
     f32 inradius = sqrt_f32(((semiperimeter-ab)*(semiperimeter-bc)*(semiperimeter-ca)) / semiperimeter);
-    f32 k = thickness / inradius;
+    f32 k = cmd->thickness / inradius;
     v2 qk = v2_scale(incenter, k);
 
-    v2 new_a = v2_add(v2_scale(a, 1.0f-k), qk);
-    v2 new_b = v2_add(v2_scale(b, 1.0f-k), qk);
-    v2 new_c = v2_add(v2_scale(c, 1.0f-k), qk);
+    v2 new_a = v2_add(v2_scale(cmd->a, 1.0f-k), qk);
+    v2 new_b = v2_add(v2_scale(cmd->b, 1.0f-k), qk);
+    v2 new_c = v2_add(v2_scale(cmd->c, 1.0f-k), qk);
+
+    RenderCommandTriangle transparent_cmd = {RENDER_COMMAND_RenderCommandTriangle, new_a, new_b, new_c, cmd->origin,
+                                             color_transparent(), cmd->rotation};
+    RenderCommandTriangle outline_cmd = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin,
+                                         cmd->color, cmd->rotation};
 
     glEnable(GL_DEPTH_TEST);
     stencil_buffer_enable_write();
-    output_triangle(renderer, new_a, new_b, new_c, origin, color_transparent(), rotation);
+    output_triangle(renderer, &transparent_cmd);
 
     glDisable(GL_DEPTH_TEST);
     stencil_buffer_disable_write();
     renderer->triangle_renderer.shader = renderer->poly_border_shader;
-    output_triangle(renderer, a, b, c, origin, color, rotation);
+    output_triangle(renderer, &outline_cmd);
     stencil_buffer_enable_write();
     renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
 // TODO(lucas): Think about pulling out common code and default vertices for shape variants
-void output_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color_a, v4 color_b, v4 color_c,
-                              f32 rotation)
+void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient* cmd)
 {
     v2 min_point = v2_full(F32_MAX);
     v2 max_point = v2_full(-F32_MAX);
 
-    if (a.x < min_point.x) min_point.x = a.x;
-    if (b.x < min_point.x) min_point.x = b.x;
-    if (c.x < min_point.x) min_point.x = c.x;
+    if (cmd->a.x < min_point.x) min_point.x = cmd->a.x;
+    if (cmd->b.x < min_point.x) min_point.x = cmd->b.x;
+    if (cmd->c.x < min_point.x) min_point.x = cmd->c.x;
 
-    if (a.y < min_point.y) min_point.y = a.y;
-    if (b.y < min_point.y) min_point.y = b.y;
-    if (c.y < min_point.y) min_point.y = c.y;
+    if (cmd->a.y < min_point.y) min_point.y = cmd->a.y;
+    if (cmd->b.y < min_point.y) min_point.y = cmd->b.y;
+    if (cmd->c.y < min_point.y) min_point.y = cmd->c.y;
 
-    if (a.x > max_point.x) max_point.x = a.x;
-    if (b.x > max_point.x) max_point.x = b.x;
-    if (c.x > max_point.x) max_point.x = c.x;
+    if (cmd->a.x > max_point.x) max_point.x = cmd->a.x;
+    if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
+    if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (a.y > max_point.y) max_point.y = a.y; 
-    if (b.y > max_point.y) max_point.y = b.y; 
-    if (c.y > max_point.y) max_point.y = c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
 
     v2 scale = v2_sub(max_point, min_point);
 
-    v2 a_norm = {(a.x - min_point.x) / scale.x, (a.y - min_point.y) / scale.y};
-    v2 b_norm = {(b.x - min_point.x) / scale.x, (b.y - min_point.y) / scale.y};
-    v2 c_norm = {(c.x - min_point.x) / scale.x, (c.y - min_point.y) / scale.y};
+    v2 a_norm = {(cmd->a.x - min_point.x) / scale.x, (cmd->a.y - min_point.y) / scale.y};
+    v2 b_norm = {(cmd->b.x - min_point.x) / scale.x, (cmd->b.y - min_point.y) / scale.y};
+    v2 c_norm = {(cmd->c.x - min_point.x) / scale.x, (cmd->c.y - min_point.y) / scale.y};
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){min_point.x, min_point.y, 0.0f});
-    v2 delta = v2_abs(v2_sub(origin, min_point));
+    v2 delta = v2_abs(v2_sub(cmd->origin, min_point));
 
-    if (rotation)
+    if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -566,9 +572,9 @@ void output_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v
     f32 gradient_vertices[] =
     {
         // pos              // color
-        a_norm.x, a_norm.y, color_a.r, color_a.g, color_a.b, color_a.a, // bottom left
-        b_norm.x, b_norm.y, color_b.r, color_b.g, color_b.b, color_b.a, // bottom right
-        c_norm.x, c_norm.y, color_c.r, color_c.g, color_c.b, color_c.a  // top
+        a_norm.x, a_norm.y, cmd->color_a.r, cmd->color_a.g, cmd->color_a.b, cmd->color_a.a, // bottom left
+        b_norm.x, b_norm.y, cmd->color_b.r, cmd->color_b.g, cmd->color_b.b, cmd->color_b.a, // bottom right
+        c_norm.x, c_norm.y, cmd->color_c.r, cmd->color_c.g, cmd->color_c.b, cmd->color_c.a  // top
     };
 
     vao_bind(renderer->triangle_renderer.vao);
@@ -579,61 +585,65 @@ void output_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v
     vao_bind(0);    
 }
 
-void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation)
+void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 {
     m4 model = m4_identity();
-    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
-    v2 delta = v2_sub(origin, position);
+    model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
+    v2 delta = v2_sub(cmd->origin, cmd->position);
 
-    if (rotation)
+    if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
-    model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
+    model = m4_scale(model, (v3){(f32)cmd->size.x, (f32)cmd->size.y, 1.0f});
 
     shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->quad_renderer.shader, "color", color);
+    shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
 
     vao_bind(renderer->quad_renderer.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_bind(0);
 }
 
-void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 thickness, f32 rotation)
+void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
 {
-    v2 new_pos = v2_add(position, v2_full(thickness));
-    v2 new_size = v2_sub(size, v2_full(2.0f*thickness));
+    v2 new_pos = v2_add(cmd->position, v2_full(cmd->thickness));
+    v2 new_size = v2_sub(cmd->size, v2_full(2.0f*cmd->thickness));
+
+    RenderCommandQuad transparent_cmd = {RENDER_COMMAND_RenderCommandQuad, new_pos, cmd->origin, new_size,
+                                         color_transparent(), cmd->rotation};
+    RenderCommandQuad outline_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->position, cmd->origin, cmd->size,
+                                     cmd->color, cmd->rotation};
 
     glEnable(GL_DEPTH_TEST);
     stencil_buffer_enable_write();
-    output_quad(renderer, new_pos, origin, new_size, color_transparent(), rotation);
+    output_quad(renderer, &transparent_cmd);
 
     glDisable(GL_DEPTH_TEST);
     stencil_buffer_disable_write();
     renderer->quad_renderer.shader = renderer->poly_border_shader;
-    output_quad(renderer, position, origin, size, color, rotation);
+    output_quad(renderer, &outline_cmd);
     stencil_buffer_enable_write();
     renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
-void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_bl, v4 color_br, v4 color_tr,
-                          v4 color_tl, f32 rotation)
+void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
 {
     m4 model = m4_identity();
-    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
-    v2 delta = v2_sub(origin, position);
+    model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
+    v2 delta = v2_sub(cmd->origin, cmd->position);
 
-    if (rotation)
+    if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
-    model = m4_scale(model, (v3){(f32)size.x, (f32)size.y, 1.0f});
+    model = m4_scale(model, (v3){(f32)cmd->size.x, (f32)cmd->size.y, 1.0f});
 
     shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
     shader_set_v4(renderer->quad_renderer.shader, "color", color_white());
@@ -650,10 +660,10 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     f32 gradient_vertices[] =
     {
         // pos      // color
-        0.0f, 0.0f, color_bl.r, color_bl.g, color_bl.b, color_bl.a, // bottom left
-        1.0f, 0.0f, color_br.r, color_br.g, color_br.b, color_br.a, // bottom right
-        1.0f, 1.0f, color_tr.r, color_tr.g, color_tr.b, color_tr.a, // top right
-        0.0f, 1.0f, color_tl.r, color_tl.g, color_tl.b, color_tl.a  // top left
+        0.0f, 0.0f, cmd->color_bl.r, cmd->color_bl.g, cmd->color_bl.b, cmd->color_bl.a, // bottom left
+        1.0f, 0.0f, cmd->color_br.r, cmd->color_br.g, cmd->color_br.b, cmd->color_br.a, // bottom right
+        1.0f, 1.0f, cmd->color_tr.r, cmd->color_tr.g, cmd->color_tr.b, cmd->color_tr.a, // top right
+        0.0f, 1.0f, cmd->color_tl.r, cmd->color_tl.g, cmd->color_tl.b, cmd->color_tl.a  // top left
     };
 
     // TODO(lucas): Is there a better way to handle making sure vertex colors do not persist?
@@ -665,15 +675,15 @@ void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v
     vao_bind(0);
 }
 
-void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
+void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
 {
     m4 model = m4_identity();
-    model = m4_translate(model, (v3){position.x, position.y, 0.0f});
-    model = m4_scale(model, (v3){radius, radius, 1.0f});
+    model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
+    model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
     // Set model matrix and color shader values
     shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->quad_renderer.shader, "color", color);
+    shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
 
     // The number of triangles is 2 less than the number of line segments or points
     u32 segs = renderer->config.circle_line_segments;
@@ -713,16 +723,20 @@ void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
     vao_bind(0);
 }
 
-void output_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness)
+void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
 {
+    RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->position,
+                                           color_transparent(), cmd->radius - cmd->thickness};
+    RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->position, cmd->color, cmd->radius};
+
     glEnable(GL_DEPTH_TEST);
     stencil_buffer_enable_write();
-    output_circle(renderer, position, radius - thickness, color_transparent());
+    output_circle(renderer, &transparent_cmd);
 
     glDisable(GL_DEPTH_TEST);
     stencil_buffer_disable_write();
     renderer->circle_renderer.shader = renderer->poly_border_shader;
-    output_circle(renderer, position, radius, color);
+    output_circle(renderer, &outline_cmd);
     stencil_buffer_enable_write();
     renderer->circle_renderer.shader = renderer->poly_shader;
 }
@@ -763,87 +777,84 @@ internal void render_command_buffer_output(Renderer* renderer)
     RenderCommandBuffer* command_buffer = &renderer->command_buffer;
     for (usize base_address = 0; base_address < command_buffer->size;)
     {
+        // TODO(lucas): This can probably be collapsed into a macro
         RenderCommand* header = (RenderCommand*)(command_buffer->base + base_address);
         switch(header->type)
         {
             case RENDER_COMMAND_RenderCommandLine:
             {
                 RenderCommandLine* cmd = (RenderCommandLine*)header;
-                output_line(renderer, cmd->start, cmd->end, cmd->origin, cmd->color, cmd->thickness, cmd->rotation);
+                output_line(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandTriangle:
             {
                 RenderCommandTriangle* cmd = (RenderCommandTriangle*)header;
-                output_triangle(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->rotation);
+                output_triangle(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandTriangleOutline:
             {
                 RenderCommandTriangleOutline* cmd = (RenderCommandTriangleOutline*)header;
-                output_triangle_outline(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->thickness,
-                                        cmd->rotation);
+                output_triangle_outline(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandTriangleGradient:
             {
                 RenderCommandTriangleGradient* cmd = (RenderCommandTriangleGradient*)header;
-                output_triangle_gradient(renderer, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color_a, cmd->color_b,
-                                         cmd->color_c, cmd->rotation);
+                output_triangle_gradient(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandQuad:
             {
                 RenderCommandQuad* cmd = (RenderCommandQuad*)header;
-                output_quad(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation);
+                output_quad(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandQuadOutline:
             {
                 RenderCommandQuadOutline* cmd = (RenderCommandQuadOutline*)header;
-                output_quad_outline(renderer, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->thickness,
-                                    cmd->rotation);
+                output_quad_outline(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandQuadGradient:
             {
                 RenderCommandQuadGradient* cmd = (RenderCommandQuadGradient*)header;
-                output_quad_gradient(renderer, cmd->position, cmd->origin, cmd->size, cmd->color_bl, cmd->color_br,
-                                    cmd->color_tr, cmd->color_tl, cmd->rotation);
+                output_quad_gradient(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandCircle:
             {
                 RenderCommandCircle* cmd = (RenderCommandCircle*)header;
-                output_circle(renderer, cmd->position, cmd->radius, cmd->color);
+                output_circle(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandCircleOutline:
             {
                 RenderCommandCircleOutline* cmd = (RenderCommandCircleOutline*)header;
-                output_circle_outline(renderer, cmd->position, cmd->radius, cmd->color, cmd->thickness);
+                output_circle_outline(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandSprite:
             {
                 RenderCommandSprite* cmd = (RenderCommandSprite*)header;
-                output_sprite(renderer, cmd->sprite);
+                output_sprite(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
             case RENDER_COMMAND_RenderCommandText:
             {
                 RenderCommandText* cmd = (RenderCommandText*)header;
-                output_text(renderer, cmd->text);
+                output_text(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 

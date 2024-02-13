@@ -51,6 +51,7 @@ typedef struct RenderCommand
     RenderCommandType type;
 } RenderCommand;
 
+// TODO(lucas): Remove header from each command struct and change the push macro to push the header separately
 typedef struct RenderCommandLine
 {
     RenderCommand header;
@@ -271,17 +272,15 @@ inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
 
 // NOTE(lucas): For internal use only
-void output_line(Renderer* renderer, v2 start, v2 end, v2 origin, v4 color, f32 thickness, f32 rotation);
+void output_line(Renderer* renderer, RenderCommandLine* cmd);
 
-void output_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 rotation);
-void output_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color, f32 thickness, f32 rotation);
-void output_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v2 origin, v4 color_a, v4 color_b, v4 color_c,
-                              f32 rotation);
+void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd);
+void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd);
+void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient* cmd);
 
-void output_quad(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 rotation);
-void output_quad_outline(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color, f32 thickness, f32 rotation);
-void output_quad_gradient(Renderer* renderer, v2 position, v2 origin, v2 size, v4 color_bl, v4 color_br, v4 color_tr,
-                          v4 color_tl, f32 rotation);
+void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
+void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd);
+void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd);
 
-void output_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
-void output_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness);
+void output_circle(Renderer* renderer, RenderCommandCircle* cmd);
+void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd);
