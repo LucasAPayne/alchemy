@@ -900,17 +900,17 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     char ui_frag_shader_full_path[MAX_FILEPATH_LEN];
     char border_frag_shader_full_path[MAX_FILEPATH_LEN];
 
-    path_from_install_dir("/res/shaders/framebuffer.vert", framebuffer_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/framebuffer.frag", framebuffer_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/poly.vert", poly_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/poly.frag", poly_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/sprite.vert", sprite_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/sprite.frag", sprite_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/font.vert", font_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/font.frag", font_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/ui.vert", ui_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/ui.frag", ui_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/border.frag", border_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/framebuffer.vs", framebuffer_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/framebuffer.fs", framebuffer_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.vs", poly_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/poly.fs", poly_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.vs", sprite_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/sprite.fs", sprite_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/font.vs", font_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/font.fs", font_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.vs", ui_vert_shader_full_path);
+    path_from_install_dir("/res/shaders/ui.fs", ui_frag_shader_full_path);
+    path_from_install_dir("/res/shaders/border.fs", border_frag_shader_full_path);
 
     u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
     u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
