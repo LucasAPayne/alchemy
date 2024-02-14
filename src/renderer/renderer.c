@@ -923,12 +923,12 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     path_from_install_dir("/res/shaders/ui.fs", ui_frag_shader_full_path);
     path_from_install_dir("/res/shaders/border.fs", border_frag_shader_full_path);
 
-    u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
-    u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
-    u32 sprite_shader      = shader_init(sprite_vert_shader_full_path, sprite_frag_shader_full_path);
-    u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
-    u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
-    u32 poly_border_shader = shader_init(poly_vert_shader_full_path, border_frag_shader_full_path);
+    u32 framebuffer_shader = shader_init(&renderer, framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
+    u32 poly_shader        = shader_init(&renderer, poly_vert_shader_full_path, poly_frag_shader_full_path);
+    u32 sprite_shader      = shader_init(&renderer, sprite_vert_shader_full_path, sprite_frag_shader_full_path);
+    u32 font_shader        = shader_init(&renderer, font_vert_shader_full_path, font_frag_shader_full_path);
+    u32 ui_shader          = shader_init(&renderer, ui_vert_shader_full_path, ui_frag_shader_full_path);
+    u32 poly_border_shader = shader_init(&renderer, poly_vert_shader_full_path, border_frag_shader_full_path);
 
     renderer.triangle_renderer    = triangle_renderer_init(poly_shader);
     renderer.quad_renderer        = quad_renderer_init(poly_shader);

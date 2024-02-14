@@ -37,6 +37,11 @@ inline MemoryArena memory_arena_init_from_base(void* base, usize size)
     return arena;
 }
 
+inline void memory_arena_pop(MemoryArena* arena, usize size)
+{
+    arena->used -= size;
+}
+
 inline void memory_arena_clear(MemoryArena* arena)
 {
     arena->used = 0;

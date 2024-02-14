@@ -2,7 +2,9 @@
 
 #include "alchemy/util/types.h"
 
-u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path);
+typedef struct Renderer Renderer;
+
+u32 shader_init(Renderer* renderer, const char* vert_shader_path, const char* frag_shader_path);
 void shader_bind(u32 id);
 void shader_unbind();
 void shader_delete(u32 id);

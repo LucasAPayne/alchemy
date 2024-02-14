@@ -1,19 +1,14 @@
 #include "alchemy/renderer/shader.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 
-#include <stdio.h>  // File I/O
-#include <stdlib.h> // malloc
+#include <stdio.h> // File I/O
 
-// NOTE(lucas): This is a temporary file loading function that will probably be changed or replaced
-/*
-* Reads the file 'path' into a string 'buf'. If 'add_null' is true, terminates string with '\0'.
-* If successful, returns file size.
-* If unsuccessful, returns -1.
-* WARNING: Remember to free 'buf' after calling this function.
-*/
-internal char* file_to_string(const char* path)
+internal char* file_to_string(const char* path, MemoryArena* arena)
 {
     char* buf = NULL;
     i64 length = 0;
@@ -25,7 +20,7 @@ internal char* file_to_string(const char* path)
         fseek(f, 0, SEEK_END);
         length = ftell(f);
         fseek(f, 0, SEEK_SET);
-        buf = (char*)malloc(length+1);
+        buf = push_array(arena, length+1, char);
 
         if (buf)
             fread(buf, 1, length, f);
@@ -74,44 +69,47 @@ internal void shader_error_check(GLuint shader)
     }
 }
 
-u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path)
+u32 shader_init(Renderer* renderer, const char* vert_shader_path, const char* frag_shader_path)
 {
     // Read shaders from files
-    char* vertex_shader_source = file_to_string(vertex_shader_path);
-    char* fragment_shader_source = file_to_string(fragment_shader_path);
+    char* vert_shader_source = file_to_string(vert_shader_path, &renderer->scratch_arena);
+    char* frag_shader_source = file_to_string(frag_shader_path, &renderer->scratch_arena);
+
+    int vert_shader_len = str_len(vert_shader_source);
+    int frag_shader_len = str_len(frag_shader_source);
 
     // Create and compile shaders
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
-    glCompileShader(vertex_shader);
-    shader_error_check(vertex_shader);
+    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert_shader, 1, &vert_shader_source, NULL);
+    glCompileShader(vert_shader);
+    shader_error_check(vert_shader);
 
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
-    glCompileShader(fragment_shader);
-    shader_error_check(fragment_shader);
+    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag_shader, 1, &frag_shader_source, NULL);
+    glCompileShader(frag_shader);
+    shader_error_check(frag_shader);
 
     // Link both shaders into a shader program
-    GLuint shader_program = glCreateProgram();
+    GLuint shader = glCreateProgram();
     // TODO(lucas): Logging
-    if (!shader_program)
+    if (!shader)
     {
         // Shader Error: Shader program creation failed!
         ASSERT(0);
     }
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-    glLinkProgram(shader_program);
-    shader_error_check(shader_program);
+    glAttachShader(shader, vert_shader);
+    glAttachShader(shader, frag_shader);
+    glLinkProgram(shader);
+    shader_error_check(shader);
 
-    free(vertex_shader_source);
-    free(fragment_shader_source);
+    memory_arena_pop(&renderer->scratch_arena, vert_shader_len+1);
+    memory_arena_pop(&renderer->scratch_arena, frag_shader_len+1);
 
     // Delete the shader sources as they are no longer needed
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
+    glDeleteShader(vert_shader);
+    glDeleteShader(frag_shader);
 
-    return shader_program;
+    return shader;
 }
 
 void shader_bind(u32 id)
