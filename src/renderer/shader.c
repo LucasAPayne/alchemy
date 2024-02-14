@@ -127,6 +127,42 @@ void shader_delete(u32 id)
     glDeleteProgram(id);
 }
 
+void shader_set_i32(u32 shader, const char* name, i32 value)
+{
+    shader_bind(shader);
+    glUniform1i(glGetUniformLocation(shader, name), value);
+}
+
+void shader_set_iv2(u32 shader, const char* name, iv2 value)
+{
+    shader_bind(shader);
+    glUniform2i(glGetUniformLocation(shader, name), value.x, value.y);
+}
+
+void shader_set_iv3(u32 shader, const char* name, iv3 value)
+{
+    shader_bind(shader);
+    glUniform3i(glGetUniformLocation(shader, name), value.x, value.y, value.z);
+}
+
+void shader_set_iv4(u32 shader, const char* name, iv4 value)
+{
+    shader_bind(shader);
+    glUniform4i(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
+}
+
+void shader_set_f32(u32 shader, const char* name, f32 value)
+{
+    shader_bind(shader);
+    glUniform1f(glGetUniformLocation(shader, name), value);
+}
+
+void shader_set_v2(u32 shader, const char* name, v2 value)
+{
+    shader_bind(shader);
+    glUniform2f(glGetUniformLocation(shader, name), value.x, value.y);
+}
+
 void shader_set_v3(u32 shader, const char* name, v3 value)
 {
     shader_bind(shader);
@@ -139,15 +175,20 @@ void shader_set_v4(u32 shader, const char* name, v4 value)
     glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
+void shader_set_m2(u32 shader, const char* name, m2 value, b32 transpose)
+{
+    shader_bind(shader);
+    glUniformMatrix2fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
+}
+
+void shader_set_m3(u32 shader, const char* name, m3 value, b32 transpose)
+{
+    shader_bind(shader);
+    glUniformMatrix3fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
+}
+
 void shader_set_m4(u32 shader, const char* name, m4 value, b32 transpose)
 {
     shader_bind(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
-}
-
-
-void shader_set_int(u32 shader, const char* name, int value)
-{
-    shader_bind(shader);
-    glUniform1i(glGetUniformLocation(shader, name), value);
 }
