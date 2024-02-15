@@ -221,7 +221,19 @@ UPDATE_AND_RENDER(update_and_render)
 
     // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
 
-    draw_circle_outline(renderer, player->position, player->size.x, player->color, 5.0f);
+    // renderer->config.wireframe_mode = true;
+
+    v2 center = v2_add(player->position, v2_full(100.0f));
+    // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
+
+    f32 in_rad = player->size.x/2.0f;
+    f32 out_rad = player->size.x;
+    persist f32 time = 0.0f;
+    f32 freq = 2.0f;
+    f32 start_angle = 45.0f - 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
+    f32 end_angle = 315.0f + 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
+    time += delta_time;
+    draw_circle_sector(renderer, center, out_rad, start_angle, end_angle, player->color, 0.0f);
 
     draw_sprite(renderer, state->logo);
 

@@ -678,14 +678,12 @@ void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
 void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
 {
     m4 model = m4_identity();
-    model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
+    model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
     model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
-    // Set model matrix and color shader values
     shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
     shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
 
-    // The number of triangles is 2 less than the number of line segments or points
     u32 segs = renderer->config.circle_line_segments;
     u32 tris = segs - 2;
     u32 n_verts = 2*segs;
@@ -694,16 +692,17 @@ void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
 
     // Construct points from angles of tris
-    f32 angle = 360.0f / segs;
-    for (u32 i = 0; i < 2*segs; i += 2)
+    f32 angle_delta = 360.0f / segs;
+    u32 index = 0;
+    for (u32 i = 0; i < segs; ++i)
     {
-        f32 a = glm_rad(angle*i);
-        vertices[i] = cos_f32(a);
-        vertices[i+1] = sin_f32(a);
+        f32 a = glm_rad(angle_delta*i);
+        vertices[index++] = cos_f32(a);
+        vertices[index++] = sin_f32(a);
     }
 
     // Construct tris using indices, where the first vertex is shared by all tris
-    u32 index = 1;
+    index = 1;
     for (u32 i = 0; i < 3*tris; i+= 3)
     {
         indices[i] = 0;
@@ -725,9 +724,9 @@ void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
 
 void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
 {
-    RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->position,
+    RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center,
                                            color_transparent(), cmd->radius - cmd->thickness};
-    RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->position, cmd->color, cmd->radius};
+    RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
 
     glEnable(GL_DEPTH_TEST);
     stencil_buffer_enable_write();
@@ -739,6 +738,59 @@ void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
     output_circle(renderer, &outline_cmd);
     stencil_buffer_enable_write();
     renderer->circle_renderer.shader = renderer->poly_shader;
+}
+
+void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
+{
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
+    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
+
+    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
+
+    u32 segs = renderer->config.circle_line_segments;
+    u32 tris = segs;
+    u32 n_verts = 2*segs + 4;
+    u32 n_indices = 3*tris;
+    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
+    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
+
+    // NOTE(lucas): For drawing circle sectors, it is easiest for vertices to share the center of the circle.
+    vertices[0] = 0.0f;
+    vertices[1] = 0.0f;
+
+    // Construct points from angles of tris
+    f32 angle_delta = abs_f32(cmd->end_angle - cmd->start_angle) / segs;
+    u32 index = 2;
+    u32 iterations = n_verts/2;
+    for (u32 i = 0; i < iterations; ++i)
+    {
+        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        vertices[index++] = cos_f32(a);
+        vertices[index++] = sin_f32(a);
+    }
+
+    // Construct tris using indices, where the first vertex is shared by all tris
+    index = 1;
+    for (u32 i = 0; i < 3*tris; i+= 3)
+    {
+        indices[i] = 0;
+        indices[i+1] = index++;
+        indices[i+2] = index;
+    }
+
+    vao_bind(renderer->circle_renderer.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->circle_renderer.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
+    vao_bind(0);
 }
 
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
@@ -841,6 +893,13 @@ internal void render_command_buffer_output(Renderer* renderer)
             {
                 RenderCommandCircleOutline* cmd = (RenderCommandCircleOutline*)header;
                 output_circle_outline(renderer, cmd);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandCircleSector:
+            {
+                RenderCommandCircleSector* cmd = (RenderCommandCircleSector*)header;
+                output_circle_sector(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -1186,25 +1245,38 @@ void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_bl, v
     cmd->rotation = rotation;
 }
 
-void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color)
+void draw_circle(Renderer* renderer, v2 center, f32 radius, v4 color)
 {
     RenderCommandCircle* cmd = render_command_push(&renderer->command_buffer, RenderCommandCircle);
     if (!cmd)
         return;
-    cmd->position = position;
+    cmd->center = center;
     cmd->radius = radius;
     cmd->color = color;
 }
 
-void draw_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness)
+void draw_circle_outline(Renderer* renderer, v2 center, f32 radius, v4 color, f32 thickness)
 {
     RenderCommandCircleOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandCircleOutline);
     if (!cmd)
         return;
-    cmd->position = position;
+    cmd->center = center;
     cmd->radius = radius;
     cmd->color = color;
     cmd->thickness = thickness;
+}
+
+void draw_circle_sector(Renderer* renderer, v2 center, f32 radius, f32 start_angle, f32 end_angle, v4 color, f32 rotation)
+{
+    RenderCommandCircleSector* cmd = render_command_push(&renderer->command_buffer, RenderCommandCircleSector);
+    if (!cmd)
+        return;
+    cmd->center = center;
+    cmd->color = color;
+    cmd->radius = radius;
+    cmd->start_angle = start_angle;
+    cmd->end_angle = end_angle;
+    cmd->rotation = rotation;
 }
 
 void draw_sprite(Renderer* renderer, Sprite sprite)

@@ -99,7 +99,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 
     /* setup program */
     shader_bind(dev->shader);
-    shader_set_int(dev->shader, "tex", 0);
+    shader_set_i32(dev->shader, "tex", 0);
     shader_set_m4(dev->shader, "projection", ortho, false);
     glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
     {

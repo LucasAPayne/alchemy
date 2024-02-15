@@ -42,8 +42,10 @@ typedef enum RenderCommandType
     RENDER_COMMAND_RenderCommandQuadGradient,
     RENDER_COMMAND_RenderCommandCircle,
     RENDER_COMMAND_RenderCommandCircleOutline,
+    RENDER_COMMAND_RenderCommandCircleSector,
+    RENDER_COMMAND_RenderCommandCircleSectorOutline,
     RENDER_COMMAND_RenderCommandSprite,
-    RENDER_COMMAND_RenderCommandText
+    RENDER_COMMAND_RenderCommandText,
 } RenderCommandType;
 
 typedef struct RenderCommand
@@ -136,7 +138,7 @@ typedef struct RenderCommandQuadGradient
 typedef struct RenderCommandCircle
 {
     RenderCommand header;
-    v2 position;
+    v2 center;
     v4 color;
     f32 radius;
 } RenderCommandCircle;
@@ -144,11 +146,23 @@ typedef struct RenderCommandCircle
 typedef struct RenderCommandCircleOutline
 {
     RenderCommand header;
-    v2 position;
+    v2 center;
     v4 color;
     f32 radius;
     f32 thickness;
 } RenderCommandCircleOutline;
+
+typedef struct RenderCommandCircleSector
+{
+    RenderCommand header;
+    v2 center;
+    v2 origin;
+    v4 color;
+    f32 radius;
+    f32 start_angle;
+    f32 end_angle;
+    f32 rotation;
+} RenderCommandCircleSector;
 
 typedef struct RenderCommandSprite
 {
@@ -252,8 +266,11 @@ void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 t
 void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_bl, v4 color_br, v4 color_tr, v4 color_tl,
                         f32 rotation);
 
-void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
-void draw_circle_outline(Renderer* renderer, v2 position, f32 radius, v4 color, f32 thickness);
+void draw_circle(Renderer* renderer, v2 center, f32 radius, v4 color);
+void draw_circle_outline(Renderer* renderer, v2 center, f32 radius, v4 color, f32 thickness);
+
+// NOTE(lucas): Angles must be passed in degrees
+void draw_circle_sector(Renderer* renderer, v2 center, f32 radius, f32 start_angle, f32 end_angle, v4 color, f32 rotation);
 
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
@@ -282,5 +299,7 @@ void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
 void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd);
 void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd);
 
+// TODO(lucas): circle sector outline
 void output_circle(Renderer* renderer, RenderCommandCircle* cmd);
 void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd);
+void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd);
