@@ -293,7 +293,8 @@ internal RenderObject circle_renderer_init(u32 shader, u32 segs)
     circle_renderer.vbo = vbo_init_empty();
     circle_renderer.ibo = ibo_init_empty();
 
-    vertex_layout_set(0, 2, 2*sizeof(f32), 0);
+    vertex_layout_set(0, 2, 6*sizeof(f32), 0);
+    vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
     vao_bind(0);
 
     return circle_renderer;
@@ -681,12 +682,12 @@ void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
     model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
-    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
+    shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
 
     u32 segs = renderer->config.circle_line_segments;
     u32 tris = segs - 2;
-    u32 n_verts = 2*segs;
+    u32 n_verts = 6*segs;
     u32 n_indices = 3*tris;
     f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
     u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
@@ -699,11 +700,16 @@ void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
         f32 a = glm_rad(angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
     }
 
     // Construct tris using indices, where the first vertex is shared by all tris
     index = 1;
-    for (u32 i = 0; i < 3*tris; i+= 3)
+    for (u32 i = 0; i < n_indices; i += 3)
     {
         indices[i] = 0;
         indices[i+1] = index++;
@@ -747,12 +753,12 @@ void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
     model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
-    shader_set_m4(renderer->quad_renderer.shader, "model", model, false);
-    shader_set_v4(renderer->quad_renderer.shader, "color", cmd->color);
+    shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
 
     u32 segs = renderer->config.circle_line_segments;
     u32 tris = segs;
-    u32 n_verts = 2*segs + 4;
+    u32 n_verts = 6*(segs + 2);
     u32 n_indices = 3*tris;
     f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
     u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
@@ -760,21 +766,30 @@ void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
     // NOTE(lucas): For drawing circle sectors, it is easiest for vertices to share the center of the circle.
     vertices[0] = 0.0f;
     vertices[1] = 0.0f;
+    vertices[2] = cmd->color.r;
+    vertices[3] = cmd->color.g;
+    vertices[4] = cmd->color.b;
+    vertices[5] = cmd->color.a;
 
     // Construct points from angles of tris
     f32 angle_delta = abs_f32(cmd->end_angle - cmd->start_angle) / segs;
-    u32 index = 2;
     u32 iterations = n_verts/2;
+    u32 index = 6;
     for (u32 i = 0; i < iterations; ++i)
     {
         f32 a = glm_rad(cmd->start_angle + angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
     }
 
     // Construct tris using indices, where the first vertex is shared by all tris
     index = 1;
-    for (u32 i = 0; i < 3*tris; i+= 3)
+    for (u32 i = 0; i < n_indices; i += 3)
     {
         indices[i] = 0;
         indices[i+1] = index++;
@@ -791,6 +806,192 @@ void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
     vao_bind(0);
+}
+
+void output_ring(Renderer* renderer, RenderCommandRing* cmd)
+{
+    // NOTE(lucas): Outer radius must be positive and larger than inner radius
+    if (cmd->inner_radius > cmd->outer_radius)
+    {
+        f32 temp = cmd->inner_radius;
+        cmd->inner_radius = cmd->outer_radius;
+        cmd->outer_radius = temp;
+    }
+
+    if (cmd->outer_radius <= 0.0f)
+        cmd->outer_radius = 0.1f;
+
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
+    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
+
+    shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
+
+    u32 segs = renderer->config.circle_line_segments;
+    u32 tris = segs;
+    u32 n_verts = 6*(segs + 2);
+    u32 n_indices = 3*tris;
+    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
+    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
+
+    // Construct points from angles of tris
+    f32 angle_delta = abs_f32(cmd->end_angle - cmd->start_angle) / segs;
+    u32 index = 0;
+    u32 iterations = n_verts/2;
+    f32 k = cmd->inner_radius / cmd->outer_radius;
+    for (u32 i = 0; i < iterations; i += 2)
+    {
+        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        vertices[index++] = k*cos_f32(a);
+        vertices[index++] = k*sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+
+        vertices[index++] = cos_f32(a);
+        vertices[index++] = sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+    }
+
+    index = 0;
+    for (u32 i = 0; i < n_indices; i += 3, ++index)
+    {
+        indices[i] = index;
+        indices[i+1] = index+1;
+        indices[i+2] = index+2;
+    }
+
+    vao_bind(renderer->circle_renderer.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->circle_renderer.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
+    vao_bind(0);
+}
+
+void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
+{
+    if (cmd->inner_radius > cmd->outer_radius)
+    {
+        f32 temp = cmd->inner_radius;
+        cmd->inner_radius = cmd->outer_radius;
+        cmd->outer_radius = temp;
+    }
+
+    if (cmd->outer_radius <= 0.0f)
+        cmd->outer_radius = 0.1f;
+
+    m4 model = m4_identity();
+    model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
+    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
+
+    shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
+    shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
+
+    u32 segs = renderer->config.circle_line_segments;
+    // u32 tris = 2*segs + 14;
+    // u32 n_verts = 4*segs + 28;
+    u32 tris = 4*segs;
+    u32 n_verts = 24*segs;
+    u32 n_indices = 3*tris;
+    f32* vertices = push_array(&renderer->scratch_arena, n_verts, f32);
+    u32* indices = push_array(&renderer->scratch_arena, n_indices, u32);
+
+    // Construct points from angles of tris
+    f32 angle_delta = abs_f32(cmd->end_angle - cmd->start_angle) / segs;
+    u32 index = 0;
+    u32 iterations = n_verts/4 - 2;
+    f32 k_in = cmd->inner_radius / cmd->outer_radius;
+    f32 k_t = cmd->thickness / cmd->outer_radius;
+
+    // NOTE(lucas): inner edge
+    for (u32 i = 0; i <= segs; i += 2)
+    {
+        f32 a_deg = cmd->start_angle + angle_delta*i;
+        f32 a = glm_rad(a_deg);
+        vertices[index++] = k_in*cos_f32(a);
+        vertices[index++] = k_in*sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+
+        vertices[index++] = (k_in + k_t)*cos_f32(a);
+        vertices[index++] = (k_in + k_t)*sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+    }
+
+    // NOTE(lucas): outer edge
+    for (u32 i = 0; i <= segs; i += 2)
+    {
+        f32 a_deg = cmd->end_angle - angle_delta*i;
+        f32 a = glm_rad(a_deg);
+        vertices[index++] = cos_f32(a);
+        vertices[index++] = sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+
+        vertices[index++] = (1.0f - k_t)*cos_f32(a);
+        vertices[index++] = (1.0f - k_t)*sin_f32(a);
+
+        vertices[index++] = cmd->color.r;
+        vertices[index++] = cmd->color.g;
+        vertices[index++] = cmd->color.b;
+        vertices[index++] = cmd->color.a;
+    }
+
+    index = 0;
+    for (u32 i = 0; i < n_indices; i += 3, ++index)
+    {
+        indices[i] = index;
+        indices[i+1] = index+1;
+        indices[i+2] = index+2;
+    }
+
+    vao_bind(renderer->circle_renderer.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->circle_renderer.vbo);
+    glBufferData(GL_ARRAY_BUFFER, n_verts*sizeof(f32), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->circle_renderer.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
+    vao_bind(0);
+
+    // NOTE(lucas): Draw cap lines
+    // TODO(lucas): Figure out how to properly include cap lines directly in vertex data?
+    v2 cap_start = {cmd->center.x + cmd->inner_radius, cmd->center.y};
+    v2 cap_end = {cmd->center.x + cmd->outer_radius, cmd->center.y};
+
+    RenderCommandLine start_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
+                                   cmd->thickness, cmd->start_angle + cmd->rotation};
+    RenderCommandLine end_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
+                                 cmd->thickness, cmd->end_angle + cmd->rotation};
+
+    output_line(renderer, &start_cap);
+    output_line(renderer, &end_cap);
 }
 
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
@@ -900,6 +1101,20 @@ internal void render_command_buffer_output(Renderer* renderer)
             {
                 RenderCommandCircleSector* cmd = (RenderCommandCircleSector*)header;
                 output_circle_sector(renderer, cmd);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandRing:
+            {
+                RenderCommandRing* cmd = (RenderCommandRing*)header;
+                output_ring(renderer, cmd);
+                base_address += sizeof(*cmd);
+            } break;
+
+            case RENDER_COMMAND_RenderCommandRingOutline:
+            {
+                RenderCommandRingOutline* cmd = (RenderCommandRingOutline*)header;
+                output_ring_outline(renderer, cmd);
                 base_address += sizeof(*cmd);
             } break;
 
@@ -1277,6 +1492,37 @@ void draw_circle_sector(Renderer* renderer, v2 center, f32 radius, f32 start_ang
     cmd->start_angle = start_angle;
     cmd->end_angle = end_angle;
     cmd->rotation = rotation;
+}
+
+void draw_ring(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius, f32 start_angle, f32 end_angle,
+               v4 color, f32 rotation)
+{
+    RenderCommandRing* cmd = render_command_push(&renderer->command_buffer, RenderCommandRing);
+    if (!cmd)
+        return;
+    cmd->center = center;
+    cmd->color = color;
+    cmd->outer_radius = outer_radius;
+    cmd->inner_radius = inner_radius;
+    cmd->start_angle = start_angle;
+    cmd->end_angle = end_angle;
+    cmd->rotation = rotation;
+}
+
+void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius, f32 start_angle,
+                       f32 end_angle, v4 color, f32 rotation, f32 thickness)
+{
+    RenderCommandRingOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandRingOutline);
+    if (!cmd)
+        return;
+    cmd->center = center;
+    cmd->color = color;
+    cmd->outer_radius = outer_radius;
+    cmd->inner_radius = inner_radius;
+    cmd->start_angle = start_angle;
+    cmd->end_angle = end_angle;
+    cmd->rotation = rotation;
+    cmd->thickness = thickness;
 }
 
 void draw_sprite(Renderer* renderer, Sprite sprite)
