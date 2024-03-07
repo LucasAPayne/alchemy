@@ -10,6 +10,8 @@
 #include <stdio.h>  // Temporary: sprintf_s
 #include <string.h> // Temporary
 
+#include <stb_image/stb_image.h>
+
 internal void bounce_dvd(ExampleState* state, f32* direction)
 {
     // Bounce off screen boundary
@@ -56,7 +58,7 @@ internal void update_player(ExampleState* state, f32 delta_time, u32 window_widt
                                            (f32)(window_height - player->size.y)});
 
     // Update player position
-    v2 player_delta = v2_scale((v2){gamepad->left_stick_x, gamepad->left_stick_y}, speed*delta_time);
+    v2 player_delta = v2_scale((v2){gamepad->left_stick_x, -gamepad->left_stick_y}, speed*delta_time);
     player->position = v2_add(player->position, player_delta);
 
     // Dash
@@ -119,7 +121,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
     state->logo.size = (v2){300.0f, 150.0f};
-    state->logo.position = (v2){0.0f, (f32)window.height - state->logo.size.y};
+    state->logo.position = v2_zero();
 
     state->logo_direction = (v2){1.0f, -1.0f};
 
@@ -132,6 +134,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->colors[6] = color_cyan();
 
     state->player.size = (v2){50.0f, 50.0f};
+    state->player.position = (v2){0.0f, (f32)window.height + state->player.size.y};
     state->player.color = color_white();
 
     state->player.dash_counter = 0;
@@ -152,12 +155,14 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
-    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, MEGABYTES(1));
+    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_size);
+    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_size);
 
     // nuklear example
-    UIRenderState* ui_render_state = &renderer->ui_render_state;
-    ui_render_state->keyboard = &state->input->keyboard;
-    ui_render_state->mouse = &state->input->mouse;
+    ui_state_init(renderer, state->matrix_font, 14, &state->permanent_arena);
+    UIState* ui_state = &renderer->ui_state;
+    ui_state->keyboard = &input->keyboard;
+    ui_state->mouse = &input->mouse;
 }
 
 UPDATE_AND_RENDER(update_and_render)
@@ -177,11 +182,11 @@ UPDATE_AND_RENDER(update_and_render)
     // update_dvd(state, delta_time, window.width, window.height);
     update_player(state, delta_time, window.width, window.height);
 
-    if (key_pressed(&state->input->keyboard, KEY_LBRACKET))
-        cursor_set_from_memory(state->sword_cursor);
+    // if (key_pressed(keyboard, KEY_LBRACKET))
+    //     cursor_set_from_memory(state->sword_cursor);
 
-    if (key_pressed(&state->input->keyboard, KEY_RBRACKET))
-        cursor_set_from_system(CURSOR_ARROW);
+    // if (key_pressed(keyboard, KEY_RBRACKET))
+    //     cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;
     if (gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
@@ -204,11 +209,9 @@ UPDATE_AND_RENDER(update_and_render)
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */
-    struct nk_context* ctx = &renderer->ui_render_state.ctx;
-
     Player* player = &state->player;
-    // draw_quad(renderer, player->position, player->size, player->color, player->rotation);
-    // draw_quad_outline(renderer, player->position, player->size, color_red(), 5.0f, player->rotation);
+    draw_quad(renderer, player->position, player->size, player->color, player->rotation);
+    // draw_quad_outline(renderer, player->position, player->size, color_red(), player->rotation, 5.0f);
     // draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
                     //    player->rotation);
 
@@ -216,14 +219,14 @@ UPDATE_AND_RENDER(update_and_render)
     // v2 b = v2_add(player->position, (v2){200.0f, -50.0f});
     // v2 c = v2_add(player->position, (v2){-100.0f, 100.0f});
     // draw_triangle(renderer, a, b, c, player->color, player->rotation);
-    // draw_triangle_outline(renderer, a, b, c, color_red(), 5.0f, player->rotation);
+    // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
     // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
 
     // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
 
     // renderer->config.wireframe_mode = true;
 
-    v2 center = v2_add(player->position, v2_full(300.0f));
+    v2 center = v2_sub(player->position, v2_full(300.0f));
     // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
 
     f32 in_rad = player->size.x*4.0f;
@@ -240,29 +243,31 @@ UPDATE_AND_RENDER(update_and_render)
     draw_sprite(renderer, state->logo);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
+    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, 50.0f}, 48);
     engine_text.color = font_color;
     draw_text(renderer, engine_text);
 
     char buffer[512];
     sprintf_s(buffer, ARRAY_COUNT(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    Text frame_time = text_init(renderer, buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
+    Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(renderer, cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
+    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1050.0f,
+                                   (f32)window.height + 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(renderer, stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
+    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(renderer, stopwatch_text);
 
+    // TODO(lucas): For some reason, text here and in the UI can get cut off or out of order.
     /* Text justification Test */
     // rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
     // // draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
@@ -278,7 +283,9 @@ UPDATE_AND_RENDER(update_and_render)
     // text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     // draw_text_area(renderer, text_area);
     
-    ui_overview(ctx, window.width);
+    struct nk_context* ctx = &renderer->ui_state.ctx;
+    ui_overview(renderer, ctx, window.width);
 
-    sound_output_process(&state->sound_output, &state->transient_arena);
+    // TODO(lucas): Something has completely busted sound output
+    // sound_output_process(&state->sound_output, &state->transient_arena);
 }

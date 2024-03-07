@@ -48,6 +48,7 @@ typedef struct ExampleState
     void* sword_cursor;
 
     MemoryArena transient_arena;
+    MemoryArena permanent_arena;
 } ExampleState;
 
 ALCHEMY_EXPORT UPDATE_AND_RENDER(update_and_render);

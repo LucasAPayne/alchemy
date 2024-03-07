@@ -242,7 +242,7 @@ typedef struct Renderer
     u32 poly_shader;
     u32 poly_border_shader;
 
-    UIRenderState ui_render_state;
+    UIState ui_state;
 
     // NOTE(lucas): If MSAA is disabled, then the intermediate framebuffer is unused.
     // Otherwise, the main framebufer is used for multisampling operations and is
@@ -281,13 +281,13 @@ void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f3
 
 // NOTE(lucas): Vertices must be specified in couter-clockwise order!
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation);
-void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 thickness, f32 rotation);
+void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation, f32 thickness);
 void draw_triangle_gradient(Renderer* renderer, v2 a, v2 b, v2 c, v4 color_a, v4 color_b, v4 color_c, f32 rotation);
 
 // TODO(lucas): Rounded edges option
 // TODO(lucas): Add functions to take in rect instead of position/size or start/end
 void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
-void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 thickness, f32 rotation);
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness);
 void draw_quad_gradient(Renderer* renderer, v2 position, v2 size, v4 color_bl, v4 color_br, v4 color_tr, v4 color_tl,
                         f32 rotation);
 
@@ -318,20 +318,4 @@ inline v4 color_magenta(void)     {return (v4){1.0f, 0.0f, 1.0f, 1.0f};}
 inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
 
-// NOTE(lucas): For internal use only
-void output_line(Renderer* renderer, RenderCommandLine* cmd);
-
-void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd);
-void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd);
-void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient* cmd);
-
-void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
-void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd);
-void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd);
-
-void output_circle(Renderer* renderer, RenderCommandCircle* cmd);
-void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd);
-void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd);
-
-void output_ring(Renderer* renderer, RenderCommandRing* cmd);
-void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd);
+void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr);

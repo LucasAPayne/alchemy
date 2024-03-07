@@ -5,6 +5,7 @@
 #include "alchemy/util/str.h"
 
 #include <glad/glad.h>
+#include <stb_image/stb_image.h>
 
 internal void vao_bind(u32 vao)
 {
@@ -116,7 +117,7 @@ internal void rbo_update(int window_width, int window_height, int samples)
     glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, window_width, window_height);
 }
 
-internal void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
+void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
 {
     glEnableVertexAttribArray(index);
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, ptr);
@@ -385,7 +386,9 @@ internal void renderer_gen_texture(Texture tex)
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-void output_line(Renderer* renderer, RenderCommandLine* cmd)
+internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
+
+internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
 {
     v2 delta = v2_sub(cmd->end, cmd->start);
 
@@ -413,7 +416,7 @@ void output_line(Renderer* renderer, RenderCommandLine* cmd)
     output_quad(renderer, &quad_cmd);
 }
 
-void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
+internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
 {
     v2 min_point = v2_full(F32_MAX);
     v2 max_point = v2_full(-F32_MAX);
@@ -475,7 +478,7 @@ void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     vao_bind(0);
 }
 
-void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
+internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
 {
     /* NOTE(lucas): To find the vertices of the shrunken triangle, first find incenter of the triangle (the center of
      * the inscribed circle). Then, find the inradius, the radius of the inscribed circle. Trivially, the two triangles
@@ -519,7 +522,7 @@ void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* c
 }
 
 // TODO(lucas): Think about pulling out common code and default vertices for shape variants
-void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient* cmd)
+internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient* cmd)
 {
     v2 min_point = v2_full(F32_MAX);
     v2 max_point = v2_full(-F32_MAX);
@@ -586,7 +589,7 @@ void output_triangle_gradient(Renderer* renderer, RenderCommandTriangleGradient*
     vao_bind(0);    
 }
 
-void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
+internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
@@ -609,7 +612,7 @@ void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
     vao_bind(0);
 }
 
-void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
+internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
 {
     v2 new_pos = v2_add(cmd->position, v2_full(cmd->thickness));
     v2 new_size = v2_sub(cmd->size, v2_full(2.0f*cmd->thickness));
@@ -631,7 +634,7 @@ void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
     renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
-void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
+internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->position.x, cmd->position.y, 0.0f});
@@ -676,7 +679,7 @@ void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
     vao_bind(0);
 }
 
-void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
+internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
@@ -728,7 +731,7 @@ void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     vao_bind(0);
 }
 
-void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
+internal void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
 {
     RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center,
                                            color_transparent(), cmd->radius - cmd->thickness};
@@ -746,7 +749,7 @@ void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
     renderer->circle_renderer.shader = renderer->poly_shader;
 }
 
-void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
+internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
@@ -808,7 +811,7 @@ void output_circle_sector(Renderer* renderer, RenderCommandCircleSector* cmd)
     vao_bind(0);
 }
 
-void output_ring(Renderer* renderer, RenderCommandRing* cmd)
+internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
 {
     // NOTE(lucas): Outer radius must be positive and larger than inner radius
     if (cmd->inner_radius > cmd->outer_radius)
@@ -881,7 +884,7 @@ void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     vao_bind(0);
 }
 
-void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
+internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
 {
     if (cmd->inner_radius > cmd->outer_radius)
     {
@@ -1146,6 +1149,7 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
 {
     Renderer renderer = {0};
 
+    stbi_set_flip_vertically_on_load(true);
     opengl_init(window);
 
     glEnable(GL_MULTISAMPLE);
@@ -1215,8 +1219,6 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     renderer.poly_shader = poly_shader;
     renderer.poly_border_shader = poly_border_shader;
     
-    renderer.ui_render_state = ui_render_state_init(ui_shader);
-
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
@@ -1240,7 +1242,6 @@ void renderer_delete(Renderer* renderer)
 
     framebuffer_delete(&renderer->framebuffer);
     framebuffer_delete(&renderer->intermediate_framebuffer);
-    ui_render_state_shutdown(&renderer->ui_render_state);
 }
 
 void renderer_new_frame(Renderer* renderer, Window window)
@@ -1272,7 +1273,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
     // NOTE(lucas): If the viewport does not start at (0, 0), offset the projection matrix by the viewport origin
     m4 projection = m4_ortho(renderer->viewport.x, renderer->viewport.x + renderer->viewport.width,
-                             renderer->viewport.y, renderer->viewport.y + renderer->viewport.height,
+                             renderer->viewport.y + renderer->viewport.height, renderer->viewport.y,
                              -1.0f, 1.0f);
 
     // NOTE(lucas): Most shapes use the same shader, so no need to set the uniform for each shape
@@ -1302,6 +1303,8 @@ void renderer_render(Renderer* renderer)
 
     rect viewport = renderer->viewport;
 
+    // TODO(lucas): Use renderer AA settings
+    ui_render(renderer, NK_ANTI_ALIASING_ON);
     render_command_buffer_output(renderer);
 
     // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the
@@ -1340,9 +1343,6 @@ void renderer_render(Renderer* renderer)
 
     for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
         renderer->textures_to_generate[i] = (Texture){0};
-
-    // TODO(lucas): Use renderer AA settings
-    ui_render(renderer, NK_ANTI_ALIASING_ON);
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -1357,7 +1357,7 @@ void renderer_clear(v4 color)
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation)
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 rotation, f32 thickness)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
@@ -1385,7 +1385,7 @@ void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)
     cmd->rotation = rotation;
 }
 
-void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 thickness, f32 rotation)
+void draw_triangle_outline(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation, f32 thickness)
 {
     RenderCommandTriangleOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandTriangleOutline);
     if (!cmd)

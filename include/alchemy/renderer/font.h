@@ -65,9 +65,11 @@ typedef struct TextArea
 
 Font font_load_from_file(const char* filename);
 
-Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px);
+Text text_init(char* string, Font* font, v2 position, u32 px);
 void text_set_size_px(Text* text, u32 px);
 void text_scale(Text* text, f32 factor);
+
+f32 text_get_width(Text text);
 
 void output_text(Renderer* renderer, RenderCommandText* cmd);
 

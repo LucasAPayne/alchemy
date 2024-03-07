@@ -29,7 +29,7 @@ Font font_load_from_file(const char* filename)
 }
 
 // NOTE(lucas): Determine width of string in pixels
-internal f32 text_get_width(Text text)
+f32 text_get_width(Text text)
 {
     f32 result = 0.0f;
 
@@ -69,7 +69,7 @@ void text_scale(Text* text, f32 factor)
     text_set_size_px(text, new_size);
 }
 
-Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px)
+Text text_init(char* string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
 
@@ -135,17 +135,17 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
                      GL_UNSIGNED_BYTE,
                      glyph->bitmap.buffer);
 
-        f32 x2 = x + glyph->bitmap_left;
-        f32 y2 = y + glyph->bitmap_top;
+        f32 x2 = x + (f32)glyph->bitmap_left;
+        f32 y2 = y - (f32)glyph->bitmap_top;
         f32 w = (f32)glyph->bitmap.width;
         f32 h = (f32)glyph->bitmap.rows;
 
         f32 vertices[] =
         {
-            x2 + w, y2    , 1.0f, 0.0f,
-            x2 + w, y2 - h, 1.0f, 1.0f,
-            x2,     y2 - h, 0.0f, 1.0f,
-            x2,     y2    , 0.0f, 0.0f,
+            x2 + w, y2, 1.0f, 0.0f,
+            x2 + w, y2 + h, 1.0f, 1.0f,
+            x2,     y2 + h, 0.0f, 1.0f,
+            x2,     y2, 0.0f, 0.0f,
         };
 
         // TODO(lucas): Update with glBufferSubData?
@@ -159,13 +159,13 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
         if ((*c == '\r') && (*(c+1) == '\n'))
         {
             // If \r\n is used to end a line, need to skip the next character (\n)
-            y -= text.line_height;
+            y += text.line_height;
             x = text.position.x;
             ++c;
         }
         else if ((*c == '\n') || (*c == '\r'))
         {
-            y -= text.line_height;
+            y += text.line_height;
             x = text.position.x;
         }
         else
@@ -416,7 +416,7 @@ TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, 
     TextArea result = {0};
     result.bounds = bounds;
     v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
-    result.text = text_init(renderer, str, font, text_pos, text_size_px);
+    result.text = text_init(str, font, text_pos, text_size_px);
     return result;
 }
 

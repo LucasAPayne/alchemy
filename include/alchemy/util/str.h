@@ -41,3 +41,23 @@ inline char* str_copy(char* src, MemoryArena* arena)
     result[len] = '\0';
     return result;
 }
+
+inline char* str_sub(char* src, usize pos, usize len, MemoryArena* arena)
+{
+    usize src_len = str_len(src);
+    char* result = push_array(arena, len+1, char);
+    
+    if (pos >= src_len)
+    {
+        pos = len - 1;
+        len = 0;
+    }
+    if (len > src_len)
+        len = src_len;
+
+    for (u32 i = 0; i < src_len; ++i, ++src)
+        *(result + i) = *(src + pos);
+    
+    *(result + len) = '\0';
+    return result;
+}

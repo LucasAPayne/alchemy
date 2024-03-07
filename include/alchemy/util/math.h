@@ -99,6 +99,20 @@ inline f32 atan_f32(f32 y, f32 x)
     return result;
 }
 
+// Convert radians to degrees
+inline f32 deg_f32(f32 rad)
+{
+    f32 result = glm_deg(rad);
+    return result;
+}
+
+// Convert degrees to radians
+inline f32 rad_f32(f32 deg)
+{
+    f32 result = glm_rad(deg);
+    return result;
+}
+
 /* v2 */
 inline v2 v2_full(f32 fill_value)
 {
