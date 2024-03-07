@@ -44,13 +44,13 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
     state->logo.position = v2_clamp_to_rect(state->logo.position, window_bounds);
 }
 
-internal void update_player(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
+internal void update_player(ExampleState* state, Input* input, f32 delta_time, u32 window_width, u32 window_height)
 {
     Player* player = &state->player;
 
     timer_update(&player->dash_cooldown, delta_time, true);
 
-    Gamepad* gamepad = &state->input->gamepads[0];
+    Gamepad* gamepad = &input->gamepads[0];
     f32 speed = 250.0f; // pixels per second
 
     rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
@@ -111,7 +111,6 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 {
     srand(0);
 
-    state->input = input;
     renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
@@ -177,16 +176,16 @@ UPDATE_AND_RENDER(update_and_render)
     memory_arena_clear(&state->transient_arena);
 
     stopwatch_update(&state->stopwatch, delta_time);
-    Gamepad* gamepad = &state->input->gamepads[0];
-    Keyboard* keyboard = &state->input->keyboard;
-    // update_dvd(state, delta_time, window.width, window.height);
-    update_player(state, delta_time, window.width, window.height);
+    Gamepad* gamepad = &input->gamepads[0];
+    Keyboard* keyboard = &input->keyboard;
+    update_dvd(state, delta_time, window.width, window.height);
+    update_player(state, input, delta_time, window.width, window.height);
 
-    // if (key_pressed(keyboard, KEY_LBRACKET))
-    //     cursor_set_from_memory(state->sword_cursor);
+    if (key_pressed(keyboard, KEY_LBRACKET))
+        cursor_set_from_memory(state->sword_cursor);
 
-    // if (key_pressed(keyboard, KEY_RBRACKET))
-    //     cursor_set_from_system(CURSOR_ARROW);
+    if (key_pressed(keyboard, KEY_RBRACKET))
+        cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;
     if (gamepad_button_pressed(gamepad->a_button) && !state->is_shooting)
@@ -216,8 +215,8 @@ UPDATE_AND_RENDER(update_and_render)
                     //    player->rotation);
 
     // v2 a = player->position;
-    // v2 b = v2_add(player->position, (v2){200.0f, -50.0f});
-    // v2 c = v2_add(player->position, (v2){-100.0f, 100.0f});
+    // v2 b = v2_add(player->position, (v2){200.0f, 50.0f});
+    // v2 c = v2_add(player->position, (v2){-100.0f, -100.0f});
     // draw_triangle(renderer, a, b, c, player->color, player->rotation);
     // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
     // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
@@ -226,11 +225,11 @@ UPDATE_AND_RENDER(update_and_render)
 
     // renderer->config.wireframe_mode = true;
 
-    v2 center = v2_sub(player->position, v2_full(300.0f));
+    // v2 center = v2_add(player->position, (v2){300.0f, -300.0f});
     // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
 
-    f32 in_rad = player->size.x*4.0f;
-    f32 out_rad = player->size.x*2.0f;
+    // f32 in_rad = player->size.x*4.0f;
+    // f32 out_rad = player->size.x*2.0f;
     // persist f32 time = 0.0f;
     // f32 freq = 2.0f;
     // f32 start_angle = 45.0f - 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
@@ -238,7 +237,7 @@ UPDATE_AND_RENDER(update_and_render)
     // time += delta_time;
     // draw_circle_sector(renderer, center, out_rad, start_angle, end_angle, player->color, 0.0f);
     // draw_ring(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation);
-    draw_ring_outline(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation, 5.0f);
+    // draw_ring_outline(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation, 5.0f);
 
     draw_sprite(renderer, state->logo);
 
@@ -255,8 +254,7 @@ UPDATE_AND_RENDER(update_and_render)
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1050.0f,
-                                   (f32)window.height + 10.0f}, 32);
+    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1100.0f, (f32)window.height - 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
@@ -286,6 +284,5 @@ UPDATE_AND_RENDER(update_and_render)
     struct nk_context* ctx = &renderer->ui_state.ctx;
     ui_overview(renderer, ctx, window.width);
 
-    // TODO(lucas): Something has completely busted sound output
-    // sound_output_process(&state->sound_output, &state->transient_arena);
+    sound_output_process(&state->sound_output, &state->transient_arena);
 }

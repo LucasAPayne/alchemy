@@ -465,7 +465,7 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -556,7 +556,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -598,7 +598,7 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -643,7 +643,7 @@ internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -926,7 +926,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
         f32 a_deg = cmd->start_angle + angle_delta*i;
         f32 a = glm_rad(a_deg);
         vertices[index++] = k_in*cos_f32(a);
-        vertices[index++] = k_in*sin_f32(a);
+        vertices[index++] = -k_in*sin_f32(a);
 
         vertices[index++] = cmd->color.r;
         vertices[index++] = cmd->color.g;
@@ -934,7 +934,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
         vertices[index++] = cmd->color.a;
 
         vertices[index++] = (k_in + k_t)*cos_f32(a);
-        vertices[index++] = (k_in + k_t)*sin_f32(a);
+        vertices[index++] = -(k_in + k_t)*sin_f32(a);
 
         vertices[index++] = cmd->color.r;
         vertices[index++] = cmd->color.g;
@@ -948,7 +948,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
         f32 a_deg = cmd->end_angle - angle_delta*i;
         f32 a = glm_rad(a_deg);
         vertices[index++] = cos_f32(a);
-        vertices[index++] = sin_f32(a);
+        vertices[index++] = -sin_f32(a);
 
         vertices[index++] = cmd->color.r;
         vertices[index++] = cmd->color.g;
@@ -956,7 +956,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
         vertices[index++] = cmd->color.a;
 
         vertices[index++] = (1.0f - k_t)*cos_f32(a);
-        vertices[index++] = (1.0f - k_t)*sin_f32(a);
+        vertices[index++] = -(1.0f - k_t)*sin_f32(a);
 
         vertices[index++] = cmd->color.r;
         vertices[index++] = cmd->color.g;
