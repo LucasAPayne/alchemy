@@ -997,6 +997,12 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     output_line(renderer, &end_cap);
 }
 
+internal void output_scissor_test(Renderer* renderer, RenderCommandScissorTest* cmd)
+{
+    glEnable(GL_SCISSOR_TEST);
+    glScissor((GLint)cmd->clip.x, (GLint)cmd->clip.y, (GLsizei)cmd->clip.width, (GLsizei)cmd->clip.height);
+}
+
 internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
 {
     RenderCommandBuffer result = {0};
@@ -1135,6 +1141,13 @@ internal void render_command_buffer_output(Renderer* renderer)
                 base_address += sizeof(*cmd);
             } break;
 
+            case RENDER_COMMAND_RenderCommandScissorTest:
+            {
+                RenderCommandScissorTest* cmd = (RenderCommandScissorTest*)header;
+                output_scissor_test(renderer, cmd);
+                base_address += sizeof(*cmd);
+            } break;
+
             INVALID_DEFAULT_CASE();
         }
     }    
@@ -1148,10 +1161,13 @@ internal void path_from_install_dir(char* path, char* dest)
 Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size)
 {
     Renderer renderer = {0};
+    renderer.window_width = window.width;
+    renderer.window_height = window.height;
 
     stbi_set_flip_vertically_on_load(true);
     opengl_init(window);
 
+    glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
@@ -1249,6 +1265,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
     if (renderer->config.wireframe_mode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    glEnable(GL_SCISSOR_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
@@ -1541,6 +1558,14 @@ void draw_text(Renderer* renderer, Text text)
     char* text_copy = str_copy(text.string, &renderer->scratch_arena);
     cmd->text = text;
     cmd->text.string = text_copy;
+}
+
+void draw_scissor_test(Renderer* renderer, rect clip)
+{
+    RenderCommandScissorTest* cmd = render_command_push(&renderer->command_buffer, RenderCommandScissorTest);
+    if (!cmd)
+        return;
+    cmd->clip = clip;
 }
 
 u32 renderer_next_tex_id(Renderer* renderer)

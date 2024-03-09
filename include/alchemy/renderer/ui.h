@@ -19,7 +19,6 @@ typedef struct Renderer Renderer;
 typedef struct UIState
 {
     int width, height;
-    int display_width, display_height;
     struct nk_context ctx;
     struct nk_user_font user_font;
     u32 text[NK_ALCHEMY_TEXT_MAX];

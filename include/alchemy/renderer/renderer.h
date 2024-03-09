@@ -47,6 +47,7 @@ typedef enum RenderCommandType
     RENDER_COMMAND_RenderCommandRingOutline,
     RENDER_COMMAND_RenderCommandSprite,
     RENDER_COMMAND_RenderCommandText,
+    RENDER_COMMAND_RenderCommandScissorTest,
 } RenderCommandType;
 
 typedef struct RenderCommand
@@ -201,6 +202,15 @@ typedef struct RenderCommandText
     Text text;
 } RenderCommandText;
 
+typedef struct RenderCommandScissorTest
+{
+    RenderCommand header;
+    rect clip;
+
+    // TODO(lucas): Scissor tests break other draw commands without having this extra padding.
+    v4 unused_;
+} RenderCommandScissorTest;
+
 typedef struct RenderCommandBuffer
 {
     usize max_size;
@@ -304,6 +314,8 @@ void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inne
 
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
+
+void draw_scissor_test(Renderer* renderer, rect clip);
 
 u32 renderer_next_tex_id(Renderer* renderer);
 void renderer_push_texture(Renderer* renderer, Texture texture);
