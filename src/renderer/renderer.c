@@ -1269,6 +1269,9 @@ void renderer_new_frame(Renderer* renderer, Window window)
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
+    renderer->window_width = window.width;
+    renderer->window_height = window.height;
+
     // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
     // fit the viewport to the window.
     if (rect_is_zero(renderer->viewport))
