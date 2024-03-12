@@ -19,15 +19,17 @@ internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const 
 {
     f32 result = 0.0f;
 
-    MemoryArena arena = memory_arena_alloc(strlen(text)+1);
+    MemoryArena arena = memory_arena_alloc(str_len(text)+1);
 
     if (len > 0)
     {
         char* substr = str_sub(text, 0, len, &arena);
         Font* font = (Font*)handle.ptr;
-        Text substr_text = text_init(text, font, v2_zero(), (u32)height);
+        Text substr_text = text_init(substr, font, v2_zero(), (u32)height);
         result = text_get_width(substr_text);
     }
+
+    memory_arena_pop(&arena, str_len(text)+1);
 
     return result;
 }

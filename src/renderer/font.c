@@ -318,9 +318,9 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     // of the next line.
                     parsed_text.height += text_area.text.line_height; 
                     word.position.x = text_area.text.position.x;
-                    word.position.y -= text_area.text.line_height;
+                    word.position.y += text_area.text.line_height;
                     space.position.x = text_area.text.position.x + word.string_width;
-                    space.position.y -= text_area.text.line_height;
+                    space.position.y += text_area.text.line_height;
 
                     overflow_text->word = word;
                     overflow_text->space = space;
@@ -486,12 +486,12 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     {
         case TEXT_ALIGN_VERT_BOTTOM:
         {
-            text_area.text.position.y -= 1.25f*vert_space_remaining;
+            text_area.text.position.y += 1.25f*vert_space_remaining;
         } break;
 
         case TEXT_ALIGN_VERT_CENTER:
         {
-            text_area.text.position.y -= 0.7f*vert_space_remaining;
+            text_area.text.position.y += 0.7f*vert_space_remaining;
         } break;
 
         // NOTE(lucas): Assume top align and do nothing.
@@ -508,7 +508,7 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
             draw_text(renderer, node->text);
         }
 
-        text_area.text.position.y -= text_area.text.line_height;
+        text_area.text.position.y += text_area.text.line_height;
 
         // NOTE(lucas): This should only be hit if NOT shrink to fit.
         // Discard any text that overflows y bound
