@@ -32,7 +32,7 @@ typedef enum ChartType
     CHART_MIXED
 } ChartType;
 
-int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width)
+int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Texture* logo_tex)
 {
     ctx->style.font = &renderer->ui_state.user_font;
 
@@ -1426,6 +1426,17 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width)
                 }
                 nk_tree_pop(ctx);
             }
+            nk_tree_pop(ctx);
+        }
+
+        if (nk_tree_push(ctx, NK_TREE_TAB, "Image", NK_MINIMIZED))
+        {
+            nk_layout_row_static(ctx, 100, 100, 2);
+
+            struct nk_color color = {0, 0, 255, 255};
+            struct nk_image image = nk_image_ptr(logo_tex);
+            nk_image(ctx, image);
+            nk_image_color(ctx, image, color);
             nk_tree_pop(ctx);
         }
     }

@@ -184,6 +184,20 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 draw_text(renderer, text);
             } break;
 
+            case NK_COMMAND_IMAGE:
+            {
+                const struct nk_command_image* i = (const struct nk_command_image*)cmd;
+                v4 tint = nk_color_to_v4(i->col);
+                v2 pos = {(f32)i->x, (f32)i->y};
+                v2 size = {(f32)i->w, (f32)i->h};
+                Texture* tex = (Texture*)i->img.handle.ptr;
+                Sprite sprite = sprite_init(tex);
+                sprite.color = tint;
+                sprite.position = pos;
+                sprite.size = size;
+                draw_sprite(renderer, sprite);
+            } break;
+
             default: break;
         }
     }

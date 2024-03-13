@@ -111,7 +111,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 {
     srand(0);
 
-    renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
+    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_size);
+    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_size);
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
@@ -121,7 +122,6 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->logo = sprite_init(&state->logo_tex);
     state->logo.size = (v2){300.0f, 150.0f};
     state->logo.position = v2_zero();
-
     state->logo_direction = (v2){1.0f, -1.0f};
 
     state->colors[0] = color_white();
@@ -153,9 +153,6 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
-
-    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_size);
-    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_size);
 
     // nuklear example
     ui_state_init(renderer, state->matrix_font, 14, &state->permanent_arena);
@@ -280,8 +277,10 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(renderer, text_area);
     
+    Texture* logo_tex = push_struct(&state->transient_arena, Texture);
+    *logo_tex = state->logo_tex;
     struct nk_context* ctx = &renderer->ui_state.ctx;
-    ui_overview(renderer, ctx, window.width);
+    ui_overview(renderer, ctx, window.width, logo_tex);
 
     sound_output_process(&state->sound_output, &state->transient_arena);
 }
