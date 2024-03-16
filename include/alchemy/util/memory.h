@@ -28,6 +28,10 @@ typedef struct MemoryArena
 GameMemory game_memory_init(usize permanent_storage_size, usize transient_storage_size);
 MemoryArena memory_arena_alloc(usize size);
 
+<<<<<<< HEAD
+=======
+// TODO(lucas): This should probably take an offset in to the base
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 inline MemoryArena memory_arena_init_from_base(void* base, usize size)
 {
     MemoryArena arena = {0};
@@ -37,6 +41,14 @@ inline MemoryArena memory_arena_init_from_base(void* base, usize size)
     return arena;
 }
 
+<<<<<<< HEAD
+=======
+inline void memory_arena_pop(MemoryArena* arena, usize size)
+{
+    arena->used -= size;
+}
+
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 inline void memory_arena_clear(MemoryArena* arena)
 {
     arena->used = 0;

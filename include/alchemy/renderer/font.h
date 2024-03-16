@@ -8,6 +8,7 @@
 #include FT_FREETYPE_H
 
 typedef struct Renderer Renderer;
+typedef struct RenderCommandText RenderCommandText;
 
 // NOTE(lucas): For now, there will be a font renderer for each different font
 typedef struct Font
@@ -68,8 +69,13 @@ Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px
 void text_set_size_px(Text* text, u32 px);
 void text_scale(Text* text, f32 factor);
 
-void output_text(Renderer* renderer, Text text);
+f32 text_get_width(Text text);
 
+<<<<<<< HEAD
+=======
+void output_text(Renderer* renderer, RenderCommandText* cmd);
+
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px);
 void text_area_scale(TextArea* text_area, f32 factor);
 

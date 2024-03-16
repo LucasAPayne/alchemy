@@ -25,9 +25,12 @@ typedef struct Player
 
 typedef struct ExampleState
 {
+<<<<<<< HEAD
     Input* input;
     Renderer* renderer;
 
+=======
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     Font immortal_font;
     Font cardinal_font;
     Font matrix_font;
@@ -49,6 +52,7 @@ typedef struct ExampleState
     void* sword_cursor;
 
     MemoryArena transient_arena;
+    MemoryArena permanent_arena;
 } ExampleState;
 
 ALCHEMY_EXPORT UPDATE_AND_RENDER(update_and_render);

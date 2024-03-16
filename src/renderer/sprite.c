@@ -18,8 +18,9 @@ Sprite sprite_init(Texture* tex)
     return sprite;
 }
 
-void output_sprite(Renderer* renderer, Sprite sprite)
+void output_sprite(Renderer* renderer, RenderCommandSprite* cmd)
 {
+    Sprite sprite = cmd->sprite;
     m4 model = m4_identity();
     model = m4_translate(model, (v3){sprite.position.x, sprite.position.y, 0.0f});
 

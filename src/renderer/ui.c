@@ -1,6 +1,10 @@
 #include "alchemy/renderer/ui.h"
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/util/types.h"
+<<<<<<< HEAD
+=======
+#include "alchemy/util/str.h"
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
 #include <glad/glad.h>
 
@@ -13,6 +17,7 @@ typedef struct Vertex {
     nk_byte col[4];
 } Vertex;
 
+<<<<<<< HEAD
 internal UIDevice ui_device_create(u32 ui_shader)
 {
     UIDevice dev = {0};
@@ -70,10 +75,38 @@ internal void ui_device_destroy(UIDevice* dev)
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
     nk_buffer_free(&dev->cmds);
+=======
+// NOTE(lucas): handle.ptr is a pointer to the font
+internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* text, int len)
+{
+    f32 result = 0.0f;
+
+    MemoryArena arena = memory_arena_alloc(str_len(text)+1);
+
+    if (len > 0)
+    {
+        char* substr = str_sub(text, 0, len, &arena);
+        Font* font = (Font*)handle.ptr;
+        Text substr_text = text_init(substr, font, v2_zero(), (u32)height);
+        result = text_get_width(substr_text);
+    }
+
+    memory_arena_pop(&arena, str_len(text)+1);
+
+    return result;
+}
+
+internal v4 nk_color_to_v4(struct nk_color color)
+{
+    struct nk_colorf cf = nk_color_cf(color);
+    v4 result = {cf.r, cf.g, cf.b, cf.a};
+    return result;
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 }
 
 void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 {
+<<<<<<< HEAD
     UIRenderState* state = &renderer->ui_render_state;
     UIDevice *dev = &state->device;
     struct nk_buffer vbuf, ebuf;
@@ -177,6 +210,172 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 internal void ui_enter_char(Renderer* renderer, u64 code)
 {
     UIRenderState* state = &renderer->ui_render_state;
+=======
+    UIState* state = &renderer->ui_state;
+    u32 shader = renderer->ui_renderer.shader;
+
+    m4 projection = m4_ortho(0.0f, (f32)state->width, (f32)state->height, 0.0f, -1.0f, 1.0f);
+
+    shader_bind(shader);
+    shader_set_i32(shader, "tex", 0);
+    shader_set_m4(shader, "projection", projection, false);
+    renderer_viewport(renderer, rect_min_dim(v2_zero(), (v2){(f32)renderer->window_width, (f32)renderer->window_height}));
+
+    const struct nk_command* cmd;
+    nk_foreach(cmd, &state->ctx)
+    {
+        // TODO(lucas): The lines and points on the chart don't look quite right. The points are offset and the lines
+        // don't connect very gracefully.
+        switch (cmd->type)
+        {
+            case NK_COMMAND_NOP: break;
+
+            case NK_COMMAND_SCISSOR:
+            {
+                const struct nk_command_scissor* s = (const struct nk_command_scissor*)cmd;
+                f32 y = (f32)(renderer->window_height - s->h - s->y);
+                rect clip = rect_min_dim((v2){(f32)s->x, y}, (v2){(f32)s->w, (f32)s->h});
+                draw_scissor_test(renderer, clip);
+            } break;
+
+            case NK_COMMAND_LINE:
+            {
+                const struct nk_command_line* l = (const struct nk_command_line*)cmd;
+                v4 color = nk_color_to_v4(l->color);
+                v2 start = {(f32)l->begin.x, (f32)l->begin.y};
+                v2 end = {(f32)l->end.x, (f32)l->end.y};
+                draw_line(renderer, start, end, color, (f32)l->line_thickness, 0.0f);
+            } break;
+
+            // TODO(lucas): Rounding
+            case NK_COMMAND_RECT:
+            {
+                const struct nk_command_rect* r = (const struct nk_command_rect*)cmd;
+                v4 color = nk_color_to_v4(r->color);
+                v2 pos = {(f32)r->x, (f32)r->y};
+                v2 size = {(f32)r->w, (f32)r->h};
+                draw_quad_outline(renderer, pos, size, color, r->line_thickness, 0.0f);
+            } break;
+
+            // TODO(lucas): Rounding
+            case NK_COMMAND_RECT_FILLED:
+            {
+                const struct nk_command_rect_filled* r = (const struct nk_command_rect_filled*)cmd;
+                v4 color = nk_color_to_v4(r->color);
+                v2 pos = {(f32)r->x, (f32)r->y};
+                v2 size = {(f32)r->w, (f32)r->h};
+                draw_quad(renderer, pos, size, color, 0.0f);
+            } break;
+
+            // TODO(lucas): Verify color order
+            case NK_COMMAND_RECT_MULTI_COLOR:
+            {
+                const struct nk_command_rect_multi_color* r = (const struct nk_command_rect_multi_color*)cmd;
+                v4 bl = nk_color_to_v4(r->left);
+                v4 br = nk_color_to_v4(r->bottom);
+                v4 tr = nk_color_to_v4(r->right);
+                v4 tl = nk_color_to_v4(r->top);
+                v2 pos = {(f32)r->x, (f32)r->y};
+                v2 size = {(f32)r->w, (f32)r->h};
+                draw_quad_gradient(renderer, pos, size, bl, br, tr, tl, 0.0f);
+            } break;
+
+            // TODO(lucas): This command has width and height, so it probably expects more of an ellipse
+            // TODO(lucas): Verify center
+            case NK_COMMAND_CIRCLE:
+            {
+                const struct nk_command_circle* c = (const struct nk_command_circle*)cmd;
+                v4 color = nk_color_to_v4(c->color);
+                v2 center = {(f32)c->x + (f32)c->w/2.0f, (f32)c->y + (f32)c->h/2.0f};
+                draw_circle_outline(renderer, center, c->w, color, (f32)c->line_thickness);
+            } break;
+
+            case NK_COMMAND_CIRCLE_FILLED:
+            {
+                const struct nk_command_circle_filled* c = (const struct nk_command_circle_filled*)cmd;
+                v4 color = nk_color_to_v4(c->color);
+                v2 center = {(f32)c->x + (f32)c->w/2.0f, (f32)c->y + (f32)c->h/2.0f};
+                draw_circle(renderer, center, c->w, color);
+            } break;
+
+            // TODO(lucas): Verify angles
+            case NK_COMMAND_ARC:
+            {
+                const struct nk_command_arc* a = (const struct nk_command_arc*)cmd;
+                v4 color = nk_color_to_v4(a->color);
+                v2 center = {(f32)a->cx, (f32)a->cy};
+                f32 start_angle = deg_f32(a->a[0]);
+                f32 end_angle = deg_f32(a->a[1]);
+                draw_ring_outline(renderer, center, a->r, 0.0f, start_angle, end_angle, color, 0.0f, a->line_thickness);
+            } break;
+
+            case NK_COMMAND_ARC_FILLED:
+            {
+                const struct nk_command_arc_filled* a = (const struct nk_command_arc_filled*)cmd;
+                v4 color = nk_color_to_v4(a->color);
+                v2 center = {(f32)a->cx, (f32)a->cy};
+                f32 start_angle = deg_f32(a->a[0]);
+                f32 end_angle = deg_f32(a->a[1]);
+                draw_ring(renderer, center, a->r, 0.0f, start_angle, end_angle, color, 0.0f);
+            };
+
+            case NK_COMMAND_TRIANGLE:
+            {
+                const struct nk_command_triangle* t = (const struct nk_command_triangle*)cmd;
+                v4 color = nk_color_to_v4(t->color);
+                v2 a = {(f32)t->a.x, (f32)t->a.y};
+                v2 b = {(f32)t->b.x, (f32)t->b.y};
+                v2 c = {(f32)t->c.x, (f32)t->c.y};
+                draw_triangle_outline(renderer, a, b, c, color, 0.0f, t->line_thickness);
+            } break;
+
+            case NK_COMMAND_TRIANGLE_FILLED:
+            {
+                const struct nk_command_triangle_filled* t = (const struct nk_command_triangle_filled*)cmd;
+                v4 color = nk_color_to_v4(t->color);
+                v2 a = {(f32)t->a.x, (f32)t->a.y};
+                v2 b = {(f32)t->b.x, (f32)t->b.y};
+                v2 c = {(f32)t->c.x, (f32)t->c.y};
+                draw_triangle(renderer, a, b, c, color, 0.0f);
+            } break;
+
+            // TODO(lucas): background color
+            // TODO(lucas): Default font (check if font is null)
+            case NK_COMMAND_TEXT:
+            {
+                const struct nk_command_text* t = (const struct nk_command_text*)cmd;
+                v4 color = nk_color_to_v4(t->foreground);
+                Font* font = (Font*)t->font->userdata.ptr;
+                v2 pos = {(f32)t->x, (f32)t->y + (f32)t->font->height*0.75f};
+                Text text = text_init((char*)t->string, font, pos, (u32)t->font->height);
+                text.color = color;
+                draw_text(renderer, text);
+            } break;
+
+            case NK_COMMAND_IMAGE:
+            {
+                const struct nk_command_image* i = (const struct nk_command_image*)cmd;
+                v4 tint = nk_color_to_v4(i->col);
+                v2 pos = {(f32)i->x, (f32)i->y};
+                v2 size = {(f32)i->w, (f32)i->h};
+                Texture* tex = (Texture*)i->img.handle.ptr;
+                Sprite sprite = sprite_init(tex);
+                sprite.color = tint;
+                sprite.position = pos;
+                sprite.size = size;
+                draw_sprite(renderer, sprite);
+            } break;
+
+            default: break;
+        }
+    }
+    nk_clear(&state->ctx);
+    shader_unbind();
+}
+
+internal void ui_enter_char(UIState* state, u64 code)
+{
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     /* NOTE(lucas): Make sure character code is at least 32, which excludes the NULL character, backspace, and so on.
      * If these keys are not disregarded here, they may perform their other functions, but they will also
      * place a question mark in the text box.
@@ -204,6 +403,7 @@ internal void ui_clipboard_copy(nk_handle usr, const char *text, int len)
     free(str);
 }
 
+<<<<<<< HEAD
 UIRenderState ui_render_state_init(u32 shader)
 {
     UIRenderState state = {0};
@@ -232,28 +432,60 @@ void ui_font_stash_end(Renderer* renderer)
     nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->device.font_tex.id), &state->device.tex_null);
     if (state->atlas.default_font)
         nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
+=======
+void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* arena)
+{
+    UIState state = {0};
+
+    Font* new_font = push_struct(arena, Font);
+    *new_font = font;
+
+    struct nk_user_font user_font = {0};
+    user_font.userdata = nk_handle_ptr(new_font);
+    user_font.height = (f32)font_size;
+    user_font.width = nk_alchemy_font_get_text_width;
+    nk_init_default(&state.ctx, &user_font);
+    state.user_font = user_font;
+
+    state.ctx.clip.copy = ui_clipboard_copy;
+    state.ctx.clip.paste = ui_clipboard_paste;
+    state.ctx.clip.userdata = nk_handle_ptr(&state);
+
+    renderer->ui_state = state;
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 }
 
 void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
 {
+<<<<<<< HEAD
     UIRenderState* state = &renderer->ui_render_state;
+=======
+    UIState* state = &renderer->ui_state;
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     struct nk_context* ctx = &state->ctx;
     Keyboard* keyboard = state->keyboard;
     Mouse* mouse = state->mouse;
 
     state->width = window_width;
     state->height = window_height;
+<<<<<<< HEAD
     state->display_width = window_width;
     state->display_height = window_height;
     state->fb_scale.x = (f32)state->display_width/(f32)state->width;
     state->fb_scale.y = (f32)state->display_height/(f32)state->height;
+=======
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     nk_input_begin(ctx);
 
     // text input
     if (keyboard)
     {
+<<<<<<< HEAD
         ui_enter_char(renderer, keyboard->current_char);
+=======
+        ui_enter_char(state, keyboard->current_char);
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
         for (int i = 0; i < state->text_len; ++i)
             nk_input_unicode(ctx, state->text[i]);
 
@@ -270,7 +502,11 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
         nk_input_key(ctx, NK_KEY_SCROLL_DOWN,  key_pressed(keyboard, KEY_PAGEDOWN));
         nk_input_key(ctx, NK_KEY_SCROLL_UP,    key_pressed(keyboard, KEY_PAGEUP));
         nk_input_key(ctx, NK_KEY_SHIFT,        key_pressed(keyboard, KEY_LSHIFT) ||
+<<<<<<< HEAD
                                             key_pressed(keyboard, KEY_RSHIFT));
+=======
+                                               key_pressed(keyboard, KEY_RSHIFT));
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
         if (key_pressed(keyboard, KEY_LCONTROL) || key_pressed(keyboard, KEY_RCONTROL))
         {
@@ -309,10 +545,17 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
     state->text_len = 0;
 }
 
+<<<<<<< HEAD
 void ui_render_state_shutdown(UIRenderState* state)
 {
     nk_font_atlas_clear(&state->atlas);
     nk_free(&state->ctx);
     ui_device_destroy(&state->device);
+=======
+// TODO(lucas): Clear user font and user data
+void ui_state_delete(UIState* state)
+{
+    nk_free(&state->ctx);
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     memset(state, 0, sizeof(*state));
 }

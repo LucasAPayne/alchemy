@@ -29,7 +29,7 @@ Font font_load_from_file(const char* filename)
 }
 
 // NOTE(lucas): Determine width of string in pixels
-internal f32 text_get_width(Text text)
+f32 text_get_width(Text text)
 {
     f32 result = 0.0f;
 
@@ -83,8 +83,10 @@ Text text_init(Renderer* renderer, char* string, Font* font, v2 position, u32 px
     return text;
 }
 
-void output_text(Renderer* renderer, Text text)
+void output_text(Renderer* renderer, RenderCommandText* cmd)
 {
+    Text text = cmd->text;
+    
     // Set font size in pixels
     FT_Set_Pixel_Sizes(text.font->face, text.px_width, text.px);
     FT_Face face = text.font->face;
@@ -133,17 +135,17 @@ void output_text(Renderer* renderer, Text text)
                      GL_UNSIGNED_BYTE,
                      glyph->bitmap.buffer);
 
-        f32 x2 = x + glyph->bitmap_left;
-        f32 y2 = y + glyph->bitmap_top;
+        f32 x2 = x + (f32)glyph->bitmap_left;
+        f32 y2 = y - (f32)glyph->bitmap_top;
         f32 w = (f32)glyph->bitmap.width;
         f32 h = (f32)glyph->bitmap.rows;
 
         f32 vertices[] =
         {
-            x2 + w, y2    , 1.0f, 0.0f,
-            x2 + w, y2 - h, 1.0f, 1.0f,
-            x2,     y2 - h, 0.0f, 1.0f,
-            x2,     y2    , 0.0f, 0.0f,
+            x2 + w, y2, 1.0f, 0.0f,
+            x2 + w, y2 + h, 1.0f, 1.0f,
+            x2,     y2 + h, 0.0f, 1.0f,
+            x2,     y2, 0.0f, 0.0f,
         };
 
         // TODO(lucas): Update with glBufferSubData?
@@ -157,13 +159,13 @@ void output_text(Renderer* renderer, Text text)
         if ((*c == '\r') && (*(c+1) == '\n'))
         {
             // If \r\n is used to end a line, need to skip the next character (\n)
-            y -= text.line_height;
+            y += text.line_height;
             x = text.position.x;
             ++c;
         }
         else if ((*c == '\n') || (*c == '\r'))
         {
-            y -= text.line_height;
+            y += text.line_height;
             x = text.position.x;
         }
         else
@@ -316,9 +318,9 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     // of the next line.
                     parsed_text.height += text_area.text.line_height; 
                     word.position.x = text_area.text.position.x;
-                    word.position.y -= text_area.text.line_height;
+                    word.position.y += text_area.text.line_height;
                     space.position.x = text_area.text.position.x + word.string_width;
-                    space.position.y -= text_area.text.line_height;
+                    space.position.y += text_area.text.line_height;
 
                     overflow_text->word = word;
                     overflow_text->space = space;
@@ -484,12 +486,12 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     {
         case TEXT_ALIGN_VERT_BOTTOM:
         {
-            text_area.text.position.y -= 1.25f*vert_space_remaining;
+            text_area.text.position.y += 1.25f*vert_space_remaining;
         } break;
 
         case TEXT_ALIGN_VERT_CENTER:
         {
-            text_area.text.position.y -= 0.7f*vert_space_remaining;
+            text_area.text.position.y += 0.7f*vert_space_remaining;
         } break;
 
         // NOTE(lucas): Assume top align and do nothing.
@@ -506,7 +508,7 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
             draw_text(renderer, node->text);
         }
 
-        text_area.text.position.y -= text_area.text.line_height;
+        text_area.text.position.y += text_area.text.line_height;
 
         // NOTE(lucas): This should only be hit if NOT shrink to fit.
         // Discard any text that overflows y bound

@@ -47,7 +47,11 @@ set(ALCHEMY_LIBS
 # C4116 is unnamed type definitions in parenthetical expressions. Disabled because of nuklear
 # /Oi: Generate intrinsic functions
 set(COMMON_COMPILER_FLAGS
+<<<<<<< HEAD
     /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116
+=======
+    /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116 /wd4090
+>>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     /D_CRT_SECURE_NO_WARNINGS)
 
 # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)

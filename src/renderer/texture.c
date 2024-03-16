@@ -41,6 +41,9 @@ void texture_fill_empty_data(Texture* texture, int width, int height, int sample
 Texture texture_load_from_file(Renderer* renderer, const char* filename)
 {
     Texture tex = {0};
+    stbi_set_flip_vertically_on_load(true);
+
+    tex.id = renderer_next_tex_id(renderer);
 
     tex.id = renderer_next_tex_id(renderer);
 

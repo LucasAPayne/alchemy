@@ -4,6 +4,7 @@
 
 typedef struct Texture Texture;
 typedef struct Renderer Renderer;
+typedef struct RenderCommandSprite RenderCommandSprite;
 
 typedef struct Sprite
 {
@@ -15,4 +16,4 @@ typedef struct Sprite
 } Sprite;
 
 Sprite sprite_init(Texture* tex);
-void output_sprite(Renderer* renderer, Sprite sprite);
+void output_sprite(Renderer* renderer, RenderCommandSprite* cmd);

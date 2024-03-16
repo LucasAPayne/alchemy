@@ -2,6 +2,7 @@
 
 #include <cglm/struct.h>
 
+#include <float.h>
 #include <stdint.h>
 
 #define ALCHEMY_EXPORT __declspec(dllexport)
@@ -21,6 +22,9 @@
 
 #define true  1
 #define false 0
+
+#define F32_MIN FLT_MIN
+#define F32_MAX FLT_MAX
 
 typedef uint8_t  u8;
 typedef uint16_t u16;

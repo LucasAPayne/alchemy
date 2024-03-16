@@ -1,4 +1,5 @@
 #include "ui_overview.h"
+#include "alchemy/renderer/renderer.h"
 
 #include <time.h> // struct tm
 
@@ -31,8 +32,10 @@ typedef enum ChartType
     CHART_MIXED
 } ChartType;
 
-int ui_overview(struct nk_context *ctx, u32 window_width)
+int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Texture* logo_tex)
 {
+    ctx->style.font = &renderer->ui_state.user_font;
+
     /* window flags */
     persist b32 first_frame  = true;
     persist b32 show_menu    = true;
@@ -58,7 +61,7 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
     if (no_scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
     if (scale_left) window_flags   |= NK_WINDOW_SCALE_LEFT;
     if (minimizable) window_flags  |= NK_WINDOW_MINIMIZABLE;
-    if (first_frame) window_flags  |= NK_WINDOW_MINIMIZED;
+    // if (first_frame) window_flags  |= NK_WINDOW_MINIMIZED;
 
     f32 ui_width = 400.0f;
     f32 ui_height = 600.0f;
@@ -1423,6 +1426,17 @@ int ui_overview(struct nk_context *ctx, u32 window_width)
                 }
                 nk_tree_pop(ctx);
             }
+            nk_tree_pop(ctx);
+        }
+
+        if (nk_tree_push(ctx, NK_TREE_TAB, "Image", NK_MINIMIZED))
+        {
+            nk_layout_row_static(ctx, 100, 100, 2);
+
+            struct nk_color color = {0, 0, 255, 255};
+            struct nk_image image = nk_image_ptr(logo_tex);
+            nk_image(ctx, image);
+            nk_image_color(ctx, image, color);
             nk_tree_pop(ctx);
         }
     }
