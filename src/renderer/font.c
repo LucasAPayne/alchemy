@@ -7,9 +7,6 @@
 
 #include <glad/glad.h>
 
-// TODO(lucas): Replace with custom methods
-#include <string.h> // strncpy
-
 Font font_load_from_file(const char* filename)
 {
     Font font = {0};
@@ -43,11 +40,7 @@ f32 text_get_width(Text text)
             // TODO(lucas): Diagnostic, could not load character
         }
 
-        // TODO(lucas): Other types of whitespace
-        if (*c == ' ')
-            result += text.font->face->glyph->advance.x/64;
-        else
-            result += (f32)glyph->metrics.width/64;
+        result += text.font->face->glyph->advance.x/64;
     }
 
     return result;
@@ -125,6 +118,7 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
             // TODO(lucas): Diagnostic, could not load character
         }
 
+        // TODO(lucas): Only do texture generation once when the font is loaded.
         glTexImage2D(GL_TEXTURE_2D,
                      0,
                      GL_RED,
@@ -254,7 +248,6 @@ internal void text_chop(Text* text, usize len, MemoryArena* arena)
 
 internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
 {
-    // TODO(lucas): Custom strncpy
     Text result = token;
     usize word_len = tokenizer->at - token.string;
     text_chop(&result, word_len, arena);
@@ -281,6 +274,10 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
         token.position.x = text_area.text.position.x + parsed_text.width;
         ++num_spaces;
     }
+
+    // NOTE(lucas): After overflow has been written, make sure to reset it again.
+    overflow_text->word = (Text){0};
+    overflow_text->space = (Text){0};
 
     // NOTE(lucas): Break up into words. For now, keep punctuation with the word as one node.
     b32 parsing = true;
@@ -369,9 +366,6 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
             if (!line_overflowed)
                 break;
 
-            // TODO(lucas): Sometimes, it looks like the amount of space added is slightly underestimated.
-            // Probably a precision issue, but could be with fonts.
-            // Some fonts also just give completely incorrect results, so look into improving this later.
             f32 width_per_space = width_remaining / (f32)num_spaces;
             int count = 1;
 
@@ -426,6 +420,13 @@ void text_area_scale(TextArea* text_area, f32 factor)
     text_scale(&text_area->text, factor);
 }
 
+internal f32 get_text_height(TextArea* text_area)
+{
+    i32 lines_req = ceil_f32(text_area->text.string_width / text_area->bounds.width);
+    f32 text_height = (f32)(lines_req) * text_area->text.line_height;
+    return text_height;
+}
+
 // NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
 void draw_text_area(Renderer* renderer, TextArea text_area)
 {
@@ -435,10 +436,10 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     Tokenizer test_tokenizer = {0};
     tokenizer.at = test_tokenizer.at = text_area.text.string;
     text_area.text.position = text_area.bounds.position;
+    
     // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
     // size is used. It also seems to vary slightly across different fonts.
     // Figure out a way to be more exact about this.
-    text_area.text.position.y += text_area.bounds.height - 0.65f*(f32)text_area.text.px;
 
     f32 text_height = 0.0f;
     if (text_area.style & TEXT_AREA_SHRINK_TO_FIT)
@@ -455,15 +456,11 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         // Wrap text, and if text height exceeds bounds, decrease font size.
         if (text_area.style & TEXT_AREA_WRAP)
         {
-            i32 lines_req = ceil_f32(text_area.text.string_width / text_area.bounds.width) + 1;
-            text_height = (f32)(lines_req - 1) * text_area.text.line_height + text_area.text.px;
+            text_height = get_text_height(&text_area);
             while (text_height > text_area.bounds.height)
             {
                 text_set_size_px(&text_area.text, text_area.text.px-1);
-                // NOTE(lucas): Lines required must be rounded up to be accurate.
-                // lines_req = text_area.text.string_width / text_area.bounds.width + 0.5f;
-                lines_req = ceil_f32(text_area.text.string_width / text_area.bounds.width) + 1;
-                text_height = (f32)(lines_req - 1) * text_area.text.line_height + text_area.text.px;
+                text_height = get_text_height(&text_area);
             }
         }
         else
@@ -478,23 +475,35 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
             }
         }
     }
+    // NOTE(lucas): Wrap but don't shrink to fit
+    else if (text_area.style & TEXT_AREA_WRAP)
+    {
+        text_height = text_height = get_text_height(&text_area);
+    }
+    // NOTE(lucas): Don't wrap or shrink to fit
+    else
+    {
+        text_height = text_area.text.line_height;
+    }
 
-    // TODO(lucas): Something weird is going on with calculating the vertical space remaining.
-    // For now, the spacing is fudged a little bit to look right, but this needs to be revisited and made more exact.
-    f32 vert_space_remaining = text_area.bounds.height - text_height;
+    f32 vert_space_remaining = text_area.bounds.height - text_height + text_area.text.line_height;
     switch (text_area.vert_alignment)
     {
         case TEXT_ALIGN_VERT_BOTTOM:
         {
-            text_area.text.position.y += 1.25f*vert_space_remaining;
+            text_area.text.position.y += vert_space_remaining;
         } break;
 
         case TEXT_ALIGN_VERT_CENTER:
         {
-            text_area.text.position.y += 0.7f*vert_space_remaining;
+            text_area.text.position.y += 0.5f*vert_space_remaining;
         } break;
 
-        // NOTE(lucas): Assume top align and do nothing.
+        case TEXT_ALIGN_VERT_TOP:
+        {
+            text_area.text.position.y += text_area.text.px;
+        } break;
+
         default: break; 
     }
 
@@ -514,6 +523,14 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         // Discard any text that overflows y bound
         if (text_area.text.position.y < text_area.bounds.position.y)
             break;
+    }
+
+    // NOTE(lucas): Draw the overflow text if there is any.
+    // Overflow text should only be drawn if the text area is shrink to fit or if there is room for the extra line.
+    if (overflow.word.string && ((text_area.style & TEXT_AREA_SHRINK_TO_FIT) ||
+       (text_area.text.position.y >= text_area.bounds.position.y)))
+    {
+        draw_text(renderer, overflow.word);
     }
 }
  

@@ -250,7 +250,7 @@ void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* ar
 
     state.ctx.clip.copy = ui_clipboard_copy;
     state.ctx.clip.paste = ui_clipboard_paste;
-    state.ctx.clip.userdata = nk_handle_ptr(&state);
+    // state.ctx.clip.userdata = nk_handle_ptr(&state);
 
     renderer->ui_state = state;
 }

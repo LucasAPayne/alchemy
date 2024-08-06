@@ -263,17 +263,17 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
-    // draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
+    rect text_bounds = rect_min_dim((v2){300.0f, 300.0f}, (v2){250.0f, 100.0f});
+    draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
                 "the Duel.";
 
-    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 30);
-    text_area.text.color = color_white();
+    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    text_area.text.color = color_black();
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(renderer, text_area);
     
