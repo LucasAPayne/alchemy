@@ -427,6 +427,12 @@ internal f32 get_text_height(TextArea* text_area)
     return text_height;
 }
 
+internal b32 text_in_bounds(TextArea* text_area)
+{
+    b32 result = text_area->text.position.y < text_area->bounds.position.y + text_area->bounds.height;
+    return result;
+}
+
 // NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
 void draw_text_area(Renderer* renderer, TextArea text_area)
 {
@@ -436,7 +442,7 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     Tokenizer test_tokenizer = {0};
     tokenizer.at = test_tokenizer.at = text_area.text.string;
     text_area.text.position = text_area.bounds.position;
-    
+
     // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
     // size is used. It also seems to vary slightly across different fonts.
     // Figure out a way to be more exact about this.
@@ -478,12 +484,13 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
     // NOTE(lucas): Wrap but don't shrink to fit
     else if (text_area.style & TEXT_AREA_WRAP)
     {
-        text_height = text_height = get_text_height(&text_area);
+        text_height = get_text_height(&text_area);
     }
     // NOTE(lucas): Don't wrap or shrink to fit
     else
     {
         text_height = text_area.text.line_height;
+        text_area.bounds.height = text_area.text.line_height;
     }
 
     f32 vert_space_remaining = text_area.bounds.height - text_height + text_area.text.line_height;
@@ -521,16 +528,13 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
 
         // NOTE(lucas): This should only be hit if NOT shrink to fit.
         // Discard any text that overflows y bound
-        if (text_area.text.position.y < text_area.bounds.position.y)
+        if (!text_in_bounds(&text_area))
             break;
     }
 
     // NOTE(lucas): Draw the overflow text if there is any.
     // Overflow text should only be drawn if the text area is shrink to fit or if there is room for the extra line.
-    if (overflow.word.string && ((text_area.style & TEXT_AREA_SHRINK_TO_FIT) ||
-       (text_area.text.position.y >= text_area.bounds.position.y)))
-    {
+    if (overflow.word.string && ((text_area.style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(&text_area)))
         draw_text(renderer, overflow.word);
-    }
 }
  
