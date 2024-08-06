@@ -270,8 +270,8 @@ typedef struct Renderer
     MemoryArena command_buffer_arena;
     MemoryArena scratch_arena;
 
-    RenderID tex_ids[64];
-    Texture textures_to_generate[64];
+    RenderID tex_ids[512];
+    Texture textures_to_generate[512];
     u32 tex_index;
 } Renderer;
 
