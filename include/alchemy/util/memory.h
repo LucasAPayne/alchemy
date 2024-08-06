@@ -69,6 +69,7 @@ inline void zero_size_(usize size, void* ptr)
 
 // Define macro to cast to correct type and get correct size
 #define push_struct(arena, type) (type*)push_size_(arena, sizeof(type))
-#define push_array(arena, count, type) (type*)push_size_(arena, (count)*sizeof(type))
 #define zero_struct(instance) zero_size_(sizeof((instance)), &(instance))
+#define push_array(arena, count, type) (type*)push_size_(arena, (count)*sizeof(type))
+#define zero_array(first, count, type) zero_size_((count)*sizeof(type), first)
 #define push_size(arena, size) push_size_(arena, size)
