@@ -306,7 +306,9 @@ internal void render_object_delete(RenderObject* render_object)
     glDeleteVertexArrays(1, &render_object->vao);
     glDeleteBuffers(1, &render_object->vbo);
     glDeleteBuffers(1, &render_object->ibo);
-    shader_delete(render_object->shader);
+
+    // TODO(lucas): Some render objects share shaders, and deleting twice gives a GL_INVALID_VALUE error
+    // shader_delete(render_object->shader);
 }
 
 internal void framebuffer_attach_texture(Framebuffer* framebuffer, Texture texture, int samples)
