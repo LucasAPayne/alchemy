@@ -41,6 +41,41 @@ internal v4 nk_color_to_v4(struct nk_color color)
     return result;
 }
 
+/* TODO(lucas): Currently, this only works for very static UIs since it uses absolute position relative to the window.
+ * The position needs to be relative to the parent widget.
+ * Maybe automatic like the other UI components with an optional additional offset.
+ */
+typedef struct UITextArea
+{
+    Renderer* renderer;
+    TextArea* text_area;
+} UITextArea;
+void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callback_data)
+{
+    UITextArea* ui_text_area = (UITextArea*)callback_data.ptr;
+    Renderer* renderer = ui_text_area->renderer;
+    TextArea* text_area = ui_text_area->text_area;
+    v2 temp = text_area->bounds.position;
+    text_area->bounds.x = (f32)x;
+    text_area->bounds.y = (f32)y;
+    draw_text_area(renderer, *text_area);
+    text_area->bounds.position = temp;
+}
+
+void ui_draw_text_area(Renderer* renderer, TextArea* text_area, v2 offset)
+{
+    UITextArea* ui_text_area = push_struct(&renderer->scratch_arena, UITextArea);
+    ui_text_area->renderer = renderer;
+    ui_text_area->text_area = text_area;
+
+    struct nk_context* ctx = &renderer->ui_state.ctx; 
+    struct nk_command_buffer* out = nk_window_get_canvas(ctx);
+    struct nk_rect bounds = nk_rect(text_area->bounds.x + offset.x, text_area->bounds.y + offset.y,
+                                    text_area->bounds.width, text_area->bounds.height);
+    nk_handle data = nk_handle_ptr(ui_text_area);
+    nk_push_custom(out, bounds, nk_draw_text_area, data);
+}
+
 void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 {
     UIState* state = &renderer->ui_state;
@@ -197,6 +232,12 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 sprite.size = size;
                 draw_sprite(renderer, sprite);
             } break;
+
+            case NK_COMMAND_CUSTOM:
+            {
+                const struct nk_command_custom* c = (const struct nk_command_custom*)cmd;
+                c->callback(NULL, c->x, c->y, c->w, c->h, c->callback_data);
+            }
 
             default: break;
         }

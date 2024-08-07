@@ -35,3 +35,5 @@ void ui_state_delete(UIState* state);
 
 void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height);
 void ui_render(Renderer* renderer, enum nk_anti_aliasing aa);
+
+void ui_draw_text_area(Renderer* renderer, TextArea* text_area, v2 offset);
