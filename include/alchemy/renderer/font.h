@@ -56,11 +56,11 @@ typedef enum TextAreaStyle
 // TODO(lucas): Margins, borders, and other options
 typedef struct TextArea
 {
-    rect bounds;
-    Text text;
     TextAlignmentHoriz horiz_alignment;
     TextAlignmentVert vert_alignment;
     TextAreaStyle style;
+    rect bounds;
+    Text text;
 } TextArea;
 
 Font font_load_from_file(const char* filename);
@@ -69,11 +69,11 @@ Text text_init(char* string, Font* font, v2 position, u32 px);
 void text_set_size_px(Text* text, u32 px);
 void text_scale(Text* text, f32 factor);
 
-f32 text_get_width(Text text);
+f32 text_get_width(Text* text);
 
 void output_text(Renderer* renderer, RenderCommandText* cmd);
 
 TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px);
 void text_area_scale(TextArea* text_area, f32 factor);
 
-void draw_text_area(Renderer* renderer, TextArea text_area);
+void draw_text_area(Renderer* renderer, TextArea* text_area);

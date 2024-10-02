@@ -26,7 +26,7 @@ internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const 
         char* substr = str_sub(text, 0, len, &arena);
         Font* font = (Font*)handle.ptr;
         Text substr_text = text_init(substr, font, v2_zero(), (u32)height);
-        result = text_get_width(substr_text);
+        result = text_get_width(&substr_text);
     }
 
     memory_arena_pop(&arena, str_len(text)+1);
@@ -41,6 +41,14 @@ internal v4 nk_color_to_v4(struct nk_color color)
     return result;
 }
 
+/* FIXME(Lucas): There is a sneaky issue here that only occurs when optimizations are enabled.
+ * At some point in the call stack, there will always be a read access violation, whether it is on the text area
+ * or something to do with the text area parsing. For now, optimizations have been disabled on all the offending
+ * functions, but clearly this is just a temporary solution.
+ * Look for undefined behavior, pointer aliasing, alignment issues, etc.
+ * Try enabling only specific optimizations to try and pinpoint what optimization actually causes the problem.
+ * This might make it easier to determine the root cause.
+ */
 /* TODO(lucas): Currently, this only works for very static UIs since it uses absolute position relative to the window.
  * The position needs to be relative to the parent widget.
  * Maybe automatic like the other UI components with an optional additional offset.
@@ -50,7 +58,7 @@ typedef struct UITextArea
     Renderer* renderer;
     TextArea* text_area;
 } UITextArea;
-void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callback_data)
+internal void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callback_data)
 {
     UITextArea* ui_text_area = (UITextArea*)callback_data.ptr;
     Renderer* renderer = ui_text_area->renderer;
@@ -58,7 +66,7 @@ void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callb
     v2 temp = text_area->bounds.position;
     text_area->bounds.x = (f32)x;
     text_area->bounds.y = (f32)y;
-    draw_text_area(renderer, *text_area);
+    draw_text_area(renderer, text_area);
     text_area->bounds.position = temp;
 }
 

@@ -11,6 +11,8 @@
 
 #if ALCHEMY_DEBUG
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
+#else
+    #define ASSERT(...)
 #endif
 
 #define INVALID_CODE_PATH() ASSERT(!"Invalid Code Path")
