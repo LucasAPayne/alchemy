@@ -345,9 +345,6 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
             {
                 mouse->x = GET_X_LPARAM(msg.lParam);
                 mouse->y = GET_Y_LPARAM(msg.lParam);
-                char info_log[512];
-                snprintf(info_log, sizeof(info_log), "Mouse Pos: (%d, %d)\n", mouse->x, mouse->y);
-                OutputDebugStringA(info_log);
             } break;
             case WM_MOUSEWHEEL: mouse->scroll = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA; break;
 

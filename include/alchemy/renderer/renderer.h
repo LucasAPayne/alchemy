@@ -27,10 +27,6 @@ typedef struct Framebuffer
 typedef struct RendererConfig
 {
     b32 wireframe_mode;
-<<<<<<< HEAD
-    b32 rotate_quad_from_center;
-=======
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     u32 circle_line_segments;
     int msaa_level;
 } RendererConfig;
@@ -38,12 +34,6 @@ typedef struct RendererConfig
 typedef enum RenderCommandType
 {
     RENDER_COMMAND_RenderCommandLine,
-<<<<<<< HEAD
-    RENDER_COMMAND_RenderCommandQuad,
-    RENDER_COMMAND_RenderCommandCircle,
-    RENDER_COMMAND_RenderCommandSprite,
-    RENDER_COMMAND_RenderCommandText
-=======
     RENDER_COMMAND_RenderCommandTriangle,
     RENDER_COMMAND_RenderCommandTriangleOutline,
     RENDER_COMMAND_RenderCommandTriangleGradient,
@@ -58,7 +48,6 @@ typedef enum RenderCommandType
     RENDER_COMMAND_RenderCommandSprite,
     RENDER_COMMAND_RenderCommandText,
     RENDER_COMMAND_RenderCommandScissorTest,
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 } RenderCommandType;
 
 typedef struct RenderCommand
@@ -66,34 +55,11 @@ typedef struct RenderCommand
     RenderCommandType type;
 } RenderCommand;
 
-<<<<<<< HEAD
-=======
 // TODO(lucas): Remove header from each command struct and change the push macro to push the header separately
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 typedef struct RenderCommandLine
 {
     RenderCommand header;
     v4 color;
-<<<<<<< HEAD
-    f32 line_thickness;
-    v2 start;
-    v2 end;
-} RenderCommandLine;
-
-typedef struct RenderCommandQuad
-{
-    RenderCommand header;
-    f32 rotation;
-    v2 position;
-    v2 size;
-    v4 color;
-} RenderCommandQuad;
-
-typedef struct RenderCommandCircle
-{
-    RenderCommand header;
-    v2 position;
-=======
     v2 start;
     v2 end;
     v2 origin;
@@ -175,13 +141,10 @@ typedef struct RenderCommandCircle
 {
     RenderCommand header;
     v2 center;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     v4 color;
     f32 radius;
 } RenderCommandCircle;
 
-<<<<<<< HEAD
-=======
 typedef struct RenderCommandCircleOutline
 {
     RenderCommand header;
@@ -227,7 +190,6 @@ typedef struct RenderCommandRingOutline
     f32 thickness;
 } RenderCommandRingOutline;
 
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 typedef struct RenderCommandSprite
 {
     RenderCommand header;
@@ -240,8 +202,6 @@ typedef struct RenderCommandText
     Text text;
 } RenderCommandText;
 
-<<<<<<< HEAD
-=======
 typedef struct RenderCommandScissorTest
 {
     RenderCommand header;
@@ -251,7 +211,6 @@ typedef struct RenderCommandScissorTest
     v4 unused_;
 } RenderCommandScissorTest;
 
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 typedef struct RenderCommandBuffer
 {
     usize max_size;
@@ -281,28 +240,19 @@ typedef struct Renderer
 {
     RenderCommandBuffer command_buffer;
 
-<<<<<<< HEAD
-    RenderObject circle_renderer;
-    RenderObject rect_renderer;
-=======
     RenderObject triangle_renderer;
     RenderObject quad_renderer;
     RenderObject circle_renderer;
 
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     RenderObject sprite_renderer;
     RenderObject font_renderer;
     RenderObject framebuffer_renderer;
     RenderObject ui_renderer;
 
-<<<<<<< HEAD
-    UIRenderState ui_render_state;
-=======
     u32 poly_shader;
     u32 poly_border_shader;
 
     UIState ui_state;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     // NOTE(lucas): If MSAA is disabled, then the intermediate framebuffer is unused.
     // Otherwise, the main framebufer is used for multisampling operations and is
@@ -320,8 +270,8 @@ typedef struct Renderer
     MemoryArena command_buffer_arena;
     MemoryArena scratch_arena;
 
-    RenderID tex_ids[64];
-    Texture textures_to_generate[64];
+    RenderID tex_ids[512];
+    Texture textures_to_generate[512];
     u32 tex_index;
 } Renderer;
 
@@ -336,16 +286,6 @@ void renderer_render(Renderer* renderer);
 void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
 
-<<<<<<< HEAD
-// TODO(lucas): Line, Triangle, Quad structs?
-// TODO(lucas): Rounded edges option
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
-void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation);
-void draw_circle(Renderer* renderer, v2 position, f32 radius, v4 color);
-void draw_sprite(Renderer* renderer, Sprite sprite);
-void draw_text(Renderer* renderer, Text text);
-
-=======
 // TODO(lucas): Add additional functions that take in origins, and consider taking rotation out of the default functions
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation);
 
@@ -377,7 +317,6 @@ void draw_text(Renderer* renderer, Text text);
 
 void draw_scissor_test(Renderer* renderer, rect clip);
 
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 u32 renderer_next_tex_id(Renderer* renderer);
 void renderer_push_texture(Renderer* renderer, Texture texture);
 
@@ -390,8 +329,5 @@ inline v4 color_cyan(void)        {return (v4){0.0f, 1.0f, 1.0f, 1.0f};}
 inline v4 color_magenta(void)     {return (v4){1.0f, 0.0f, 1.0f, 1.0f};}
 inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
-<<<<<<< HEAD
-=======
 
 void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33

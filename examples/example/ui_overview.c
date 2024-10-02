@@ -1432,11 +1432,26 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
         if (nk_tree_push(ctx, NK_TREE_TAB, "Image", NK_MINIMIZED))
         {
             nk_layout_row_static(ctx, 100, 100, 2);
-
             struct nk_color color = {0, 0, 255, 255};
             struct nk_image image = nk_image_ptr(logo_tex);
             nk_image(ctx, image);
             nk_image_color(ctx, image, color);
+            nk_tree_pop(ctx);
+        }
+
+        if (nk_tree_push(ctx, NK_TREE_TAB, "Shapes", NK_MINIMIZED))
+        {
+            nk_layout_row_dynamic(ctx, 200, 1);
+            
+            struct nk_command_buffer* out = nk_window_get_canvas(ctx);
+            struct nk_rect space;
+            nk_widget(&space, ctx);
+
+            struct nk_rect bounds = nk_rect(space.x, space.y, 100, 100);
+            struct nk_color color = nk_rgba(255, 255, 255, 255);
+
+            nk_fill_rect(out, bounds, 0, color);
+
             nk_tree_pop(ctx);
         }
     }

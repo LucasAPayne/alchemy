@@ -306,7 +306,9 @@ internal void render_object_delete(RenderObject* render_object)
     glDeleteVertexArrays(1, &render_object->vao);
     glDeleteBuffers(1, &render_object->vbo);
     glDeleteBuffers(1, &render_object->ibo);
-    shader_delete(render_object->shader);
+
+    // TODO(lucas): Some render objects share shaders, and deleting twice gives a GL_INVALID_VALUE error
+    // shader_delete(render_object->shader);
 }
 
 internal void framebuffer_attach_texture(Framebuffer* framebuffer, Texture texture, int samples)
@@ -359,37 +361,6 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
 }
 
 internal void renderer_gen_texture(Texture tex)
-<<<<<<< HEAD
-{
-    if (!tex.data)
-        return;
-
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-
-    // TODO(lucas): Make options configurable
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    GLenum format = 0;
-    switch(tex.channels)
-    {
-        case 1: format = GL_RED;  break;
-        case 2: format = GL_RG;   break;
-        case 3: format = GL_RGB;  break;
-        case 4: format = GL_RGBA; break;
-        default: break;
-    }
-
-    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
-    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-}
-
-internal void output_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
-=======
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 {
     if (!tex.data)
         return;
@@ -1195,15 +1166,10 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     renderer.window_width = window.width;
     renderer.window_height = window.height;
 
-<<<<<<< HEAD
-    opengl_init(window);
-
-=======
     stbi_set_flip_vertically_on_load(true);
     opengl_init(window);
 
     glEnable(GL_SCISSOR_TEST);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
@@ -1239,27 +1205,7 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     char font_frag_shader_full_path[MAX_FILEPATH_LEN];
     char ui_vert_shader_full_path[MAX_FILEPATH_LEN];
     char ui_frag_shader_full_path[MAX_FILEPATH_LEN];
-<<<<<<< HEAD
-
-    path_from_install_dir("/res/shaders/framebuffer.vert", framebuffer_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/framebuffer.frag", framebuffer_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/poly.vert", poly_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/poly.frag", poly_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/sprite.vert", sprite_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/sprite.frag", sprite_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/font.vert", font_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/font.frag", font_frag_shader_full_path);
-    path_from_install_dir("/res/shaders/ui.vert", ui_vert_shader_full_path);
-    path_from_install_dir("/res/shaders/ui.frag", ui_frag_shader_full_path);
-
-    u32 framebuffer_shader = shader_init(framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
-    u32 poly_shader        = shader_init(poly_vert_shader_full_path, poly_frag_shader_full_path);
-    u32 sprite_shader      = shader_init(sprite_vert_shader_full_path, sprite_frag_shader_full_path);
-    u32 font_shader        = shader_init(font_vert_shader_full_path, font_frag_shader_full_path);
-    u32 ui_shader          = shader_init(ui_vert_shader_full_path, ui_frag_shader_full_path);
-=======
     char border_frag_shader_full_path[MAX_FILEPATH_LEN];
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     path_from_install_dir("/res/shaders/framebuffer.vs", framebuffer_vert_shader_full_path);
     path_from_install_dir("/res/shaders/framebuffer.fs", framebuffer_frag_shader_full_path);
@@ -1287,15 +1233,10 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     renderer.font_renderer        = font_renderer_init(font_shader);
     renderer.framebuffer_renderer = framebuffer_renderer_init(framebuffer_shader);
     renderer.ui_renderer          = ui_renderer_init(ui_shader);
-<<<<<<< HEAD
-=======
 
     renderer.poly_shader = poly_shader;
     renderer.poly_border_shader = poly_border_shader;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     
-    renderer.ui_render_state = ui_render_state_init(ui_shader);
-
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
@@ -1319,7 +1260,6 @@ void renderer_delete(Renderer* renderer)
 
     framebuffer_delete(&renderer->framebuffer);
     framebuffer_delete(&renderer->intermediate_framebuffer);
-    ui_render_state_shutdown(&renderer->ui_render_state);
 }
 
 void renderer_new_frame(Renderer* renderer, Window window)
@@ -1367,12 +1307,6 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
     ui_new_frame(renderer, window.width, window.height);
 
-<<<<<<< HEAD
-    ui_new_frame(renderer, window.width, window.height);
-
-    // Clear viewport
-=======
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     renderer_clear(color_black());
 }
 
@@ -1431,13 +1365,6 @@ void renderer_render(Renderer* renderer)
 
     for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
         renderer->textures_to_generate[i] = (Texture){0};
-<<<<<<< HEAD
-
-    // TODO(lucas): Use renderer AA settings
-    ui_render(renderer, NK_ANTI_ALIASING_ON);
-    
-=======
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -1638,8 +1565,6 @@ void draw_text(Renderer* renderer, Text text)
     cmd->text.string = text_copy;
 }
 
-<<<<<<< HEAD
-=======
 void draw_scissor_test(Renderer* renderer, rect clip)
 {
     RenderCommandScissorTest* cmd = render_command_push(&renderer->command_buffer, RenderCommandScissorTest);
@@ -1648,7 +1573,6 @@ void draw_scissor_test(Renderer* renderer, rect clip)
     cmd->clip = clip;
 }
 
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 u32 renderer_next_tex_id(Renderer* renderer)
 {
     u32 id = 0;

@@ -1,10 +1,7 @@
 #include "alchemy/renderer/shader.h"
-<<<<<<< HEAD
-=======
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/util/memory.h"
 #include "alchemy/util/str.h"
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 #include "alchemy/util/types.h"
 
 #include <glad/glad.h>

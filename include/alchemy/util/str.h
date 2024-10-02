@@ -41,8 +41,6 @@ inline char* str_copy(char* src, MemoryArena* arena)
     result[len] = '\0';
     return result;
 }
-<<<<<<< HEAD
-=======
 
 inline char* str_sub(char* src, usize pos, usize len, MemoryArena* arena)
 {
@@ -63,4 +61,3 @@ inline char* str_sub(char* src, usize pos, usize len, MemoryArena* arena)
     *(result + len) = '\0';
     return result;
 }
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33

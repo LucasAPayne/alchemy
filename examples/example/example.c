@@ -50,11 +50,7 @@ internal void update_player(ExampleState* state, Input* input, f32 delta_time, u
 
     timer_update(&player->dash_cooldown, delta_time, true);
 
-<<<<<<< HEAD
-    Gamepad* gamepad = &state->input->gamepads[0];
-=======
     Gamepad* gamepad = &input->gamepads[0];
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     f32 speed = 250.0f; // pixels per second
 
     rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
@@ -115,14 +111,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 {
     srand(0);
 
-<<<<<<< HEAD
-    state->renderer = renderer;
-    state->input = input;
-    state->renderer->clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
-=======
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_size);
     state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_size);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
@@ -131,12 +121,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
     state->logo.size = (v2){300.0f, 150.0f};
-<<<<<<< HEAD
-    state->logo.position = (v2){0.0f, (f32)window.height - state->logo.size.y};
-
-=======
     state->logo.position = v2_zero();
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     state->logo_direction = (v2){1.0f, -1.0f};
 
     state->colors[0] = color_white();
@@ -169,20 +154,11 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     cursor_set_from_system(CURSOR_ARROW);
     state->sword_cursor = cursor_load_from_file("cursors/sword.ani");
 
-<<<<<<< HEAD
-    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, MEGABYTES(1));
-
-    // nuklear example
-    UIRenderState* ui_render_state = &renderer->ui_render_state;
-    ui_render_state->keyboard = &state->input->keyboard;
-    ui_render_state->mouse = &state->input->mouse;
-=======
     // nuklear example
     ui_state_init(renderer, state->matrix_font, 14, &state->permanent_arena);
     UIState* ui_state = &renderer->ui_state;
     ui_state->keyboard = &input->keyboard;
     ui_state->mouse = &input->mouse;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 }
 
 UPDATE_AND_RENDER(update_and_render)
@@ -197,17 +173,6 @@ UPDATE_AND_RENDER(update_and_render)
     memory_arena_clear(&state->transient_arena);
 
     stopwatch_update(&state->stopwatch, delta_time);
-<<<<<<< HEAD
-    Gamepad* gamepad = &state->input->gamepads[0];
-    Keyboard* keyboard = &state->input->keyboard;
-    update_dvd(state, delta_time, window.width, window.height);
-    update_player(state, delta_time, window.width, window.height);
-
-    if (key_pressed(&state->input->keyboard, KEY_LBRACKET))
-        cursor_set_from_memory(state->sword_cursor);
-
-    if (key_pressed(&state->input->keyboard, KEY_RBRACKET))
-=======
     Gamepad* gamepad = &input->gamepads[0];
     Keyboard* keyboard = &input->keyboard;
     update_dvd(state, delta_time, window.width, window.height);
@@ -217,7 +182,6 @@ UPDATE_AND_RENDER(update_and_render)
         cursor_set_from_memory(state->sword_cursor);
 
     if (key_pressed(keyboard, KEY_RBRACKET))
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
         cursor_set_from_system(CURSOR_ARROW);
 
     state->sound_output.should_play = false;
@@ -241,42 +205,6 @@ UPDATE_AND_RENDER(update_and_render)
         stopwatch_reset(&state->stopwatch);
 
     /* Draw */
-<<<<<<< HEAD
-    struct nk_context* ctx = &renderer->ui_render_state.ctx;
-
-    draw_sprite(state->renderer, state->logo);
-
-    Player* player = &state->player;
-    draw_quad(state->renderer, player->position, player->size, player->color, player->rotation);
-
-    v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init(renderer, "Alchemy Engine", &state->cardinal_font, (v2){500.0f, window.height - 50.0f}, 48);
-    engine_text.color = font_color;
-    draw_text(state->renderer, engine_text);
-
-    char buffer[512];
-    sprintf_s(buffer, ARRAY_COUNT(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    Text frame_time = text_init(renderer, buffer, &state->immortal_font, (v2){10.0f, 10.0f}, 32);
-    frame_time.color = font_color;
-    draw_text(state->renderer, frame_time);
-
-    char cooldown_buffer[512];
-    sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(renderer, cooldown_buffer, &state->immortal_font, (v2){1050.0f, 10.0f}, 32);
-    cooldown_text.color = font_color;
-    if (player->dash_cooldown.is_active)
-        draw_text(state->renderer, cooldown_text);
-    
-    char stopwatch_buffer[512];
-    sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(renderer, stopwatch_buffer, &state->immortal_font, (v2){10.0f, window.height - 30.0f}, 32);
-    stopwatch_text.color = font_color;
-    draw_text(state->renderer, stopwatch_text);
-
-    /* Text justification Test */
-    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
-    draw_quad(state->renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
-=======
     Player* player = &state->player;
     draw_quad(renderer, player->position, player->size, player->color, player->rotation);
     // draw_quad_outline(renderer, player->position, player->size, color_red(), player->rotation, 5.0f);
@@ -335,26 +263,17 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim((v2){350.0f, 100.0f}, v2_full(300.0f));
-    // draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
+    rect text_bounds = rect_min_dim((v2){300.0f, 300.0f}, (v2){250.0f, 100.0f});
+    draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
                 "the Duel.";
 
-    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 30);
-<<<<<<< HEAD
+    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    text_area.text.color = color_black();
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
-    text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(state->renderer, text_area);
-    
-    ui_overview(ctx, window.width);
-=======
-    text_area.text.color = color_white();
-    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_CENTER;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(renderer, text_area);
     
@@ -362,7 +281,6 @@ UPDATE_AND_RENDER(update_and_render)
     *logo_tex = state->logo_tex;
     struct nk_context* ctx = &renderer->ui_state.ctx;
     ui_overview(renderer, ctx, window.width, logo_tex);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     sound_output_process(&state->sound_output, &state->transient_arena);
 }

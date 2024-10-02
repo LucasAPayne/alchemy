@@ -1,10 +1,7 @@
 #include "alchemy/renderer/ui.h"
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/util/types.h"
-<<<<<<< HEAD
-=======
 #include "alchemy/util/str.h"
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
 #include <glad/glad.h>
 
@@ -17,65 +14,6 @@ typedef struct Vertex {
     nk_byte col[4];
 } Vertex;
 
-<<<<<<< HEAD
-internal UIDevice ui_device_create(u32 ui_shader)
-{
-    UIDevice dev = {0};
-    nk_buffer_init_default(&dev.cmds);
-    dev.shader = ui_shader;
-
-    dev.attrib_pos = glGetAttribLocation(dev.shader, "position");
-    dev.attrib_uv = glGetAttribLocation(dev.shader, "tex_coord");
-    dev.attrib_col = glGetAttribLocation(dev.shader, "color");
-
-    {
-        /* buffer setup */
-        GLsizei vs = sizeof(Vertex);
-        usize vp = offsetof(Vertex, position);
-        usize vt = offsetof(Vertex, uv);
-        usize vc = offsetof(Vertex, col);
-
-        glGenBuffers(1, &dev.vbo);
-        glGenBuffers(1, &dev.ebo);
-        glGenVertexArrays(1, &dev.vao);
-
-        glBindVertexArray(dev.vao);
-        glBindBuffer(GL_ARRAY_BUFFER, dev.vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev.ebo);
-
-        glEnableVertexAttribArray((GLuint)dev.attrib_pos);
-        glEnableVertexAttribArray((GLuint)dev.attrib_uv);
-        glEnableVertexAttribArray((GLuint)dev.attrib_col);
-
-        glVertexAttribPointer((GLuint)dev.attrib_pos, 2, GL_FLOAT, GL_FALSE, vs, (void*)vp);
-        glVertexAttribPointer((GLuint)dev.attrib_uv, 2, GL_FLOAT, GL_FALSE, vs, (void*)vt);
-        glVertexAttribPointer((GLuint)dev.attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
-    }
-
-    texture_unbind(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    return dev;
-}
-
-internal void ui_device_upload_atlas(Renderer* renderer, const void *image, int width, int height)
-{
-    UIDevice *dev = &renderer->ui_render_state.device;
-    dev->font_tex = texture_generate(0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, image);
-}
-
-internal void ui_device_destroy(UIDevice* dev)
-{
-    shader_delete(dev->shader);
-    texture_delete(&dev->font_tex);
-    glDeleteBuffers(1, &dev->vbo);
-    glDeleteBuffers(1, &dev->ebo);
-    nk_buffer_free(&dev->cmds);
-=======
 // NOTE(lucas): handle.ptr is a pointer to the font
 internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* text, int len)
 {
@@ -101,116 +39,45 @@ internal v4 nk_color_to_v4(struct nk_color color)
     struct nk_colorf cf = nk_color_cf(color);
     v4 result = {cf.r, cf.g, cf.b, cf.a};
     return result;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
+}
+
+/* TODO(lucas): Currently, this only works for very static UIs since it uses absolute position relative to the window.
+ * The position needs to be relative to the parent widget.
+ * Maybe automatic like the other UI components with an optional additional offset.
+ */
+typedef struct UITextArea
+{
+    Renderer* renderer;
+    TextArea* text_area;
+} UITextArea;
+void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callback_data)
+{
+    UITextArea* ui_text_area = (UITextArea*)callback_data.ptr;
+    Renderer* renderer = ui_text_area->renderer;
+    TextArea* text_area = ui_text_area->text_area;
+    v2 temp = text_area->bounds.position;
+    text_area->bounds.x = (f32)x;
+    text_area->bounds.y = (f32)y;
+    draw_text_area(renderer, *text_area);
+    text_area->bounds.position = temp;
+}
+
+void ui_draw_text_area(Renderer* renderer, TextArea* text_area, v2 offset)
+{
+    UITextArea* ui_text_area = push_struct(&renderer->scratch_arena, UITextArea);
+    ui_text_area->renderer = renderer;
+    ui_text_area->text_area = text_area;
+
+    struct nk_context* ctx = &renderer->ui_state.ctx; 
+    struct nk_command_buffer* out = nk_window_get_canvas(ctx);
+    struct nk_rect bounds = nk_rect(text_area->bounds.x + offset.x, text_area->bounds.y + offset.y,
+                                    text_area->bounds.width, text_area->bounds.height);
+    nk_handle data = nk_handle_ptr(ui_text_area);
+    nk_push_custom(out, bounds, nk_draw_text_area, data);
 }
 
 void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 {
-<<<<<<< HEAD
-    UIRenderState* state = &renderer->ui_render_state;
-    UIDevice *dev = &state->device;
-    struct nk_buffer vbuf, ebuf;
-
-    m4 ortho = (m4)
-    {
-        2.0f,  0.0f,  0.0f, 0.0f,
-        0.0f, -2.0f,  0.0f, 0.0f,
-        0.0f,  0.0f, -1.0f, 0.0f,
-       -1.0f,  1.0f,  0.0f, 1.0f,
-    };
-    ortho.m00 /= (f32)state->width;
-    ortho.m11 /= (f32)state->height;
-
-    /* setup global state */
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_SCISSOR_TEST);
-    glActiveTexture(GL_TEXTURE0);
-
-    /* setup program */
-    shader_bind(dev->shader);
-    shader_set_int(dev->shader, "tex", 0);
-    shader_set_m4(dev->shader, "projection", ortho, false);
-    glViewport(0,0,(GLsizei)state->display_width,(GLsizei)state->display_height);
-    {
-        /* convert from command queue into draw list and draw to screen */
-        const struct nk_draw_command *cmd;
-        void *vertices, *elements;
-        nk_size offset = 0;
-
-        /* allocate vertex and element buffer */
-        glBindVertexArray(dev->vao);
-        glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
-
-        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_BUFFER, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_BUFFER, NULL, GL_STREAM_DRAW);
-
-        /* load draw vertices & elements directly into vertex + element buffer */
-        vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-        elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
-        {
-            /* fill convert configuration */
-            struct nk_convert_config config;
-            persist const struct nk_draw_vertex_layout_element vertex_layout[] =
-            {
-                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(Vertex, position)},
-                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(Vertex, uv)},
-                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(Vertex, col)},
-                {NK_VERTEX_LAYOUT_END}
-            };
-            memset(&config, 0, sizeof(config));
-            config.vertex_layout = vertex_layout;
-            config.vertex_size = sizeof(Vertex);
-            config.vertex_alignment = NK_ALIGNOF(Vertex);
-            config.tex_null = dev->tex_null;
-            config.circle_segment_count = 22;
-            config.curve_segment_count = 22;
-            config.arc_segment_count = 22;
-            config.global_alpha = 1.0f;
-            config.shape_AA = aa;
-            config.line_AA = aa;
-
-            /* setup buffers to load vertices and elements */
-            nk_buffer_init_fixed(&vbuf, vertices, (usize)MAX_VERTEX_BUFFER);
-            nk_buffer_init_fixed(&ebuf, elements, (usize)MAX_ELEMENT_BUFFER);
-            nk_convert(&state->ctx, &dev->cmds, &vbuf, &ebuf, &config);
-        }
-        glUnmapBuffer(GL_ARRAY_BUFFER);
-        glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-
-        /* iterate over and execute each draw command */
-        nk_draw_foreach(cmd, &state->ctx, &dev->cmds)
-        {
-            if (!cmd->elem_count) continue;
-            texture_bind_id((u32)cmd->texture.id, 0);
-            glScissor(
-                (GLint)(cmd->clip_rect.x * state->fb_scale.x),
-                (GLint)((state->height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * state->fb_scale.y),
-                (GLint)(cmd->clip_rect.w * state->fb_scale.x),
-                (GLint)(cmd->clip_rect.h * state->fb_scale.y));
-            glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, (const void*) offset);
-            offset += cmd->elem_count * sizeof(nk_draw_index);
-        }
-        nk_clear(&state->ctx);
-        nk_buffer_clear(&dev->cmds);
-    }
-
-    /* default OpenGL state */
-    shader_unbind();
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glDisable(GL_SCISSOR_TEST);
-}
-
-internal void ui_enter_char(Renderer* renderer, u64 code)
-{
-    UIRenderState* state = &renderer->ui_render_state;
-=======
     UIState* state = &renderer->ui_state;
     u32 shader = renderer->ui_renderer.shader;
 
@@ -366,6 +233,12 @@ internal void ui_enter_char(Renderer* renderer, u64 code)
                 draw_sprite(renderer, sprite);
             } break;
 
+            case NK_COMMAND_CUSTOM:
+            {
+                const struct nk_command_custom* c = (const struct nk_command_custom*)cmd;
+                c->callback(NULL, c->x, c->y, c->w, c->h, c->callback_data);
+            }
+
             default: break;
         }
     }
@@ -375,7 +248,6 @@ internal void ui_enter_char(Renderer* renderer, u64 code)
 
 internal void ui_enter_char(UIState* state, u64 code)
 {
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     /* NOTE(lucas): Make sure character code is at least 32, which excludes the NULL character, backspace, and so on.
      * If these keys are not disregarded here, they may perform their other functions, but they will also
      * place a question mark in the text box.
@@ -403,36 +275,6 @@ internal void ui_clipboard_copy(nk_handle usr, const char *text, int len)
     free(str);
 }
 
-<<<<<<< HEAD
-UIRenderState ui_render_state_init(u32 shader)
-{
-    UIRenderState state = {0};
-    nk_init_default(&state.ctx, 0);
-    state.ctx.clip.copy = ui_clipboard_copy;
-    state.ctx.clip.paste = ui_clipboard_paste;
-    state.ctx.clip.userdata = nk_handle_ptr(&state);
-    state.device = ui_device_create(shader);
-
-    return state;
-}
-
-void ui_font_stash_begin(Renderer* renderer, struct nk_font_atlas **atlas)
-{
-    nk_font_atlas_init_default(&renderer->ui_render_state.atlas);
-    nk_font_atlas_begin(&renderer->ui_render_state.atlas);
-    *atlas = &renderer->ui_render_state.atlas;
-}
-
-void ui_font_stash_end(Renderer* renderer)
-{
-    UIRenderState* state = &renderer->ui_render_state;
-    const void *image; int w, h;
-    image = nk_font_atlas_bake(&state->atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
-    ui_device_upload_atlas(renderer, image, w, h);
-    nk_font_atlas_end(&state->atlas, nk_handle_id((int)state->device.font_tex.id), &state->device.tex_null);
-    if (state->atlas.default_font)
-        nk_style_set_font(&state->ctx, &state->atlas.default_font->handle);
-=======
 void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* arena)
 {
     UIState state = {0};
@@ -449,43 +291,27 @@ void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* ar
 
     state.ctx.clip.copy = ui_clipboard_copy;
     state.ctx.clip.paste = ui_clipboard_paste;
-    state.ctx.clip.userdata = nk_handle_ptr(&state);
+    // state.ctx.clip.userdata = nk_handle_ptr(&state);
 
     renderer->ui_state = state;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 }
 
 void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
 {
-<<<<<<< HEAD
-    UIRenderState* state = &renderer->ui_render_state;
-=======
     UIState* state = &renderer->ui_state;
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     struct nk_context* ctx = &state->ctx;
     Keyboard* keyboard = state->keyboard;
     Mouse* mouse = state->mouse;
 
     state->width = window_width;
     state->height = window_height;
-<<<<<<< HEAD
-    state->display_width = window_width;
-    state->display_height = window_height;
-    state->fb_scale.x = (f32)state->display_width/(f32)state->width;
-    state->fb_scale.y = (f32)state->display_height/(f32)state->height;
-=======
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
     nk_input_begin(ctx);
 
     // text input
     if (keyboard)
     {
-<<<<<<< HEAD
-        ui_enter_char(renderer, keyboard->current_char);
-=======
         ui_enter_char(state, keyboard->current_char);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
         for (int i = 0; i < state->text_len; ++i)
             nk_input_unicode(ctx, state->text[i]);
 
@@ -502,11 +328,7 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
         nk_input_key(ctx, NK_KEY_SCROLL_DOWN,  key_pressed(keyboard, KEY_PAGEDOWN));
         nk_input_key(ctx, NK_KEY_SCROLL_UP,    key_pressed(keyboard, KEY_PAGEUP));
         nk_input_key(ctx, NK_KEY_SHIFT,        key_pressed(keyboard, KEY_LSHIFT) ||
-<<<<<<< HEAD
-                                            key_pressed(keyboard, KEY_RSHIFT));
-=======
                                                key_pressed(keyboard, KEY_RSHIFT));
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
 
         if (key_pressed(keyboard, KEY_LCONTROL) || key_pressed(keyboard, KEY_RCONTROL))
         {
@@ -545,17 +367,9 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
     state->text_len = 0;
 }
 
-<<<<<<< HEAD
-void ui_render_state_shutdown(UIRenderState* state)
-{
-    nk_font_atlas_clear(&state->atlas);
-    nk_free(&state->ctx);
-    ui_device_destroy(&state->device);
-=======
 // TODO(lucas): Clear user font and user data
 void ui_state_delete(UIState* state)
 {
     nk_free(&state->ctx);
->>>>>>> ebd83c9268a6a9fec3725ad1abd65f4521e57b33
     memset(state, 0, sizeof(*state));
 }
