@@ -26,21 +26,21 @@ Font font_load_from_file(const char* filename)
 }
 
 // NOTE(lucas): Determine width of string in pixels
-f32 text_get_width(Text text)
+f32 text_get_width(Text* text)
 {
     f32 result = 0.0f;
 
-    FT_Set_Pixel_Sizes(text.font->face, text.px_width, text.px);
-    FT_GlyphSlot glyph = text.font->face->glyph;
+    FT_Set_Pixel_Sizes(text->font->face, text->px_width, text->px);
+    FT_GlyphSlot glyph = text->font->face->glyph;
 
-    for (char* c = text.string; *c; ++c)
+    for (char* c = text->string; *c; ++c)
     {
-        if (!FT_Load_Char(text.font->face, *c, FT_LOAD_NO_BITMAP))
+        if (!FT_Load_Char(text->font->face, *c, FT_LOAD_NO_BITMAP))
         {
             // TODO(lucas): Diagnostic, could not load character
         }
 
-        result += text.font->face->glyph->advance.x/64;
+        result += text->font->face->glyph->advance.x/64;
     }
 
     return result;
@@ -52,7 +52,7 @@ void text_set_size_px(Text* text, u32 px)
     FT_Set_Pixel_Sizes(text->font->face, 0, text->px);
     text->px_width = FT_MulFix(text->font->face->units_per_EM, text->font->face->size->metrics.x_scale) / 64;
 
-    text->string_width = text_get_width(*text);
+    text->string_width = text_get_width(text);
     text->line_height = (f32)text->font->face->size->metrics.height/64;
 }
 
@@ -196,6 +196,7 @@ typedef struct ParsedText
     TextNode* first_node;
 } ParsedText;
 
+#pragma optimize("", off)
 internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena* arena)
 {
     TextNode* new_node = push_struct(arena, TextNode);
@@ -214,6 +215,7 @@ internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena*
         it->next = new_node;
     }
 }
+#pragma optimize("", on)
 
 internal b32 char_is_whitespace(char c)
 {
@@ -252,15 +254,16 @@ internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_t
     usize word_len = tokenizer->at - token.string;
     text_chop(&result, word_len, arena);
 
-    result.string_width = text_get_width(result);
+    result.string_width = text_get_width(&result);
 
     return result;
 }
 
-internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, OverflowText* overflow_text, MemoryArena* arena)
+#pragma optimize("", off)
+internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, OverflowText* overflow_text, MemoryArena* arena)
 {
     ParsedText parsed_text = {0};
-    Text token = text_area.text;
+    Text token = text_area->text;
     token.string = tokenizer->at;
 
     int num_spaces = 0;
@@ -271,7 +274,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
         parsed_text_push(&parsed_text, &overflow_text->word, arena);
         parsed_text_push(&parsed_text, &overflow_text->space, arena);
         parsed_text.width += overflow_text->word.string_width + overflow_text->space.string_width;
-        token.position.x = text_area.text.position.x + parsed_text.width;
+        token.position.x = text_area->text.position.x + parsed_text.width;
         ++num_spaces;
     }
 
@@ -307,17 +310,17 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                 parsed_text.width += space.string_width;
                 token.string = tokenizer->at;
 
-                if (parsed_text.width - space.string_width > text_area.bounds.width)
+                if (parsed_text.width - space.string_width > text_area->bounds.width)
                 {
                     line_overflowed = true;
                     // NOTE(lucas): Parsing line will usually leave a word and space leftover.
                     // If this is the case, they need to be added at the beginning
                     // of the next line.
-                    parsed_text.height += text_area.text.line_height; 
-                    word.position.x = text_area.text.position.x;
-                    word.position.y += text_area.text.line_height;
-                    space.position.x = text_area.text.position.x + word.string_width;
-                    space.position.y += text_area.text.line_height;
+                    parsed_text.height += text_area->text.line_height; 
+                    word.position.x = text_area->text.position.x;
+                    word.position.y += text_area->text.line_height;
+                    space.position.x = text_area->text.position.x + word.string_width;
+                    space.position.y += text_area->text.line_height;
 
                     overflow_text->word = word;
                     overflow_text->space = space;
@@ -333,7 +336,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
                     // Push new tokens onto parsed_text and put the string at the tokenizer position
                     parsed_text_push(&parsed_text, &word, arena);
                     parsed_text_push(&parsed_text, &space, arena);
-                    token.position.x = text_area.text.position.x + parsed_text.width;
+                    token.position.x = text_area->text.position.x + parsed_text.width;
                 }
 
                 // NOTE(lucas): End the line if the null terminator or newline is encountered.
@@ -357,8 +360,8 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
     }
 
     // TODO(lucas): Draw while aligning?
-    f32 width_remaining = text_area.bounds.width - parsed_text.width;
-    switch(text_area.horiz_alignment)
+    f32 width_remaining = text_area->bounds.width - parsed_text.width;
+    switch(text_area->horiz_alignment)
     {
         case TEXT_ALIGN_HORIZ_JUSTIFIED:
         {
@@ -404,6 +407,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea text_area, Overflo
 
     return parsed_text;
 }
+#pragma optimize("", on)
 
 TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px)
 {
@@ -433,82 +437,82 @@ internal b32 text_in_bounds(TextArea* text_area)
     return result;
 }
 
-// NOTE(lucas): IMPORTANT(lucas): The arena passed to this function should be cleared each frame
-void draw_text_area(Renderer* renderer, TextArea text_area)
+#pragma optimize("", off)
+void draw_text_area(Renderer* renderer, TextArea* text_area)
 {
     // NOTE(lucas): Parse and process the text in the text area,
     // then reconstruct one Text object and render it.
     Tokenizer tokenizer = {0};
     Tokenizer test_tokenizer = {0};
-    tokenizer.at = test_tokenizer.at = text_area.text.string;
-    text_area.text.position = text_area.bounds.position;
+    tokenizer.at = test_tokenizer.at = text_area->text.string;
+    text_area->text.position = text_area->bounds.position;
 
     // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
     // size is used. It also seems to vary slightly across different fonts.
     // Figure out a way to be more exact about this.
 
     f32 text_height = 0.0f;
-    if (text_area.style & TEXT_AREA_SHRINK_TO_FIT)
+    if (text_area->style & TEXT_AREA_SHRINK_TO_FIT)
     {
-        if (text_area.text.px > (u32)text_area.bounds.height)
+        if (text_area->text.px > (u32)text_area->bounds.height)
         {
-            f32 delta = (f32)text_area.text.px - text_area.bounds.height;
-            u32 new_size = text_area.text.px - (u32)delta;
-            text_area.text.position.y += delta;
-            text_set_size_px(&text_area.text, new_size);
+            f32 delta = (f32)text_area->text.px - text_area->bounds.height;
+            u32 new_size = text_area->text.px - (u32)delta;
+            text_area->text.position.y += delta;
+            text_set_size_px(&text_area->text, new_size);
         }
 
         // NOTE(lucas): Wrap text and shrink to fit.
         // Wrap text, and if text height exceeds bounds, decrease font size.
-        if (text_area.style & TEXT_AREA_WRAP)
+        if (text_area->style & TEXT_AREA_WRAP)
         {
-            text_height = get_text_height(&text_area);
-            while (text_height > text_area.bounds.height)
+            text_height = get_text_height(text_area);
+            while (text_height > text_area->bounds.height)
             {
-                text_set_size_px(&text_area.text, text_area.text.px-1);
-                text_height = get_text_height(&text_area);
+                text_set_size_px(&text_area->text, text_area->text.px-1);
+                text_height = get_text_height(text_area);
             }
         }
         else
         {
             // NOTE(lucas): Don't wrap but shrink text to fit.
-            text_height = (f32)text_area.text.px;
-            f32 text_width = text_get_width(text_area.text);
-            while (text_width > text_area.bounds.width)
+            text_height = (f32)text_area->text.px;
+            f32 text_width = text_get_width(&text_area->text);
+            while (text_width > text_area->bounds.width)
             {
-                --text_area.text.px_width;
-                text_width = text_get_width(text_area.text);
+                --text_area->text.px_width;
+                text_width = text_get_width(&text_area->text);
             }
         }
     }
     // NOTE(lucas): Wrap but don't shrink to fit
-    else if (text_area.style & TEXT_AREA_WRAP)
+    else if (text_area->style & TEXT_AREA_WRAP)
     {
-        text_height = get_text_height(&text_area);
+        text_height = get_text_height(text_area);
     }
     // NOTE(lucas): Don't wrap or shrink to fit
     else
     {
-        text_height = text_area.text.line_height;
-        text_area.bounds.height = text_area.text.line_height;
+        text_height = text_area->text.line_height;
+        text_area->bounds.height = text_area->text.line_height;
     }
 
-    f32 vert_space_remaining = text_area.bounds.height - text_height + text_area.text.line_height;
-    switch (text_area.vert_alignment)
+    f32 vert_space_remaining = text_area->bounds.height - text_height + text_area->text.line_height;
+    switch (text_area->vert_alignment)
     {
         case TEXT_ALIGN_VERT_BOTTOM:
         {
-            text_area.text.position.y += vert_space_remaining;
+            text_area->text.position.y += vert_space_remaining;
         } break;
 
         case TEXT_ALIGN_VERT_CENTER:
         {
-            text_area.text.position.y += 0.5f*vert_space_remaining;
+            text_area->text.position.y += 0.5f*vert_space_remaining;
         } break;
 
         case TEXT_ALIGN_VERT_TOP:
         {
-            text_area.text.position.y += text_area.text.px;
+            text_area->text.position.y += text_area->text.px;
         } break;
 
         default: break; 
@@ -520,21 +524,22 @@ void draw_text_area(Renderer* renderer, TextArea text_area)
         ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
         for (TextNode* node = parsed_text.first_node; node; node = node->next)
         {
-            node->text.px = text_area.text.px;
+            node->text.px = text_area->text.px;
             draw_text(renderer, node->text);
         }
 
-        text_area.text.position.y += text_area.text.line_height;
+        text_area->text.position.y += text_area->text.line_height;
 
         // NOTE(lucas): This should only be hit if NOT shrink to fit.
         // Discard any text that overflows y bound
-        if (!text_in_bounds(&text_area))
+        if (!text_in_bounds(text_area))
             break;
     }
 
     // NOTE(lucas): Draw the overflow text if there is any.
     // Overflow text should only be drawn if the text area is shrink to fit or if there is room for the extra line.
-    if (overflow.word.string && ((text_area.style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(&text_area)))
+    if (overflow.word.string && ((text_area->style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(text_area)))
         draw_text(renderer, overflow.word);
 }
+#pragma optimize("", on)
  

@@ -50,10 +50,6 @@ set(COMMON_COMPILER_FLAGS
     /Oi /WX /W4 /wd4100 /wd4189 /wd4201 /wd4005 /wd4116 /wd4090
     /D_CRT_SECURE_NO_WARNINGS)
 
-# In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
-# Specify the multithreaded debug version of CRT (MTd) and perform all available run-time error checks (RTC1)
-set(DEBUG_COMPILER_FLAGS /MTd /Zi /Od /RTC1)
-
 add_library(alchemy ${ALCHEMY_SOURCE})
 target_include_directories(alchemy PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(alchemy SYSTEM PUBLIC
@@ -64,10 +60,10 @@ target_include_directories(alchemy SYSTEM PUBLIC
 
 target_link_libraries(alchemy PRIVATE ${ALCHEMY_LIBS})
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_link_libraries(alchemy PRIVATE ${PROJECT_SOURCE_DIR}/lib/freetype/debug/freetype.lib)
 else()
-    target_link_libraries(alchemy PRIATE ${PROJECT_SOURCE_DIR}/lib/freetype/release/freetype.lib)
+    target_link_libraries(alchemy PRIVATE ${PROJECT_SOURCE_DIR}/lib/freetype/release/freetype.lib)
 endif()
 
 option(CGLM_STATIC "Static build" ON)
@@ -79,9 +75,15 @@ target_compile_definitions(alchemy PRIVATE
 if(MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
 
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
+        # Specify the multithreaded debug version of CRT (MTd) and perform all available run-time error checks (RTC1)
+        set(DEBUG_COMPILER_FLAGS /MTd /Zi /Od /RTC1)
         target_compile_options(alchemy PRIVATE ${DEBUG_COMPILER_FLAGS})
         target_compile_definitions(alchemy PUBLIC ALCHEMY_DEBUG)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(RELEASE_COMPILER_FLAGS /MT /O2)
+        target_compile_options(alchemy PRIVATE ${RELEASE_COMPILER_FLAGS})
     endif()
 endif()
 
