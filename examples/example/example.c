@@ -275,7 +275,7 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
     text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    draw_text_area(renderer, text_area);
+    draw_text_area(renderer, &text_area);
     
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);
     *logo_tex = state->logo_tex;

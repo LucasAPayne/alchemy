@@ -1379,7 +1379,7 @@ void renderer_clear(v4 color)
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 rotation, f32 thickness)
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
