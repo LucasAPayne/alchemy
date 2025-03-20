@@ -26,12 +26,12 @@ internal u32 vao_init(void)
     return vao;
 }
 
-internal u32 vbo_init(f32* vertices, usize size)
+internal u32 vbo_init(f32* vertices, size bytes)
 {
     u32 vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, bytes, vertices, GL_STATIC_DRAW);
 
     return vbo;
 }
@@ -45,12 +45,12 @@ internal u32 vbo_init_empty(void)
     return vbo;
 }
 
-internal u32 ibo_init(u32* indices, usize size)
+internal u32 ibo_init(u32* indices, size bytes)
 {
     u32 ibo;
     glGenBuffers(1, &ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, bytes, indices, GL_STATIC_DRAW);
 
     return ibo;
 }
@@ -1005,29 +1005,29 @@ internal void output_scissor_test(Renderer* renderer, RenderCommandScissorTest* 
     glScissor((GLint)cmd->clip.x, (GLint)cmd->clip.y, (GLsizei)cmd->clip.width, (GLsizei)cmd->clip.height);
 }
 
-internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, usize max_size)
+internal RenderCommandBuffer render_command_buffer_alloc(MemoryArena* arena, size max_bytes)
 {
     RenderCommandBuffer result = {0};
-    result.base = (u8*)push_size(arena, max_size);
-    result.size = 0;
-    result.max_size = max_size;
+    result.base = (u8*)push_size(arena, max_bytes);
+    result.bytes = 0;
+    result.max_bytes = max_bytes;
     return result;
 }
 
 internal void render_command_buffer_clear(RenderCommandBuffer* command_buffer)
 {
-    command_buffer->size = 0;
+    command_buffer->bytes = 0;
 }
 
 #define render_command_push(buffer, type) (type*)render_command_push_(buffer, sizeof(type), RENDER_COMMAND_##type)
-internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer, usize size, RenderCommandType type)
+internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer, size bytes, RenderCommandType type)
 {
     RenderCommand* result = 0;
-    if (command_buffer->size + size < command_buffer->max_size)
+    if (command_buffer->bytes + bytes < command_buffer->max_bytes)
     {
-        result = (RenderCommand*)(command_buffer->base + command_buffer->size);
+        result = (RenderCommand*)(command_buffer->base + command_buffer->bytes);
         result->type = type;
-        command_buffer->size += size;
+        command_buffer->bytes += bytes;
     }
     else
     {
@@ -1039,7 +1039,7 @@ internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer
 internal void render_command_buffer_output(Renderer* renderer)
 {
     RenderCommandBuffer* command_buffer = &renderer->command_buffer;
-    for (usize base_address = 0; base_address < command_buffer->size;)
+    for (size base_address = 0; base_address < command_buffer->bytes;)
     {
         // TODO(lucas): This can probably be collapsed into a macro
         RenderCommand* header = (RenderCommand*)(command_buffer->base + base_address);
@@ -1160,7 +1160,7 @@ internal void path_from_install_dir(char* path, char* dest)
     str_cat(ALCHEMY_INSTALL_PATH, str_len(ALCHEMY_INSTALL_PATH), path, str_len(path), dest, MAX_FILEPATH_LEN);
 }
 
-Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size)
+Renderer renderer_init(Window window, int viewport_width, int viewport_height, size command_buffer_bytes)
 {
     Renderer renderer = {0};
     renderer.window_width = window.width;
@@ -1175,8 +1175,8 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-    renderer.command_buffer_arena = memory_arena_alloc(command_buffer_size);
-    renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_size);
+    renderer.command_buffer_arena = memory_arena_alloc(command_buffer_bytes);
+    renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_bytes);
 
     // TODO(lucas): What's the best way to initialize this? Maybe in config?
     // Don't want it to be necessary to define a memory arena to pass in to here.
@@ -1241,7 +1241,7 @@ Renderer renderer_init(Window window, int viewport_width, int viewport_height, u
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
 
-    for (u32 i = 0; i < ARRAY_COUNT(renderer.tex_ids); ++i)
+    for (u32 i = 0; i < countof(renderer.tex_ids); ++i)
     {
         RenderID* tex_id = renderer.tex_ids + i;
         glGenTextures(1, &tex_id->id);
@@ -1312,7 +1312,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
 
 void renderer_render(Renderer* renderer)
 {
-    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
     {
         RenderID* tex_id = renderer->tex_ids + i;
         if (tex_id->used)
@@ -1363,7 +1363,7 @@ void renderer_render(Renderer* renderer)
     memory_arena_clear(&renderer->command_buffer_arena);
     render_command_buffer_clear(&renderer->command_buffer);
 
-    for (u32 i = 0; i < ARRAY_COUNT(renderer->tex_ids); ++i)
+    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
         renderer->textures_to_generate[i] = (Texture){0};
 }
 
@@ -1577,7 +1577,7 @@ u32 renderer_next_tex_id(Renderer* renderer)
 {
     u32 id = 0;
     
-    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    if (renderer->tex_index <= countof(renderer->tex_ids))
     {
         id = renderer->tex_ids[renderer->tex_index].id;
         renderer->tex_ids[renderer->tex_index].used = true;
@@ -1588,7 +1588,7 @@ u32 renderer_next_tex_id(Renderer* renderer)
 
 void renderer_push_texture(Renderer* renderer, Texture tex)
 {
-    if (renderer->tex_index <= ARRAY_COUNT(renderer->tex_ids))
+    if (renderer->tex_index <= countof(renderer->tex_ids))
     {
         renderer->textures_to_generate[renderer->tex_index] = tex;
         ++renderer->tex_index;

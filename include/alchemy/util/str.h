@@ -5,6 +5,13 @@
 
 // TODO(lucas): Make variants that take an arena and allocate and return the string
 
+#define s8(s) (s8){(u8*)s, lengthof(s)}
+typedef struct s8
+{
+    u8* data;
+    size len;
+} s8;
+
 inline int str_len(char* s)
 {
     int count = 0;

@@ -213,8 +213,8 @@ typedef struct RenderCommandScissorTest
 
 typedef struct RenderCommandBuffer
 {
-    usize max_size;
-    usize size;
+    size max_bytes;
+    size bytes;
     u8* base;
 } RenderCommandBuffer;
 
@@ -277,7 +277,7 @@ typedef struct Renderer
 
 void opengl_init(Window window);
 
-Renderer renderer_init(Window window, int viewport_width, int viewport_height, usize command_buffer_size);
+Renderer renderer_init(Window window, int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
 void renderer_new_frame(Renderer* renderer, Window window);

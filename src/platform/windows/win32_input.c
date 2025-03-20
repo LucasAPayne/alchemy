@@ -146,11 +146,11 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
     keyboard->current_char = 0;
 
     // Release state should not persist, so make sure it is false for each button
-    for (int key = 0; key < ARRAY_COUNT(keyboard->keys); key++)
+    for (int key = 0; key < countof(keyboard->keys); key++)
         keyboard->keys[key].released = false;
 
     // Release and double click state should not persist, so set it to false
-    for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
+    for (int button = 0; button < countof(mouse->buttons); button++)
     {
         mouse->buttons[button].released = false;
         mouse->buttons[button].double_clicked = false;
@@ -577,7 +577,7 @@ void win32_xinput_gamepad_process_input(Input* input)
         gamepad = &input->gamepads[i];
 
         // Release state should not persist, so make sure it is false for each button
-        for (int button_index = 0; button_index < ARRAY_COUNT(gamepad->buttons); button_index++)
+        for (int button_index = 0; button_index < countof(gamepad->buttons); button_index++)
             gamepad->buttons[button_index].released = false;
 
         XINPUT_STATE controller_state;

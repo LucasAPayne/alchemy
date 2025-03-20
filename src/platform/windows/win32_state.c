@@ -17,7 +17,7 @@ internal char* win32_filename_from_full_path(char* full_path)
 internal void win32_build_exe_path_filename(GameCode* game_code, char* filename, char* dest, int dest_len)
 {
     char* one_past_last_slash = win32_filename_from_full_path(game_code->exe_full_path);
-    usize exe_filename_len = one_past_last_slash - game_code->exe_full_path;
+    size exe_filename_len = one_past_last_slash - game_code->exe_full_path;
     str_cat(game_code->exe_full_path, exe_filename_len, filename, str_len(filename), dest, dest_len);
 }
 
@@ -124,7 +124,7 @@ internal void input_loop_begin_recording(GameCode* game_code, GameMemory* game_m
     replay_buffer->recording_handle = CreateFileA(filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
     replay_buffer->is_recording = true;
 
-    CopyMemory(replay_buffer->memory_block, game_memory->memory_block, game_memory->total_size);
+    CopyMemory(replay_buffer->memory_block, game_memory->memory_block, game_memory->total_bytes);
 }
 
 internal void input_loop_end_recording(GameCode* game_code)
@@ -153,7 +153,7 @@ internal void input_loop_begin_playback(GameCode* game_code, GameMemory* game_me
     game_code->replay_buffer.playback_handle = CreateFileA(filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
     replay_buffer->is_playing = true;
 
-    CopyMemory(game_memory->memory_block, replay_buffer->memory_block, game_memory->total_size);
+    CopyMemory(game_memory->memory_block, replay_buffer->memory_block, game_memory->total_bytes);
 }
 
 internal void input_loop_end_playback(GameCode* game_code)
@@ -189,11 +189,11 @@ void input_loop_init(GameCode* game_code, GameMemory* game_memory)
                                                 0, 0, CREATE_ALWAYS, 0, 0);
 
     LARGE_INTEGER max_size;
-    max_size.QuadPart = game_memory->total_size;
+    max_size.QuadPart = game_memory->total_bytes;
     replay_buffer->memory_map = CreateFileMappingA(replay_buffer->memory_map, 0, PAGE_READWRITE,
                                     max_size.HighPart, max_size.LowPart, 0);
     replay_buffer->memory_block = MapViewOfFile(replay_buffer->memory_map, FILE_MAP_ALL_ACCESS, 0, 0,
-                                                game_memory->total_size);
+                                                game_memory->total_bytes);
 
     if (!replay_buffer->memory_block)
     {

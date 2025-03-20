@@ -111,8 +111,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 {
     srand(0);
 
-    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_size);
-    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_size);
+    state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_bytes);
+    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_bytes);
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
@@ -244,7 +244,7 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, engine_text);
 
     char buffer[512];
-    sprintf_s(buffer, ARRAY_COUNT(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
+    sprintf_s(buffer, countof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
     Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);

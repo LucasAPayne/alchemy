@@ -7,7 +7,8 @@
 
 #define ALCHEMY_EXPORT __declspec(dllexport)
 
-#define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
+#define countof(array) (sizeof((array)) / sizeof((array)[0]))
+#define lengthof(array) (countof(array) - 1)
 
 #if ALCHEMY_DEBUG
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
@@ -33,6 +34,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+typedef ptrdiff_t size;
 typedef size_t usize;
 
 typedef int8_t  i8;

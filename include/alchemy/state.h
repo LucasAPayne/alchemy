@@ -25,7 +25,7 @@ typedef struct ReplayBufer
     void* memory_map;
     char filename[MAX_FILEPATH_LEN];
     void* memory_block; // Copy of game memory
-    usize total_size;
+    size total_bytes;
     void* recording_handle;
     void* playback_handle;
     b32 is_recording;
