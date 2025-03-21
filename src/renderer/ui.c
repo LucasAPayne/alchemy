@@ -14,22 +14,15 @@ typedef struct Vertex {
     nk_byte col[4];
 } Vertex;
 
-// NOTE(lucas): handle.ptr is a pointer to the font
-internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* text, int len)
+// NOTE(lucas): Parameter list must match nk_text_width_f
+internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* str, int len)
 {
     f32 result = 0.0f;
 
-    MemoryArena arena = memory_arena_alloc(str_len(text)+1);
-
-    if (len > 0)
-    {
-        char* substr = str_sub(text, 0, len, &arena);
-        Font* font = (Font*)handle.ptr;
-        Text substr_text = text_init(substr, font, v2_zero(), (u32)height);
-        result = text_get_width(&substr_text);
-    }
-
-    memory_arena_pop(&arena, str_len(text)+1);
+    s8 s = (s8){(u8*)str, len};
+    Font* font = (Font*)handle.ptr;
+    Text text = text_init(s, font, v2_zero(), (u32)height);
+    result = text_get_width(&text);
 
     return result;
 }
@@ -223,7 +216,8 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 v4 color = nk_color_to_v4(t->foreground);
                 Font* font = (Font*)t->font->userdata.ptr;
                 v2 pos = {(f32)t->x, (f32)t->y + (f32)t->font->height*0.75f};
-                Text text = text_init((char*)t->string, font, pos, (u32)t->font->height);
+                s8 s = {(u8*)t->string, (size)str_len(t->string)};
+                Text text = text_init(s, font, pos, (u32)t->font->height);
                 text.color = color;
                 draw_text(renderer, text);
             } break;

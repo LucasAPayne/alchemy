@@ -116,7 +116,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 
     state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
-    state->matrix_font = font_load_from_file("fonts/matrix_regular.ttf");
+    state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
 
     state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
@@ -239,26 +239,29 @@ UPDATE_AND_RENDER(update_and_render)
     draw_sprite(renderer, state->logo);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init("Alchemy Engine", &state->cardinal_font, (v2){500.0f, 50.0f}, 48);
+    Text engine_text = text_init(s8("Alchemy Engine"), &state->cardinal_font, (v2){500.0f, 50.0f}, 48);
     engine_text.color = font_color;
     draw_text(renderer, engine_text);
 
     char buffer[512];
     sprintf_s(buffer, countof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    Text frame_time = text_init(buffer, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
+    s8 ms_frame = {(u8*)buffer, str_len(buffer)};
+    Text frame_time = text_init(ms_frame, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);
 
     char cooldown_buffer[512];
     sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown_buffer, &state->immortal_font, (v2){1100.0f, (f32)window.height - 10.0f}, 32);
+    s8 cooldown = {(u8*)cooldown_buffer, str_len(buffer)};
+    Text cooldown_text = text_init(cooldown, &state->immortal_font, (v2){1100.0f, (f32)window.height - 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
     
     char stopwatch_buffer[512];
     sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(stopwatch_buffer, &state->immortal_font, (v2){10.0f, 30.0f}, 32);
+    s8 stopwatch = {(u8*)stopwatch_buffer, str_len(stopwatch_buffer)};
+    Text stopwatch_text = text_init(stopwatch, &state->immortal_font, (v2){10.0f, 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(renderer, stopwatch_text);
 
@@ -266,9 +269,9 @@ UPDATE_AND_RENDER(update_and_render)
     rect text_bounds = rect_min_dim((v2){300.0f, 300.0f}, (v2){250.0f, 100.0f});
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    char* str = "If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
+    s8 str = s8("●If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
                 "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "the Duel.";
+                "the Duel.");
 
     TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();

@@ -1560,9 +1560,9 @@ void draw_text(Renderer* renderer, Text text)
     RenderCommandText* cmd = render_command_push(&renderer->command_buffer, RenderCommandText);
     if (!cmd)
         return;
-    char* text_copy = str_copy(text.string, &renderer->scratch_arena);
+
     cmd->text = text;
-    cmd->text.string = text_copy;
+    cmd->text.string = s8_copy(text.string, &renderer->scratch_arena);
 }
 
 void draw_scissor_test(Renderer* renderer, rect clip)

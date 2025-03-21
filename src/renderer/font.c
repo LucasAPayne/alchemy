@@ -33,9 +33,10 @@ f32 text_get_width(Text* text)
     FT_Set_Pixel_Sizes(text->font->face, text->px_width, text->px);
     FT_GlyphSlot glyph = text->font->face->glyph;
 
-    for (char* c = text->string; *c; ++c)
+    for (size i = 0; i < text->string.len; ++i)
     {
-        if (!FT_Load_Char(text->font->face, *c, FT_LOAD_NO_BITMAP))
+        u8 c = text->string.data[i];
+        if (!FT_Load_Char(text->font->face, c, FT_LOAD_NO_BITMAP))
         {
             // TODO(lucas): Diagnostic, could not load character
         }
@@ -62,7 +63,7 @@ void text_scale(Text* text, f32 factor)
     text_set_size_px(text, new_size);
 }
 
-Text text_init(char* string, Font* font, v2 position, u32 px)
+Text text_init(s8 string, Font* font, v2 position, u32 px)
 {
     Text text = {0};
 
@@ -99,9 +100,15 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     f32 x = text.position.x;
     f32 y = text.position.y;
 
-    for (char* c = text.string; *c; ++c)
+    for (size i = 0; i < text.string.len; ++i)
     {
-        glyph_index = FT_Get_Char_Index(face, *c);
+        u8* c = text.string.data + i;
+
+        // TODO(lucas): Decode entire string at once.
+        u32 charcode = utf8_get_codepoint(c);
+        int num_bytes = utf8_get_num_bytes(*c);
+        i += num_bytes-1;
+        glyph_index = FT_Get_Char_Index(face, charcode);
 
         // When appropriate, retrieve kerning information and advance cursor
         if (use_kerning && previous_glyph_index && glyph_index)
@@ -155,9 +162,9 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
             // If \r\n is used to end a line, need to skip the next character (\n)
             y += text.line_height;
             x = text.position.x;
-            ++c;
+            ++i;
         }
-        else if ((*c == '\n') || (*c == '\r'))
+        else if ((*c == '\n'))
         {
             y += text.line_height;
             x = text.position.x;
@@ -186,7 +193,7 @@ typedef struct OverflowText
 
 typedef struct Tokenizer
 {
-    char* at;
+    u8* at;
 } Tokenizer;
 
 typedef struct ParsedText
@@ -227,9 +234,9 @@ internal b32 text_is_whitespace(Text text)
 {
     b32 result = false;
 
-    for (char* c = text.string; *c; ++c)
+    for (size i = 0; i < text.string.len; ++i)
     {
-        if (!char_is_whitespace(*c))
+        if (!char_is_whitespace(text.string.data[i]))
             break;
 
         result = true;
@@ -238,24 +245,14 @@ internal b32 text_is_whitespace(Text text)
     return result;
 }
 
-// NOTE(lucas): Null-terminate text after len characters
-internal void text_chop(Text* text, usize len, MemoryArena* arena)
-{
-    char* new_str = push_size(arena, len+1);
-    ASSERT(new_str);
-    strncpy(new_str, text->string, len);
-    new_str[len] = '\0';
-    text->string = new_str;
-}
-
+// TODO(lucas): Take another look at the tokenizer structure
 internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
 {
     Text result = token;
-    usize word_len = tokenizer->at - token.string;
-    text_chop(&result, word_len, arena);
 
+    usize word_len = tokenizer->at - token.string.data;
+    result.string = s8_copyn(token.string, word_len, arena);
     result.string_width = text_get_width(&result);
-
     return result;
 }
 
@@ -264,12 +261,12 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
 {
     ParsedText parsed_text = {0};
     Text token = text_area->text;
-    token.string = tokenizer->at;
+    token.string.data = tokenizer->at;
 
     int num_spaces = 0;
     b32 line_overflowed = false;
 
-    if (overflow_text->word.string)
+    if (overflow_text->word.string.data)
     {
         parsed_text_push(&parsed_text, &overflow_text->word, arena);
         parsed_text_push(&parsed_text, &overflow_text->space, arena);
@@ -300,7 +297,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
             {
                 Text word = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 parsed_text.width += word.string_width;
-                token.string = tokenizer->at;
+                token.string.data = tokenizer->at;
 
                 while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
                     ++tokenizer->at;
@@ -308,7 +305,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
                 Text space = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 ++num_spaces;
                 parsed_text.width += space.string_width;
-                token.string = tokenizer->at;
+                token.string.data = tokenizer->at;
 
                 if (parsed_text.width - space.string_width > text_area->bounds.width)
                 {
@@ -377,7 +374,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
             for (TextNode* node = parsed_text.first_node; node; node = node->next)
             {
                 // TODO(lucas): Consider other whitespace
-                if ((node->text.string[0] == ' ') && node->next)
+                if ((node->text.string.data[0] == ' ') && node->next)
                 {
                     node->next->text.position.x += width_per_space * (f32)count;
                     ++count;
@@ -409,7 +406,7 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
 }
 #pragma optimize("", on)
 
-TextArea text_area_init(Renderer* renderer, rect bounds, char* str, Font* font, u32 text_size_px)
+TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, u32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;
@@ -444,7 +441,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     // then reconstruct one Text object and render it.
     Tokenizer tokenizer = {0};
     Tokenizer test_tokenizer = {0};
-    tokenizer.at = test_tokenizer.at = text_area->text.string;
+    tokenizer.at = test_tokenizer.at = text_area->text.string.data;
     text_area->text.position = text_area->bounds.position;
 
     // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
@@ -538,7 +535,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
 
     // NOTE(lucas): Draw the overflow text if there is any.
     // Overflow text should only be drawn if the text area is shrink to fit or if there is room for the extra line.
-    if (overflow.word.string && ((text_area->style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(text_area)))
+    if (overflow.word.string.data && ((text_area->style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(text_area)))
         draw_text(renderer, overflow.word);
 }
 #pragma optimize("", on)
