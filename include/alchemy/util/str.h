@@ -10,6 +10,18 @@ typedef struct s8
     size len;
 } s8;
 
+typedef struct s8_iter
+{
+    u8* at;
+    size idx;
+} s8_iter;
+
+internal inline void s8_iter_move(s8_iter* it, size amount)
+{
+    it->at += amount;
+    it->idx += amount;
+}
+
 internal inline s8 s8_alloc(MemoryArena* arena, size len)
 {
     s8 result = {0};

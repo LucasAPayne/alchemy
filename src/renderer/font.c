@@ -191,11 +191,6 @@ typedef struct OverflowText
     Text space;
 } OverflowText;
 
-typedef struct Tokenizer
-{
-    u8* at;
-} Tokenizer;
-
 typedef struct ParsedText
 {
     f32 width;
@@ -246,7 +241,7 @@ internal b32 text_is_whitespace(Text text)
 }
 
 // TODO(lucas): Take another look at the tokenizer structure
-internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
+internal Text tokenizer_process_token(s8_iter* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
 {
     Text result = token;
 
@@ -257,7 +252,7 @@ internal Text tokenizer_process_token(Tokenizer* tokenizer, ParsedText* parsed_t
 }
 
 #pragma optimize("", off)
-internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, OverflowText* overflow_text, MemoryArena* arena)
+internal ParsedText parse_text(s8_iter* tokenizer, TextArea* text_area, OverflowText* overflow_text, MemoryArena* arena)
 {
     ParsedText parsed_text = {0};
     Text token = text_area->text;
@@ -283,24 +278,19 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
     b32 parsing = true;
     while (parsing)
     {
-        switch(tokenizer->at[0])
+        size len = tokenizer->at - token.string.data;
+        b32 final_token = (tokenizer->idx == token.string.len) || (tokenizer->at[0] == '\0');
+        if (char_is_whitespace(tokenizer->at[0]) || final_token)
         {
-            // NOTE(lucas): Separate into words based on whitespace.
-            // Also catch null terminator to get the last word in the string.
-            case ' ':
-            case '\t':
-            case '\v':
-            case '\f':
-            case '\n':
-            case '\r':
-            case '\0':
-            {
                 Text word = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 parsed_text.width += word.string_width;
                 token.string.data = tokenizer->at;
 
-                while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
-                    ++tokenizer->at;
+                if (!final_token)
+                {
+                    while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
+                        s8_iter_move(tokenizer, 1);
+                }
 
                 Text space = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
                 ++num_spaces;
@@ -338,22 +328,21 @@ internal ParsedText parse_text(Tokenizer* tokenizer, TextArea* text_area, Overfl
 
                 // NOTE(lucas): End the line if the null terminator or newline is encountered.
                 // In the latter case, advance the tokenizer past the newline escapes
-                if (tokenizer->at[0] == '\0')
+                if (final_token)
                     parsing = false;
                 else if (tokenizer->at[0] == '\n')
                 {
-                    ++tokenizer->at;
+                    s8_iter_move(tokenizer, 1);
                     parsing = false;
                 }
                 else if (tokenizer->at[0] == '\r' && tokenizer->at[1] == '\n')
                 {
-                    tokenizer->at += 2;
+                    s8_iter_move(tokenizer, 2);
                     parsing = false;
                 }
-            } break;
-
-            default: ++tokenizer->at; break;
-        };
+        }
+        else
+            s8_iter_move(tokenizer, 1);
     }
 
     // TODO(lucas): Draw while aligning?
@@ -439,8 +428,8 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
 {
     // NOTE(lucas): Parse and process the text in the text area,
     // then reconstruct one Text object and render it.
-    Tokenizer tokenizer = {0};
-    Tokenizer test_tokenizer = {0};
+    s8_iter tokenizer = {0};
+    s8_iter test_tokenizer = {0};
     tokenizer.at = test_tokenizer.at = text_area->text.string.data;
     text_area->text.position = text_area->bounds.position;
 

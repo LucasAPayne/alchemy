@@ -10,6 +10,8 @@
 #define countof(array) (sizeof((array)) / sizeof((array)[0]))
 #define lengthof(array) (countof(array) - 1)
 
+#define u64_high_low(hi, lo) ((u64)(hi) << 32) | (lo)
+
 #if ALCHEMY_DEBUG
     #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
 #else
