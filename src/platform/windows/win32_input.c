@@ -346,24 +346,61 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 mouse->x = GET_X_LPARAM(msg.lParam);
                 mouse->y = GET_Y_LPARAM(msg.lParam);
             } break;
+
             case WM_MOUSEWHEEL: mouse->scroll = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA; break;
 
-            case WM_LBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0); break;
-            case WM_LBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 1); break;
+            case WM_LBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 1);
+            } break;
+
+            case WM_MBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 1);
+            } break;
+
+            case WM_RBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 1);
+            } break;
+
+            case WM_XBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 1);
+            } break;
+
+            case WM_LBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0);
+            } break;
+            
+            case WM_MBUTTONUP:     
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0);
+            } break;
+            
+            case WM_RBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 0);
+            } break;
+
+            case WM_XBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 0);
+            } break;
+
             case WM_LBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 2); break;
-
-            case WM_MBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0); break;
-            case WM_MBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 1); break;
             case WM_MBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 2); break;
-
-            case WM_RBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 0); break;
-            case WM_RBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 1); break;
             case WM_RBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 2); break;
-
-            case WM_XBUTTONUP:     win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 0); break;
-            case WM_XBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 1); break;
             case WM_XBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 2); break;
-
 
             default:
             {

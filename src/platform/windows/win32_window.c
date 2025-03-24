@@ -146,6 +146,8 @@ void window_init(Window* window, const char* title, int width, int height)
     window_class.hIcon = LoadIconA(0, IDI_APPLICATION);
     window_class.hIconSm = LoadIconA(0, IDI_APPLICATION);
     window_class.lpszClassName = "MyWindowClass";
+    // TODO(lucas): Allow the user to set the default cursor (system or custom)
+    window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
     
     if(!RegisterClassExA(&window_class))
     {
