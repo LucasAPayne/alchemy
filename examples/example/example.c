@@ -7,10 +7,6 @@
 #include "ui_overview.h"
 
 #include <stdlib.h> // rand
-#include <stdio.h>  // Temporary: sprintf_s
-#include <string.h> // Temporary
-
-#include <stb_image/stb_image.h>
 
 internal void bounce_dvd(ExampleState* state, f32* direction)
 {
@@ -243,24 +239,18 @@ UPDATE_AND_RENDER(update_and_render)
     engine_text.color = font_color;
     draw_text(renderer, engine_text);
 
-    char buffer[512];
-    sprintf_s(buffer, countof(buffer), "MS/frame: %.2f", delta_time * 1000.0f);
-    s8 ms_frame = {(u8*)buffer, str_len(buffer)};
+    s8 ms_frame = s8_format(&state->transient_arena, "MS/frame: %.2f", delta_time*1000.0f);
     Text frame_time = text_init(ms_frame, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);
 
-    char cooldown_buffer[512];
-    sprintf_s(cooldown_buffer, sizeof(cooldown_buffer), "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    s8 cooldown = {(u8*)cooldown_buffer, str_len(buffer)};
+    s8 cooldown = s8_format(&state->transient_arena, "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
     Text cooldown_text = text_init(cooldown, &state->immortal_font, (v2){1100.0f, (f32)window.height - 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
     
-    char stopwatch_buffer[512];
-    sprintf_s(stopwatch_buffer, sizeof(stopwatch_buffer), "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    s8 stopwatch = {(u8*)stopwatch_buffer, str_len(stopwatch_buffer)};
+    s8 stopwatch = s8_format(&state->transient_arena, "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     Text stopwatch_text = text_init(stopwatch, &state->immortal_font, (v2){10.0f, 30.0f}, 32);
     stopwatch_text.color = font_color;
     draw_text(renderer, stopwatch_text);
