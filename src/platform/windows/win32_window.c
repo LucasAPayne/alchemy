@@ -214,3 +214,13 @@ void window_icon_set_from_memory(Window* window, void* icon)
     SendMessage(window->ptr, WM_SETICON, ICON_SMALL, (LPARAM)icon);
     SendMessage(window->ptr, WM_SETICON, ICON_BIG, (LPARAM)icon);
 }
+
+void console_launch(void)
+{
+    AllocConsole();
+
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    freopen_s(&fp, "CONIN$", "r", stdin);
+}

@@ -36,3 +36,6 @@ void  window_icon_set_from_memory(Window* window, void* icon);
  * Otherwise, the incorrect time will be reported.
  */
 f32 get_frame_seconds(Window* window);
+
+// Launches a separate console window for logging and other printing
+void console_launch(void);

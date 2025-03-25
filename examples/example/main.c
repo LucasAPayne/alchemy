@@ -7,6 +7,8 @@
 
 int main(void)
 {
+    console_launch();
+
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
     
