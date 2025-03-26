@@ -9,6 +9,14 @@ typedef struct Timer
     b32 is_active;
 } Timer;
 
+typedef struct LocalTime
+{
+    u32 hour;
+    u32 minute;
+    u32 second;
+    u32 millisecond;
+} LocalTime;
+
 void timer_init(Timer* timer, f32 start_seconds, b32 start_active);
 f32 timer_milliseconds(const Timer* timer);
 f32 timer_seconds(const Timer* timer);
@@ -30,3 +38,5 @@ void stopwatch_start(Stopwatch* stopwatch);
 void stopwatch_update(Stopwatch* stopwatch, f32 delta_time);
 void stopwatch_stop(Stopwatch* stopwatch);
 void stopwatch_reset(Stopwatch* stopwatch);
+
+LocalTime get_local_time(void);

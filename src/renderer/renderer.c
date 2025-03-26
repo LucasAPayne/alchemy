@@ -343,8 +343,57 @@ internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_h
         framebuffer_attach_renderbuffer(&framebuffer);
     }
 
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    switch(framebuffer_status)
+    {
+        case GL_FRAMEBUFFER_COMPLETE: break;
+
+        case GL_FRAMEBUFFER_UNDEFINED:
+        {
+            ASSERT(0, "OpenGL framebuffer error: Default framebuffer chosen, but does not exist");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+        {
+            ASSERT(0, "OpenGL framebuffer error: At least one framebuffer attachment is incomplete");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+        {
+            ASSERT(0, "OpenGL framebuffer error: Framebuffer does not have at least one image attached");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+        {
+            ASSERT(0, "OpenGL framebuffer error: Draw buffer has a missing or invalid color attachment point");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+        {
+            ASSERT(0, "OpenGL framebuffer error: Read buffer has a missing or invalid color attachment point");
+        } break;
+
+        case GL_FRAMEBUFFER_UNSUPPORTED:
+        {
+            ASSERT(0, "OpenGL framebuffer error: Internal format combination of attached images is unsupported");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+        {
+            ASSERT(0, "OpenGL framebuffer error: The number of samples is not the same for all attached renderbuffers, "
+                      "all attached textures, or the renderbuffer and texture samples do not match");
+        } break;
+
+        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+        {
+            ASSERT(0, "OpenGL framebuffer error: The framebuffer is layered, but a populated attachment is not layered; "
+                      "or all populated color attachments are not from textures of the same target");
+        } break;
+
+        default: ASSERT(0, "OpenGL framebuffer error: Unexpected value from glCheckFramebufferStatus()"); break;
+    }
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        ASSERT(0);
+    
 
     fbo_unbind();    
 

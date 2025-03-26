@@ -1,5 +1,6 @@
 #include "alchemy/input.h"
 #include "alchemy/window.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
 #include <windows.h>
@@ -446,8 +447,7 @@ void cursor_set_from_system(CursorType type)
         case CURSOR_HELP:                       cursor = LoadCursorA(NULL, IDC_HELP);        break;
         case CURSOR_NOT_ALLOWED:                cursor = LoadCursorA(NULL, IDC_NO);          break;
 
-        // TODO(lucas): Logging, invalid type value
-        default: break;
+        default: log_error("Invalid system cursor type: %d", type); break;
     }
     SetCursor(cursor);
 }
@@ -642,7 +642,7 @@ void win32_xinput_gamepad_process_input(Input* input)
                 {
                     // Controller was connected and has become disconnected
                     gamepad->is_connected = false;
-                    // TODO(lucas): Logging
+                    log_info("Gamepad %d disconnected", i);
                 }
             } break; 
             case ERROR_SUCCESS:

@@ -34,6 +34,7 @@ set(ALCHEMY_SOURCE
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
+    ${PROJECT_SOURCE_DIR}/src/util/log.c
     ${PROJECT_SOURCE_DIR}/src/util/time.c)
 
 set(ALCHEMY_LIBS

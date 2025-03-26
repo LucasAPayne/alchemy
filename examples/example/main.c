@@ -3,12 +3,16 @@
 #include "alchemy/input.h"
 #include "alchemy/window.h"
 #include "alchemy/state.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
+
+#include <glad/glad.h>
 
 int main(void)
 {
     console_launch();
 
+    
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
     
@@ -22,9 +26,10 @@ int main(void)
     
     GameCode game = game_code_load("example_dll.dll", "example_dll_temp.dll", "example_dll_lock.tmp");
     input_loop_init(&game, &memory);
-
+    
     while(window.open)
     {
+
         game_code_update(&game);
         input_process(&window, &input);
         input_loop_update(&game, &memory, &input);

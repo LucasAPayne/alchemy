@@ -1,59 +1,59 @@
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/window.h"
+#include "alchemy/util/log.h"
 
 #include <glad/glad.h>
 
 #include <windows.h>
 
-void GLAPIENTRY opengl_error_callback(GLenum source,
-                                      GLenum type,
-                                      GLuint id,
-                                      GLenum severity,
-                                      GLsizei length,
-                                      const GLchar* message,
-                                      const void* user_param)
+void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                                      const GLchar* message, const void* user_param)
 {
-    // ignore non-significant error/warning codes
-    if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return; 
+    persist b32 shader_recomp_warning_printed = false;
+    if (shader_recomp_warning_printed) return; 
 
-    OutputDebugStringA("---------------\n");
+    // Filter out purely informational messages, which might print every frame.
+    // 131185 says since GL_STATIC_DRAW is used, the buffer is placed in video memory.
+    // 131169 says that the driver has allocated memory for the render buffer.
+    // 131204 says a texture cannot be used for texture mapping.
+    if (id == 131185 || id == 131169 || id == 131204) return;
 
-    char info_log[512];
-    snprintf(info_log, sizeof(info_log), "Debug message (%d): %s\n", id, message);
-    OutputDebugStringA(info_log);
+    // Only log performance-related messages once. Otherwise, they might print every frame.
+    if(id == 131218)
+        shader_recomp_warning_printed = true;
+
+    switch (severity)
+    {
+        case GL_DEBUG_SEVERITY_HIGH:         log_error("OpenGL (%d): %s", id, message); break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       log_warn("OpenGL (%d): %s", id, message);  break;
+        case GL_DEBUG_SEVERITY_LOW:          log_trace("OpenGL (%d): %s", id, message); break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: log_info("OpenGL (%d): %s", id, message);  break;
+        default:                             log_info("OpenGL (%d): %s", id, message);  break;
+    }
 
     switch (source)
     {
-        case GL_DEBUG_SOURCE_API:             OutputDebugStringA("Source: API\n");             break;
-        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   OutputDebugStringA("Source: Window System\n");   break;
-        case GL_DEBUG_SOURCE_SHADER_COMPILER: OutputDebugStringA("Source: Shader Compiler\n"); break;
-        case GL_DEBUG_SOURCE_THIRD_PARTY:     OutputDebugStringA("Source: Third Party\n");     break;
-        case GL_DEBUG_SOURCE_APPLICATION:     OutputDebugStringA("Source: Application\n");     break;
-        case GL_DEBUG_SOURCE_OTHER:           OutputDebugStringA("Source: Other\n");           break;
-        default:                              OutputDebugStringA("Source: Unknown\n");         break;
+        case GL_DEBUG_SOURCE_API:             log_debug("OpenGL error source: API");             break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   log_debug("OpenGL error source: Window System");   break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: log_debug("OpenGL error source: Shader Compiler"); break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:     log_debug("OpenGL error source: Third Party");     break;
+        case GL_DEBUG_SOURCE_APPLICATION:     log_debug("OpenGL error source: Application");     break;
+        case GL_DEBUG_SOURCE_OTHER:           log_debug("OpenGL error source: Other");           break;
+        default:                              log_debug("OpenGL error source: Unknown");         break;
     }
 
     switch (type)
     {
-        case GL_DEBUG_TYPE_ERROR:               OutputDebugStringA("Type: Error\n");               break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: OutputDebugStringA("Type: Deprecated Behavior\n"); break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  OutputDebugStringA("Type: Undefined Behavior\n");  break; 
-        case GL_DEBUG_TYPE_PORTABILITY:         OutputDebugStringA("Type: Portability\n");         break;
-        case GL_DEBUG_TYPE_PERFORMANCE:         OutputDebugStringA("Type: Performance\n");         break;
-        case GL_DEBUG_TYPE_MARKER:              OutputDebugStringA("Type: Marker\n");              break;
-        case GL_DEBUG_TYPE_PUSH_GROUP:          OutputDebugStringA("Type: Push Group\n");          break;
-        case GL_DEBUG_TYPE_POP_GROUP:           OutputDebugStringA("Type: Pop Group\n");           break;
-        case GL_DEBUG_TYPE_OTHER:               OutputDebugStringA("Type: Other\n");               break;
-        default:                                OutputDebugStringA("Type: Unknown\n");             break;
-    }
-    
-    switch (severity)
-    {
-        case GL_DEBUG_SEVERITY_HIGH:         OutputDebugStringA("Severity: high\n\n");         break;
-        case GL_DEBUG_SEVERITY_MEDIUM:       OutputDebugStringA("Severity: medium\n\n");       break;
-        case GL_DEBUG_SEVERITY_LOW:          OutputDebugStringA("Severity: low\n\n");          break;
-        case GL_DEBUG_SEVERITY_NOTIFICATION: OutputDebugStringA("Severity: notification\n\n"); break;
-        default:                             OutputDebugStringA("Severity: unknown\n\n");      break;
+        case GL_DEBUG_TYPE_ERROR:               log_debug("OpenGL error type: Error");               break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: log_debug("OpenGL error type: Deprecated Behavior"); break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  log_debug("OpenGL error type: Undefined Behavior");  break; 
+        case GL_DEBUG_TYPE_PORTABILITY:         log_debug("OpenGL error type: Portability");         break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         log_debug("OpenGL error type: Performance");         break;
+        case GL_DEBUG_TYPE_MARKER:              log_debug("OpenGL error type: Marker");              break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          log_debug("OpenGL error type: Push Group");          break;
+        case GL_DEBUG_TYPE_POP_GROUP:           log_debug("OpenGL error type: Pop Group");           break;
+        case GL_DEBUG_TYPE_OTHER:               log_debug("OpenGL error type: Other");               break;
+        default:                                log_debug("OpenGL error type: Unknown");             break;
     }
 }
 
@@ -82,25 +82,16 @@ void opengl_init(Window window)
     // Get an OpenGL rendering context and set it as the current context
     HGLRC opengl_rc = wglCreateContext(window_dc);
     if (!wglMakeCurrent(window_dc, opengl_rc))
-    {
-        // TODO(lucas): Logging
-    }
+        log_error("wglMakeCurrent failed. Unable to set OpenGL rendering context.");
 
     if (!gladLoadGL())
-    {
-        // TODO(lucas): Logging
-        MessageBoxA(0, "Glad initilization filed", "Glad Error", MB_OK);
-    }
+        log_error("Glad initilization failed");
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Print version
-    // TODO(lucas): Logging
     char* version = (char*)glGetString(GL_VERSION);
-    char buf[128];
-    snprintf(buf, sizeof(buf), "OpenGL version: %s\n", version);
-    OutputDebugStringA(buf);
+    log_info("OpenGL version: %s", version);
 
     // Set up debug context
 #ifdef ALCHEMY_DEBUG
@@ -108,8 +99,7 @@ void opengl_init(Window window)
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(opengl_error_callback, (void*)0);
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE);
-        // TODO(lucas): Logging
-        OutputDebugStringA("OpenGL debug mode enabled.\n");
+        log_debug("OpenGL debug mode enabled.");
 #endif
 
     ReleaseDC(window.ptr, window_dc);

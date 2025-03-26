@@ -1,5 +1,6 @@
 #include "alchemy/renderer/shader.h"
 #include "alchemy/renderer/renderer.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/memory.h"
 #include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
@@ -32,7 +33,7 @@ internal char* file_to_string(const char* path, MemoryArena* arena)
 }
 
 // Check whether there are errors in shader compilation/linking and print the log if so.
-internal void shader_error_check(GLuint shader)
+internal void shader_error_check(GLuint shader, const char* filename)
 {
     GLint success = 0;
     GLchar info_log[512];
@@ -42,30 +43,23 @@ internal void shader_error_check(GLuint shader)
     else if (glIsProgram(shader))
         glGetProgramiv(shader, GL_LINK_STATUS, &success);
     else
-    {
-        // TODO(lucas): Logging
-        // Shader error: Object is not a shader or shader program!
-        ASSERT(0);
-    }
+        ASSERT(0, "Shader error (%s): Object is not a shader or shader program.", filename);
 
     if (!success)
     {
         if (glIsShader(shader))
         {
             glGetShaderInfoLog(shader, sizeof(info_log), NULL, info_log);
-            // TODO(lucas): Logging
-            // Shader error: Shader compilation failed
-            ASSERT(0);
+            log_error(info_log);
+            ASSERT(0, "Shader error (%s): Compilation failed", filename);
         }
         else if (glIsProgram(shader))
         {
             GLsizei log_length = 0;
             glGetProgramInfoLog(shader, sizeof(info_log), &log_length, info_log);
-            // TODO(lucas): Logging
-            // Shader Error: Shader linking failed
-            ASSERT(0);
+            log_error(info_log);
+            ASSERT(0, "Shader error: Shader linking failed");
         }
-        // TODO(lucas): Output info log
     }
 }
 
@@ -82,25 +76,23 @@ u32 shader_init(Renderer* renderer, const char* vert_shader_path, const char* fr
     GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vert_shader, 1, &vert_shader_source, NULL);
     glCompileShader(vert_shader);
-    shader_error_check(vert_shader);
+    shader_error_check(vert_shader, vert_shader_path);
 
     GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(frag_shader, 1, &frag_shader_source, NULL);
     glCompileShader(frag_shader);
-    shader_error_check(frag_shader);
+    shader_error_check(frag_shader, frag_shader_path);
 
     // Link both shaders into a shader program
     GLuint shader = glCreateProgram();
     // TODO(lucas): Logging
     if (!shader)
-    {
-        // Shader Error: Shader program creation failed!
-        ASSERT(0);
-    }
+        ASSERT(0, "Shader compilation failed");
+
     glAttachShader(shader, vert_shader);
     glAttachShader(shader, frag_shader);
     glLinkProgram(shader);
-    shader_error_check(shader);
+    shader_error_check(shader, vert_shader_path);
 
     memory_arena_pop(&renderer->scratch_arena, vert_shader_len+1);
     memory_arena_pop(&renderer->scratch_arena, frag_shader_len+1);

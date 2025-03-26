@@ -1,4 +1,5 @@
 #include "alchemy/window.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
 #define VC_EXTRALEAN
@@ -111,7 +112,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
         {
-            ASSERT(!"Keyboard input came in through a non-dispatch message!");
+            ASSERT(0, "Keyboard input came in through a non-dispatch message!");
         } break;
 
         /*
@@ -223,4 +224,22 @@ void console_launch(void)
     freopen_s(&fp, "CONOUT$", "w", stdout);
     freopen_s(&fp, "CONOUT$", "w", stderr);
     freopen_s(&fp, "CONIN$", "r", stdin);
+
+    // Enable printing colored text
+    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (out == INVALID_HANDLE_VALUE) return;
+
+    DWORD mode = GetConsoleMode(out, &mode);
+    if (!mode) return;
+
+    mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(out, mode);
+
+    // Set bright blue text to a more vibrant and readable shade
+    CONSOLE_SCREEN_BUFFER_INFOEX cbi = {sizeof(CONSOLE_SCREEN_BUFFER_INFOEX)};
+    if (GetConsoleScreenBufferInfoEx(out, &cbi))
+    {
+        cbi.ColorTable[9] = RGB(0, 120, 255);
+        SetConsoleScreenBufferInfoEx(out, &cbi);
+    }
 }

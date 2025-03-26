@@ -81,7 +81,7 @@ inline internal b32 s8_eq(s8 a, s8 b)
 
 internal inline void s8_cat(s8 source_a, s8 source_b, s8 dest)
 {
-    ASSERT(source_a.len + source_b.len <= dest.len);
+    ASSERT(source_a.len + source_b.len <= dest.len, "s8 overflow");
 
     size idx = 0;
     for (size i = 0; i < source_a.len; ++i)
@@ -164,7 +164,7 @@ internal inline int str_len(char* str)
 internal inline void str_cat(char* source_a, size source_a_len, char* source_b, size source_b_len,
                  char* dest, size dest_len)
 {
-    ASSERT(source_a_len + source_b_len <= dest_len);
+    ASSERT(source_a_len + source_b_len <= dest_len, "string overflow");
 
     // TODO(lucas): Check for null terminator before adding
     // For now, just loop through each source string and add each character one at a time to the dest string

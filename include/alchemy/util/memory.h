@@ -1,6 +1,7 @@
 #pragma once
 
-#include "types.h"
+#include "alchemy/util/log.h"
+#include "alchemy/util/types.h"
 
 #define KILOBYTES(value) ((u64)(value)*1024)
 #define MEGABYTES(value) ((u64)KILOBYTES(value)*1024)
@@ -51,17 +52,16 @@ inline void memory_arena_clear(MemoryArena* arena)
 inline void* push_size_(MemoryArena* arena, size bytes)
 {
     // First free part of the arena is the base plus whatever was already being used
-    ASSERT((arena->used + bytes) <= arena->bytes);
+    ASSERT((arena->used + bytes) <= arena->bytes, "Arena overflow");
     void* result = arena->memory + arena->used;
 
-    // Add additional amount being used
     arena->used += bytes;
     return result;
 }
 
 inline void zero_size_(size bytes, void* ptr)
 {
-    // TODO(lucas): Check this guy for performance
+    // TODO(lucas): Check performance
     u8* byte = (u8*)ptr;
     while (bytes--)
         *byte++ = 0;

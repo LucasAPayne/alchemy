@@ -52,7 +52,7 @@ Texture texture_load_from_file(Renderer* renderer, const char* filename)
     tex.data = stbi_load(filename, &size_x, &size_y, &tex.channels, 0);
     tex.size = (v2){(f32)size_x, (f32)size_y};
 
-    ASSERT(tex.data);
+    ASSERT(tex.data, "Failed to load texture");
 
     renderer_push_texture(renderer, tex);
     return tex;

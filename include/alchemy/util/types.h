@@ -12,13 +12,7 @@
 
 #define u64_high_low(hi, lo) ((u64)(hi) << 32) | (lo)
 
-#if ALCHEMY_DEBUG
-    #define ASSERT(expression) if(!(expression)) {*(int *)0 = 0;}
-#else
-    #define ASSERT(...)
-#endif
-
-#define INVALID_CODE_PATH() ASSERT(!"Invalid Code Path")
+#define INVALID_CODE_PATH() ASSERT(0, "Invalid Code Path")
 #define INVALID_DEFAULT_CASE() default: {INVALID_CODE_PATH();} break
 
 #define internal static

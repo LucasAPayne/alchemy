@@ -202,7 +202,6 @@ typedef struct ParsedText
 internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena* arena)
 {
     TextNode* new_node = push_struct(arena, TextNode);
-    ASSERT(new_node);
     new_node->text = *text;
     new_node->next = 0;
 

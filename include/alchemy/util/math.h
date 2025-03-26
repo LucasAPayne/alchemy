@@ -1,6 +1,7 @@
 #pragma once
 
-#include "types.h"
+#include "alchemy/util/log.h"
+#include "alchemy/util/types.h"
 
 #include <math.h>
 
@@ -94,7 +95,7 @@ inline f32 acos_f32(f32 x)
 
 inline f32 atan_f32(f32 y, f32 x)
 {
-    ASSERT(x != 0.0f);
+    ASSERT(x != 0.0f, "Divide by zero");
     f32 result = atan2f(y, x);
     return result;
 }
