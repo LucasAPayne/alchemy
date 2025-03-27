@@ -85,7 +85,6 @@ u32 shader_init(Renderer* renderer, const char* vert_shader_path, const char* fr
 
     // Link both shaders into a shader program
     GLuint shader = glCreateProgram();
-    // TODO(lucas): Logging
     if (!shader)
         ASSERT(0, "Shader compilation failed");
 

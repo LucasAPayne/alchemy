@@ -7,20 +7,18 @@
 
 #include <glad/glad.h>
 
+// TODO(lucas): Almost all FreeType functions return an error. Check each of these.
+
 Font font_load_from_file(const char* filename)
 {
     Font font = {0};
     FT_Library ft;
 
     if (FT_Init_FreeType(&ft))
-    {
-        // TODO(lucas): Diagnostic, could not init freetype lib
-    }
+        log_error("FreeType2 error: Failed to iniitialize FreeType");
 
     if (FT_New_Face(ft, filename, 0, &font.face))
-    {
-        // TODO(lucas): Diagnostic, could not open font
-    }
+        log_error("FreeType2 error: Failed to open font %s", filename);
 
     return font;
 }
@@ -35,10 +33,14 @@ f32 text_get_width(Text* text)
 
     for (size i = 0; i < text->string.len; ++i)
     {
-        u8 c = text->string.data[i];
-        if (!FT_Load_Char(text->font->face, c, FT_LOAD_NO_BITMAP))
+        u32 charcode = utf8_get_codepoint(text->string.data + i);
+        if (FT_Load_Char(text->font->face, charcode, FT_LOAD_NO_BITMAP))
         {
-            // TODO(lucas): Diagnostic, could not load character
+            u8 c[5] = {0};
+            utf8_from_codepoint(c, charcode);
+            log_error("FreeType2 error: Failed to load character %s (codepoint %u)", c, charcode);
+            if (utf8_get_num_bytes(*c) == 4)
+                log_debug("4-byte UTF-8 characters may fail to display in the terminal.");
         }
 
         result += text->font->face->glyph->advance.x/64;
@@ -120,9 +122,13 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
 
         previous_glyph_index = glyph_index;
 
-        if (!FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER))
+        if (FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER))
         {
-            // TODO(lucas): Diagnostic, could not load character
+            u8 err[5] = {0};
+            utf8_from_codepoint(err, charcode);
+            log_error("FreeType2 error: Failed to load character %c (codepoint: %u, glyph index: %u)", err, charcode, glyph_index);
+            if (utf8_get_num_bytes(*err) == 4)
+                log_debug("4-byte UTF-8 characters may fail to display in the terminal.");
         }
 
         // TODO(lucas): Only do texture generation once when the font is loaded.

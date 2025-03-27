@@ -116,6 +116,7 @@ internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
     return result;
 }
 
+// Given the first byte of a UTF-8 encoded character, returns the total number of bytes for that character
 internal inline int utf8_get_num_bytes(u8 c)
 {
     persist const char lengths[] = {
@@ -127,6 +128,7 @@ internal inline int utf8_get_num_bytes(u8 c)
     return num_bytes;
 }
 
+// Given a UTF-8 enc
 internal inline u32 utf8_get_codepoint(u8* c)
 {
     int num_bytes = utf8_get_num_bytes(*c);
@@ -147,10 +149,39 @@ internal inline u32 utf8_get_codepoint(u8* c)
         // Each byte is prefixed with 10. Invalid otherwise; return replacement character.
         if ((*c & 0xc0) != 0x80)
             return 0xfffd;
-        
+
         codepoint = (codepoint << 6) | (*c & 0x3f);
     }
     return codepoint;
+}
+
+// Given the codepoint for a UTF-8 character, writes up to 4 bytes into c
+internal inline void utf8_from_codepoint(u8* c, u32 codepoint)
+{
+    if (codepoint < 0x7f)
+        c[0] = (u8)codepoint;
+    else if (codepoint < 0x7ff)
+    {
+        c[0] = (u8)(0xc0 | (codepoint >> 6));
+        c[1] = (u8)(0x80 | (codepoint & 0x3f));
+    }
+    else if (codepoint < 0xffff)
+    {
+        c[0] = (u8)(0xe0 | (codepoint >> 12));
+        c[1] = (u8)(0x80 | ((codepoint >> 6) & 0x3f));
+        c[2] = (u8)(0x80 | (codepoint & 0x3f));
+    }
+    else if (codepoint <= 0x10ffff)
+    {
+        c[0] = (u8)(0xf0 | (codepoint >> 18));
+        c[1] = (u8)(0x80 | ((codepoint >> 12) & 0x3f));
+        c[2] = (u8)(0x80 | ((codepoint >> 6) & 0x3f));
+        c[3] = (u8)(0x80 | (codepoint & 0x3f));
+    }
+    else
+    {
+        // TODO(lucas): Add error handling for invalid codepoint
+    }
 }
 
 internal inline int str_len(char* str)
@@ -166,7 +197,6 @@ internal inline void str_cat(char* source_a, size source_a_len, char* source_b, 
 {
     ASSERT(source_a_len + source_b_len <= dest_len, "string overflow");
 
-    // TODO(lucas): Check for null terminator before adding
     // For now, just loop through each source string and add each character one at a time to the dest string
     size idx = 0;
     for (size i = 0; i < source_a_len; ++i)

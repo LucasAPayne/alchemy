@@ -235,6 +235,8 @@ void console_launch(void)
     mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(out, mode);
 
+    SetConsoleOutputCP(CP_UTF8);
+
     // Set bright blue text to a more vibrant and readable shade
     CONSOLE_SCREEN_BUFFER_INFOEX cbi = {sizeof(CONSOLE_SCREEN_BUFFER_INFOEX)};
     if (GetConsoleScreenBufferInfoEx(out, &cbi))

@@ -115,7 +115,7 @@ internal void input_loop_begin_recording(GameCode* game_code, GameMemory* game_m
     ReplayBuffer* replay_buffer = &game_code->replay_buffer;
     if (!replay_buffer->memory_block)
     {
-        // TODO(lucas): Diagnostic
+        log_error("Input loop replay buffer is invalid");
         return;
     }
 
@@ -144,7 +144,7 @@ internal void input_loop_begin_playback(GameCode* game_code, GameMemory* game_me
     ReplayBuffer* replay_buffer = &game_code->replay_buffer;
     if (!replay_buffer->memory_block)
     {
-        // TODO(lucas): Diagnostic
+        log_error("Input loop replay buffer is invalid");
         return;
     }
 
@@ -196,9 +196,7 @@ void input_loop_init(GameCode* game_code, GameMemory* game_memory)
                                                 game_memory->total_bytes);
 
     if (!replay_buffer->memory_block)
-    {
-        // TODO(lucas): Diagnostic
-    }
+        log_error("Input loop replay buffer is invalid");
 }
 
 void input_loop_update(GameCode* game_code, GameMemory* game_memory, Input* input)

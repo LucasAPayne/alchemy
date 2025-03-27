@@ -169,11 +169,13 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     // If handle is invalid, or file poitner cannot be set, return
     if (sound_file == INVALID_HANDLE_VALUE)
     {
-        // TODO(lucas): Diagnostic
+        log_error("Invalid handle for sound file");
+        return;
     }
     if (SetFilePointer(sound_file, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
     {
-        // TODO(lucas): Diagnostic
+        log_error("File seek failed in sound file");
+        return;
     }
 
     DWORD chunk_size;
@@ -186,7 +188,10 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
 
     // File type must be wave
     if (file_type != FOURCC_WAVE)
+    {
+        log_error("Unsupported file type for sound file");
         return;
+    }
     
     // Locate "fmt" chunk and copy contents into wave struct
     find_chunk(sound_file, FOURCC_FMT, &chunk_size, &chunk_pos);
@@ -202,29 +207,23 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source voice not to expect data after this buffer
     
     IXAudio2SourceVoice* source_voice;
-    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0, XAUDIO2_DEFAULT_FREQ_RATIO,
-                                          &xaudio_callbacks, NULL, NULL)))
+    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0,
+                                          XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
     {
-        // TODO(lucas): Diagnostic
+        log_error("IXAudio2_CreateSourceVoice() failed");
     }
     
     if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(source_voice, &buffer, NULL)))
-    {
-        // TODO(lucas): Diagnostic
-    }
+        log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
 
     if (sound_output->should_play)
     {
         if (FAILED(IXAudio2SourceVoice_Start(source_voice, 0, XAUDIO2_COMMIT_NOW)))
-        {
-            // TODO(lucas): Diagnostic
-        }
+            log_error("IXAudio2SourceVoice_Start() failed");
     }
 
     if (FAILED(IXAudio2SourceVoice_SetVolume(source_voice, sound_output->volume, 0)))
-    {
-        // TODO(lucas): Diagnostic
-    }
+        log_error("IXAudio2SourceVoice_SetVolume() failed");
 
     CloseHandle(sound_file);
 }

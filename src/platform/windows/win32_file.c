@@ -23,7 +23,7 @@ size file_get_size(char* filename)
     HANDLE file = win32_file_open_normal_read(filename);
     if (file == INVALID_HANDLE_VALUE)
     {
-        // TODO(lucas): Diagnostic: Failed to open file.
+        log_error("Failed to open file %s", filename);
         return file_size;
     }
 
@@ -53,9 +53,7 @@ void* file_open(char* filename, FileMode mode)
 void file_close(void* file_handle)
 {
     if (CloseHandle(file_handle) == FALSE)
-    {
-        // TODO(lucas): Diagnostic: Could not close file
-    }
+        log_error("Failed to close file");
 }
 
 u64 file_get_last_write_time(char* filename)
@@ -64,14 +62,14 @@ u64 file_get_last_write_time(char* filename)
     HANDLE file = win32_file_open_normal_read(filename);
     if (file == INVALID_HANDLE_VALUE)
     {
-        // TODO(lucas): Diagnostic: Failed to open file.
+        log_error("Failed to open file %s", filename);
         return last_write_time;
     }
 
     FILETIME creation_time, access_time, write_time;
     if (!GetFileTime(file, &creation_time, &access_time, &write_time))
     {
-        // TODO(lucas): Diagnostic: Failed to get file time.
+        log_error("Failed to get file time for %s", filename);
         CloseHandle(file);
         return last_write_time;
     }
@@ -81,7 +79,6 @@ u64 file_get_last_write_time(char* filename)
     return last_write_time;
 }
 
-// Has the file been modified since the given time?
 b32 file_is_modified(char* filename, u64 reference_time)
 {
     b32 result = false;
@@ -91,14 +88,14 @@ b32 file_is_modified(char* filename, u64 reference_time)
     HANDLE file = win32_file_open_normal_read(filename);
     if (file == INVALID_HANDLE_VALUE)
     {
-        // TODO(lucas): Diagnostic: Failed to open file.
+        log_error("Failed to open file %s", filename);
         return result;
     }
 
     FILETIME creation_time, access_time, write_time;
     if (!GetFileTime(file, &creation_time, &access_time, &write_time))
     {
-        // TODO(lucas): Diagnostic: Failed to get file time.
+        log_error("Failed to get file time for %s", filename);
         CloseHandle(file);
         return result;
     }
@@ -117,7 +114,7 @@ s8 file_to_string(char* filename, MemoryArena* arena)
     HANDLE file = win32_file_open_normal_read(filename);
     if (file == INVALID_HANDLE_VALUE)
     {
-        // TODO(lucas): Diagnostic: Failed to open file.
+        log_error("Failed to open file %s", filename);
         memory_arena_pop(arena, file_size);
         return s8("");
     }
@@ -136,12 +133,10 @@ s8 file_to_string(char* filename, MemoryArena* arena)
         {
             LPVOID msg_buf;
             DWORD error = GetLastError();
-            DWORD size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                        NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &msg_buf, 0, NULL);
-            if (!size)
-                MessageBoxA(NULL, TEXT("FormatMessage failed"), TEXT("Error"), MB_ICONERROR);
+            FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                           NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &msg_buf, 0, NULL);
 
-            // TODO(lucas): Diagnostic: Failed to read file.
+            log_error("Failed to read file %s", filename);
             MessageBoxA(NULL, (LPCTSTR)msg_buf, TEXT("Error"), MB_ICONERROR);
             LocalFree(msg_buf);
             CloseHandle(file);
@@ -163,13 +158,13 @@ void file_write_byte(void* file_handle, size offset, u8 byte)
     off.QuadPart = offset;
     if (SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == FALSE)
     {
-        // TODO(lucas): Diagnostic: Could not seek to location
+        log_error("Failed file seek to location %llu", offset);
         return;
     }
 
     DWORD bytes_written = 0;
     if (!WriteFile(file_handle, &byte, 1, &bytes_written, NULL) == FALSE)
     {
-        // TODO(lucas): Diagnostic: Could not write byte to location
+        log_error("Failed to write byte to location %llu in file", offset);
     }
 }

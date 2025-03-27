@@ -12,7 +12,6 @@ int main(void)
 {
     console_launch();
 
-    
     Window window = {0};
     window_init(&window, "Alchemy", 1280, 720);
     
@@ -29,7 +28,6 @@ int main(void)
     
     while(window.open)
     {
-
         game_code_update(&game);
         input_process(&window, &input);
         input_loop_update(&game, &memory, &input);
