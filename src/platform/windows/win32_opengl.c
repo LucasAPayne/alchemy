@@ -57,9 +57,9 @@ void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLe
     }
 }
 
-void opengl_init(Window window)
+void opengl_init(Window* window)
 {
-    HDC window_dc = GetDC(window.ptr);
+    HDC window_dc = GetDC(window->ptr);
 
     // State desired pixel format properties
     PIXELFORMATDESCRIPTOR desired_pixel_format = {0};
@@ -102,5 +102,5 @@ void opengl_init(Window window)
         log_debug("OpenGL debug mode enabled.");
 #endif
 
-    ReleaseDC(window.ptr, window_dc);
+    ReleaseDC(window->ptr, window_dc);
 }

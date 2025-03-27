@@ -6,7 +6,7 @@
 #include "alchemy/util/memory.h"
 #include "alchemy/util/types.h"
 
-#define UPDATE_AND_RENDER(name) void name(GameMemory* memory, Input* input, Renderer* renderer, Window window, f32 delta_time)
+#define UPDATE_AND_RENDER(name) void name(GameMemory* memory, Input* input, Renderer* renderer, Window* window, f32 delta_time)
 typedef UPDATE_AND_RENDER(UpdateAndRender);
 
 // TODO(lucas): This #define is based on MAX_PATH from windows.h

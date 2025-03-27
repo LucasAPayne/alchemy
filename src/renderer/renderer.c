@@ -1209,11 +1209,11 @@ internal void path_from_install_dir(char* path, char* dest)
     str_cat(ALCHEMY_INSTALL_PATH, str_len(ALCHEMY_INSTALL_PATH), path, str_len(path), dest, MAX_FILEPATH_LEN);
 }
 
-Renderer renderer_init(Window window, int viewport_width, int viewport_height, size command_buffer_bytes)
+Renderer renderer_init(Window* window, int viewport_width, int viewport_height, size command_buffer_bytes)
 {
     Renderer renderer = {0};
-    renderer.window_width = window.width;
-    renderer.window_height = window.height;
+    renderer.window_width = window->width;
+    renderer.window_height = window->height;
 
     stbi_set_flip_vertically_on_load(true);
     opengl_init(window);
@@ -1311,7 +1311,7 @@ void renderer_delete(Renderer* renderer)
     framebuffer_delete(&renderer->intermediate_framebuffer);
 }
 
-void renderer_new_frame(Renderer* renderer, Window window)
+void renderer_new_frame(Renderer* renderer, Window* window)
 {
     if (renderer->config.wireframe_mode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1320,14 +1320,14 @@ void renderer_new_frame(Renderer* renderer, Window window)
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    renderer->window_width = window.width;
-    renderer->window_height = window.height;
+    renderer->window_width = window->width;
+    renderer->window_height = window->height;
 
     // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
     // fit the viewport to the window.
     if (rect_is_zero(renderer->viewport))
     {
-        rect viewport = rect_min_dim(v2_zero(), (v2){(f32)window.width, (f32)window.height});
+        rect viewport = rect_min_dim(v2_zero(), (v2){(f32)window->width, (f32)window->height});
         renderer_viewport(renderer, viewport);
     }
 
@@ -1354,7 +1354,7 @@ void renderer_new_frame(Renderer* renderer, Window window)
     shader_set_m4(renderer->font_renderer.shader,     "projection", projection, false);
     shader_set_m4(renderer->ui_renderer.shader,       "projection", projection, false);
 
-    ui_new_frame(renderer, window.width, window.height);
+    ui_new_frame(renderer, window->width, window->height);
 
     renderer_clear(color_black());
 }

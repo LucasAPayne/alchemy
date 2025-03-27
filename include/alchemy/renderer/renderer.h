@@ -275,12 +275,12 @@ typedef struct Renderer
     u32 tex_index;
 } Renderer;
 
-void opengl_init(Window window);
+void opengl_init(Window* window);
 
-Renderer renderer_init(Window window, int viewport_width, int viewport_height, size command_buffer_size);
+Renderer renderer_init(Window* window, int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
-void renderer_new_frame(Renderer* renderer, Window window);
+void renderer_new_frame(Renderer* renderer, Window* window);
 void renderer_render(Renderer* renderer);
 
 void renderer_viewport(Renderer* renderer, rect viewport);

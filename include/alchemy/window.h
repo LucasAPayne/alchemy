@@ -21,7 +21,8 @@ typedef struct Window
 } Window;
 
 // TODO(lucas): Window styles
-void window_init(Window* window, const char* title, int width, int height);
+// TODO(lucas): Allow the user to set the default cursor (system or custom)
+Window* window_create(const char* title, int width, int height);
 void window_render(Window* window);
 
 void window_set_min_size(Window* window, int min_width, int min_height);

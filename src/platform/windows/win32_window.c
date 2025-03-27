@@ -128,8 +128,10 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
     return result;
 }
 
-void window_init(Window* window, const char* title, int width, int height)
+Window* window_create(const char* title, int width, int height)
 {
+    Window* window = VirtualAllocEx(GetCurrentProcess(), NULL, sizeof(Window), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+
     window->width = width;
     window->height = height;
 
@@ -147,7 +149,6 @@ void window_init(Window* window, const char* title, int width, int height)
     window_class.hIcon = LoadIconA(0, IDI_APPLICATION);
     window_class.hIconSm = LoadIconA(0, IDI_APPLICATION);
     window_class.lpszClassName = "MyWindowClass";
-    // TODO(lucas): Allow the user to set the default cursor (system or custom)
     window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
     
     if(!RegisterClassExA(&window_class))
@@ -183,6 +184,8 @@ void window_init(Window* window, const char* title, int width, int height)
     SetWindowLongPtrA(window->ptr, GWLP_USERDATA, (LONG_PTR)window);
 
     window->_prev_frame_ticks = win32_get_ticks();
+
+    return window;
 }
 
 void window_render(Window* window)

@@ -103,7 +103,7 @@ internal void update_player(ExampleState* state, Input* input, f32 delta_time, u
         gamepad_set_vibration(gamepad, 16000, 16000);
 }
 
-internal void example_state_init(ExampleState* state, GameMemory* memory, Input* input, Renderer* renderer, Window window)
+internal void example_state_init(ExampleState* state, GameMemory* memory, Input* input, Renderer* renderer, Window* window)
 {
     srand(0);
 
@@ -129,7 +129,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->colors[6] = color_cyan();
 
     state->player.size = (v2){50.0f, 50.0f};
-    state->player.position = (v2){0.0f, (f32)window.height + state->player.size.y};
+    state->player.position = (v2){0.0f, (f32)window->height + state->player.size.y};
     state->player.color = color_white();
 
     state->player.dash_counter = 0;
@@ -171,8 +171,8 @@ UPDATE_AND_RENDER(update_and_render)
     stopwatch_update(&state->stopwatch, delta_time);
     Gamepad* gamepad = &input->gamepads[0];
     Keyboard* keyboard = &input->keyboard;
-    update_dvd(state, delta_time, window.width, window.height);
-    update_player(state, input, delta_time, window.width, window.height);
+    update_dvd(state, delta_time, window->width, window->height);
+    update_player(state, input, delta_time, window->width, window->height);
 
     if (key_pressed(keyboard, KEY_LBRACKET))
         cursor_set_from_memory(state->sword_cursor);
@@ -240,12 +240,12 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, engine_text);
 
     s8 ms_frame = s8_format(&state->transient_arena, "MS/frame: %.2f", delta_time*1000.0f);
-    Text frame_time = text_init(ms_frame, &state->immortal_font, (v2){10.0f, (f32)window.height - 10.0f}, 32);
+    Text frame_time = text_init(ms_frame, &state->immortal_font, (v2){10.0f, (f32)window->height - 10.0f}, 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);
 
     s8 cooldown = s8_format(&state->transient_arena, "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown, &state->immortal_font, (v2){1100.0f, (f32)window.height - 10.0f}, 32);
+    Text cooldown_text = text_init(cooldown, &state->immortal_font, (v2){1100.0f, (f32)window->height - 10.0f}, 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
@@ -273,7 +273,7 @@ UPDATE_AND_RENDER(update_and_render)
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);
     *logo_tex = state->logo_tex;
     struct nk_context* ctx = &renderer->ui_state.ctx;
-    ui_overview(renderer, ctx, window.width, logo_tex);
+    ui_overview(renderer, ctx, window->width, logo_tex);
 
     sound_output_process(&state->sound_output, &state->transient_arena);
 }
