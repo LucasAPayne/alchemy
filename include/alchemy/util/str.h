@@ -116,6 +116,69 @@ internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
     return result;
 }
 
+internal inline b32 char_is_whitespace(char c)
+{
+    b32 result = (c == ' ' ) || (c == '\t') || (c == '\v') || (c == '\f');
+    return result;
+}
+
+internal inline b32 char_is_digit(char c)
+{
+    b32 result = (c >= '0' && c <= '9');
+    return result;
+}
+
+internal inline s8 s8_from_int(int x, MemoryArena* arena)
+{
+    size len = 0;
+    int temp = x;
+    while (temp != 0)
+    {
+        temp /= 10;
+        ++len;
+    }
+
+    s8 str = s8_alloc(arena, len);
+    for (size i = len-1; i >= 0; --i)
+    {
+        str.data[i] = (x % 10) + '0';
+        x /= 10;
+    }
+
+    return str;
+}
+
+// TODO(lucas): Handle int overflow
+internal inline int s8_to_int(s8 s)
+{
+    int result = 0;
+    b32 neg = false;
+    size i = 0;
+
+    while (i < s.len && char_is_whitespace(s.data[i]))
+        ++i;
+    
+    if (i >= s.len)
+        return result;
+
+    if (s.data[i] == '-' || s.data[i] == '+')
+    {
+        neg = (s.data[i] == '-');
+        ++i;
+    }
+
+    while (i < s.len && char_is_digit(s.data[i]))
+    {
+        result = result*10 + (s.data[i] - '0');
+        ++i;
+    }
+
+    if (neg)
+        result = -result;
+    
+    return result;
+}
+
 // Given the first byte of a UTF-8 encoded character, returns the total number of bytes for that character
 internal inline int utf8_get_num_bytes(u8 c)
 {

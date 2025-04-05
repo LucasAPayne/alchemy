@@ -224,12 +224,6 @@ internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena*
 }
 #pragma optimize("", on)
 
-internal b32 char_is_whitespace(char c)
-{
-    b32 result = (c == ' ' ) || (c == '\t') || (c == '\v') || (c == '\f');
-    return result;
-}
-
 internal b32 text_is_whitespace(Text text)
 {
     b32 result = false;
