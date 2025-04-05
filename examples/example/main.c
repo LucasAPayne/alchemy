@@ -6,14 +6,12 @@
 #include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
-#include <glad/glad.h>
-
 int main(void)
 {
     console_launch();
 
     Window* window = window_create("Alchemy", 1280, 720);
-    
+
     void* potion_icon = window_icon_load_from_file("icons/potion.ico");
     window_icon_set_from_memory(window, potion_icon);
 

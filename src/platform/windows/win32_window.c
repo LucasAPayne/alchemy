@@ -2,9 +2,8 @@
 #include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
-#define VC_EXTRALEAN
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#include "win32_base.c"
+
 #include <windows.h>
 
 internal inline i64 win32_get_ticks(void)
@@ -152,30 +151,19 @@ Window* window_create(const char* title, int width, int height)
     window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
     
     if(!RegisterClassExA(&window_class))
-    {
-        GetLastError();
-        MessageBoxA(0, "RegisterClassEx failed", "Fatal Error", MB_OK);
-    }
+        win32_error_callback();
 
     RECT initial_window_rect = {0, 0, width, height};
     AdjustWindowRectEx(&initial_window_rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_OVERLAPPEDWINDOW);
     LONG initial_window_width = initial_window_rect.right - initial_window_rect.left;
     LONG initial_window_height = initial_window_rect.bottom - initial_window_rect.top;
 
-    HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW,
-                            window_class.lpszClassName,
-                            title,
-                            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                            CW_USEDEFAULT, CW_USEDEFAULT,
-                            initial_window_width, 
-                            initial_window_height,
-                            0, 0, instance, 0);
+    HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW, window_class.lpszClassName, title,
+                                WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+                                initial_window_width,  initial_window_height, 0, 0, instance, 0);
 
     if(!hwnd)
-    {
-        GetLastError();
-        MessageBoxA(0, "CreateWindowEx failed", "Fatal Error", MB_OK);
-    }
+        win32_error_callback();
 
     window->ptr = hwnd;
     window->open = true;

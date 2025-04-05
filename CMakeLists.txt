@@ -76,6 +76,7 @@ target_compile_definitions(alchemy PRIVATE
                            CMAKE_EXPORT_COMPILE_COMMANDS=1)
 if(MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
+    target_compile_definitions(alchemy PUBLIC VC_EXTRALEAN WIN32_LEAN_AND_MEAN NOMINMAX)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         # In debug mode, enable complete debug information (/Zi) and disable optimization (/Od)
