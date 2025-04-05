@@ -24,9 +24,8 @@ internal void bounce_dvd(ExampleState* state, f32* direction)
 internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
-    rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
-                                      (v2){(f32)(window_width - state->logo.size.x),
-                                           (f32)(window_height - state->logo.size.y)});
+    rect window_bounds = rect_min_max(v2_zero(), v2((f32)(window_width - state->logo.size.x),
+                                      (f32)(window_height - state->logo.size.y)));
 
     state->logo.position = v2_add(state->logo.position, v2_scale(state->logo_direction, speed*delta_time));
 
@@ -49,12 +48,11 @@ internal void update_player(ExampleState* state, Input* input, f32 delta_time, u
     Gamepad* gamepad = &input->gamepads[0];
     f32 speed = 250.0f; // pixels per second
 
-    rect window_bounds = rect_min_max((v2){0.0f, 0.0f},
-                                      (v2){(f32)(window_width - player->size.x),
-                                           (f32)(window_height - player->size.y)});
+    rect window_bounds = rect_min_max(v2_zero(), v2((f32)(window_width - player->size.x),
+                                      (f32)(window_height - player->size.y)));
 
     // Update player position
-    v2 player_delta = v2_scale((v2){gamepad->left_stick_x, -gamepad->left_stick_y}, speed*delta_time);
+    v2 player_delta = v2_scale(v2(gamepad->left_stick_x, -gamepad->left_stick_y), speed*delta_time);
     player->position = v2_add(player->position, player_delta);
 
     // Dash
@@ -116,9 +114,9 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
 
     state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
     state->logo = sprite_init(&state->logo_tex);
-    state->logo.size = (v2){300.0f, 150.0f};
+    state->logo.size = v2(300.0f, 150.0f);
     state->logo.position = v2_zero();
-    state->logo_direction = (v2){1.0f, -1.0f};
+    state->logo_direction = v2(1.0f, -1.0f);
 
     state->colors[0] = color_white();
     state->colors[1] = color_red();
@@ -128,8 +126,8 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->colors[5] = color_magenta();
     state->colors[6] = color_cyan();
 
-    state->player.size = (v2){50.0f, 50.0f};
-    state->player.position = (v2){0.0f, (f32)window->height + state->player.size.y};
+    state->player.size = v2(50.0f, 50.0f);
+    state->player.position = v2(0.0f, (f32)window->height + state->player.size.y);
     state->player.color = color_white();
 
     state->player.dash_counter = 0;
@@ -208,8 +206,8 @@ UPDATE_AND_RENDER(update_and_render)
                     //    player->rotation);
 
     // v2 a = player->position;
-    // v2 b = v2_add(player->position, (v2){200.0f, 50.0f});
-    // v2 c = v2_add(player->position, (v2){-100.0f, -100.0f});
+    // v2 b = v2_add(player->position, v2(200.0f, 50.0f));
+    // v2 c = v2_add(player->position, v2(-100.0f, -100.0f));
     // draw_triangle(renderer, a, b, c, player->color, player->rotation);
     // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
     // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
@@ -218,7 +216,7 @@ UPDATE_AND_RENDER(update_and_render)
 
     // renderer->config.wireframe_mode = true;
 
-    // v2 center = v2_add(player->position, (v2){300.0f, -300.0f});
+    // v2 center = v2_add(player->position, v2(300.0f, -300.0f));
     // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
 
     // f32 in_rad = player->size.x*4.0f;
@@ -235,28 +233,28 @@ UPDATE_AND_RENDER(update_and_render)
     draw_sprite(renderer, state->logo);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
-    Text engine_text = text_init(s8("Alchemy Engine"), &state->cardinal_font, (v2){500.0f, 50.0f}, 48);
+    Text engine_text = text_init(s8("Alchemy Engine"), &state->cardinal_font, v2(500.0f, 50.0f), 48);
     engine_text.color = font_color;
     draw_text(renderer, engine_text);
 
     s8 ms_frame = s8_format(&state->transient_arena, "MS/frame: %.2f", delta_time*1000.0f);
-    Text frame_time = text_init(ms_frame, &state->immortal_font, (v2){10.0f, (f32)window->height - 10.0f}, 32);
+    Text frame_time = text_init(ms_frame, &state->immortal_font, v2(10.0f, (f32)window->height - 10.0f), 32);
     frame_time.color = font_color;
     draw_text(renderer, frame_time);
 
     s8 cooldown = s8_format(&state->transient_arena, "Cooldown: %.1f", timer_seconds(&player->dash_cooldown));
-    Text cooldown_text = text_init(cooldown, &state->immortal_font, (v2){1100.0f, (f32)window->height - 10.0f}, 32);
+    Text cooldown_text = text_init(cooldown, &state->immortal_font, v2(1100.0f, (f32)window->height - 10.0f), 32);
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
     
     s8 stopwatch = s8_format(&state->transient_arena, "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
-    Text stopwatch_text = text_init(stopwatch, &state->immortal_font, (v2){10.0f, 30.0f}, 32);
+    Text stopwatch_text = text_init(stopwatch, &state->immortal_font, v2(10.0f, 30.0f), 32);
     stopwatch_text.color = font_color;
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim((v2){300.0f, 300.0f}, (v2){250.0f, 100.0f});
+    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
     s8 str = s8("●If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "

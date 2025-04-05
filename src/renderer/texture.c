@@ -38,6 +38,7 @@ void texture_fill_empty_data(Texture* texture, int width, int height, int sample
     texture_unbind(samples);
 }
 
+// TODO(lucas): Copy texture data into arena
 Texture texture_load_from_file(Renderer* renderer, const char* filename)
 {
     Texture tex = {0};
@@ -45,14 +46,24 @@ Texture texture_load_from_file(Renderer* renderer, const char* filename)
 
     tex.id = renderer_next_tex_id(renderer);
 
-    tex.id = renderer_next_tex_id(renderer);
-
     // Load image for texture
     int size_x, size_y;
     tex.data = stbi_load(filename, &size_x, &size_y, &tex.channels, 0);
-    tex.size = (v2){(f32)size_x, (f32)size_y};
+    tex.size = v2((f32)size_x, (f32)size_y);
 
     ASSERT(tex.data, "Failed to load texture");
+
+    renderer_push_texture(renderer, tex);
+    return tex;
+}
+
+Texture texture_load_from_memory(Renderer* renderer, int width, int height, int channels, ubyte* memory)
+{
+    Texture tex = {0};
+    tex.id = renderer_next_tex_id(renderer);
+    tex.data = memory;
+    tex.size = v2((f32)width, (f32)height);
+    tex.channels = channels;
 
     renderer_push_texture(renderer, tex);
     return tex;

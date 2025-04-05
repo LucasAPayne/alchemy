@@ -15,6 +15,7 @@ typedef struct Texture
 Texture texture_generate(int samples);
 void texture_fill_empty_data(Texture* texture, int width, int height, int samples);
 Texture texture_load_from_file(Renderer* renderer, const char* filename);
+Texture texture_load_from_memory(Renderer* renderer, int width, int height, int samples, ubyte* data);
 
 void texture_bind_id(u32 id, int samples);
 void texture_bind(Texture* tex, int samples);

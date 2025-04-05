@@ -12,8 +12,8 @@ Sprite sprite_init(Texture* tex)
     // Default sprite to have texture's size and no tint or rotation, and zero out position
     sprite.size = tex->size;
     sprite.rotation = 0.0f;
-    sprite.position = (v2){0.0f, 0.0f};
-    sprite.color = (v4){1.0f, 1.0f, 1.0f, 1.0f};
+    sprite.position = v2_zero();
+    sprite.color = v4_one();
 
     return sprite;
 }

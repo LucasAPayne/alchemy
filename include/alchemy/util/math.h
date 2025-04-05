@@ -153,7 +153,7 @@ inline v2 v2_neg(v2 v)
 
 inline v2 v2_abs(v2 v)
 {
-    v2 result = (v2){abs_f32(v.x), abs_f32(v.y)};
+    v2 result = v2(abs_f32(v.x), abs_f32(v.y));
     return result;
 }
 

@@ -454,11 +454,11 @@ internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
         initial_rotation = atan_f32(delta.y, delta.x);
 
     if (delta.x && delta.y) // Diagonal line
-        size = (v2){v2_mag(delta), cmd->thickness};
+        size = v2(v2_mag(delta), cmd->thickness);
     else if (delta.x && !delta.y) // Horizontal line
-        size = (v2){delta.x, cmd->thickness};
+        size = v2(delta.x, cmd->thickness);
     else if (delta.y && !delta.x) // Vertical line
-        size = (v2){cmd->thickness, delta.y};
+        size = v2(cmd->thickness, delta.y);
 
     // TODO(lucas): The initial rotation needs to be about the starting point,
     // white the additional rotation needs to be about the origin
@@ -1231,7 +1231,7 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
     // Don't want it to be necessary to define a memory arena to pass in to here.
     renderer.scratch_arena = memory_arena_alloc(MEGABYTES(4));
 
-    renderer.viewport = rect_min_dim((v2){0.0f, 0.0f}, (v2){(f32)viewport_width, (f32)viewport_height});
+    renderer.viewport = rect_min_dim(v2_zero(), v2((f32)viewport_width, (f32)viewport_height));
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
     renderer.config.circle_line_segments = 128;
@@ -1327,7 +1327,7 @@ void renderer_new_frame(Renderer* renderer, Window* window)
     // fit the viewport to the window.
     if (rect_is_zero(renderer->viewport))
     {
-        rect viewport = rect_min_dim(v2_zero(), (v2){(f32)window->width, (f32)window->height});
+        rect viewport = rect_min_dim(v2_zero(), v2((f32)window->width, (f32)window->height));
         renderer_viewport(renderer, viewport);
     }
 

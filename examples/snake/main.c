@@ -12,8 +12,8 @@ internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 col
 
     for (u32 slice = 0; slice < slices; ++slice)
     {
-        draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color, line_thickness, 0.0f);
-        draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color, line_thickness, 0.0f);
+        draw_line(renderer, v2(start.x, y), v2(end.x, y), color, line_thickness, 0.0f);
+        draw_line(renderer, v2(x, start.y), v2(x, end.y), color, line_thickness, 0.0f);
         x += cell_size;
         y += cell_size;
     }
@@ -21,8 +21,8 @@ internal void draw_grid(Renderer* renderer, v2 start, v2 end, u32 slices, v4 col
     // Subtract thickness before drawing final lines so they appear properly at the viewport edges
     x -= line_thickness;
     y -= line_thickness;
-    draw_line(renderer, (v2){start.x, y}, (v2){end.x, y}, color, line_thickness, 0.0f);
-    draw_line(renderer, (v2){x, start.y}, (v2){x, end.y}, color, line_thickness, 0.0f);
+    draw_line(renderer, v2(start.x, y), v2(end.x, y), color, line_thickness, 0.0f);
+    draw_line(renderer, v2(x, start.y), v2(x, end.y), color, line_thickness, 0.0f);
 }
 
 int main(void)
@@ -53,7 +53,7 @@ int main(void)
         renderer_viewport(&renderer, viewport);
         renderer_new_frame(&renderer, window);
 
-        draw_grid(&renderer, v2_one(), (v2){(f32)viewport.width, (f32)viewport.height}, 5, color_red(), 1.0f);
+        draw_grid(&renderer, v2_one(), v2((f32)viewport.width, (f32)viewport.height), 5, color_red(), 1.0f);
         draw_circle(&renderer, v2_full(400.0f), 80.0f, color_red());
 
         renderer_render(&renderer);

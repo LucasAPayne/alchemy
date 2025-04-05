@@ -44,11 +44,19 @@ typedef double f64;
 
 typedef unsigned char ubyte;
 
+#define v2(x, y) (v2){(x), (y)}
 typedef vec2s v2;
+#define iv2(x, y) (iv2){(x), (y)}
 typedef ivec2s iv2;
+
+#define v3(x, y, z) (v3){(x), (y), (z)}
 typedef vec3s v3;
+#define iv3(x, y, z) (iv3){(x), (y), (z)}
 typedef ivec3s iv3;
+
+#define v4(x, y, z, w) (v4){(x), (y), (z), (w)}
 typedef vec4s v4;
+#define iv4(x, y, z, w) (iv4){(x), (y), (z), (w)}
 typedef ivec4s iv4;
 
 typedef mat2s m2;
