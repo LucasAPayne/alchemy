@@ -29,6 +29,7 @@ size file_get_size(char* filename)
 
     GetFileSizeEx(file, &fsize);
     file_size = fsize.QuadPart;
+    file_close(file);
     return file_size;
 }
 
@@ -72,8 +73,13 @@ void* file_open(char* filename, FileMode mode)
 
 void file_close(void* file_handle)
 {
+    // TODO(lucas): For any failure to operate on a file, make sure to log the filename.
+    // This will require a function to get the filename from a handle.
     if (CloseHandle(file_handle) == FALSE)
+    {
         log_error("Failed to close file");
+        win32_error_callback();
+    }
 }
 
 u64 file_get_last_write_time(char* filename)
@@ -252,7 +258,8 @@ int file_read(void* file_handle, void* buffer, size num_bytes_to_read)
     if (num_bytes_read != num_bytes_to_read)
     {
         char* filename = get_filename(file_handle);
-        log_warn("Number of bytes read (%u) does not match expected number of bytes (%u) in file %s", filename);
+        log_warn("Number of bytes read (%u) does not match expected number of bytes (%u) in file %s",
+                 num_bytes_read, num_bytes_to_read, filename);
         free(filename);
         win32_error_callback();
     }

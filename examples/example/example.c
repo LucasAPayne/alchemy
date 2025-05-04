@@ -112,7 +112,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->immortal_font = font_load_from_file("fonts/immortal.ttf");
     state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
 
-    state->logo_tex = texture_load_from_file(renderer, "textures/dvd.png");
+    state->logo_tex = texture_load_from_file("textures/dvd.png", renderer, &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);
     state->logo.size = v2(300.0f, 150.0f);
     state->logo.position = v2_zero();
@@ -186,7 +186,7 @@ UPDATE_AND_RENDER(update_and_render)
     }
     if (gamepad_button_released(gamepad->a_button))
         state->is_shooting = false;
-    
+
     if (gamepad_button_released(gamepad->y_button))
     {
         if (state->stopwatch.is_active)
@@ -247,7 +247,7 @@ UPDATE_AND_RENDER(update_and_render)
     cooldown_text.color = font_color;
     if (player->dash_cooldown.is_active)
         draw_text(renderer, cooldown_text);
-    
+
     s8 stopwatch = s8_format(&state->transient_arena, "Stopwatch: %.1f", stopwatch_seconds(&state->stopwatch));
     Text stopwatch_text = text_init(stopwatch, &state->immortal_font, v2(10.0f, 30.0f), 32);
     stopwatch_text.color = font_color;
@@ -267,7 +267,7 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
     text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
     draw_text_area(renderer, &text_area);
-    
+
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);
     *logo_tex = state->logo_tex;
     struct nk_context* ctx = &renderer->ui_state.ctx;

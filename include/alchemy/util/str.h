@@ -56,7 +56,7 @@ internal inline s8 s8_copyn(s8 src, size len, MemoryArena* arena)
     s8 result = s8_alloc(arena, len);
     for (size i = 0; i < len; ++i)
         result.data[i] = src.data[i];
-    
+
     return result;
 }
 
@@ -69,7 +69,7 @@ inline internal b32 s8_eq(s8 a, s8 b)
 {
     if (a.len != b.len)
         return false;
-    
+
     for (size i = 0; i < a.len; ++i)
     {
         if (a.data[i] != b.data[i])
@@ -77,7 +77,7 @@ inline internal b32 s8_eq(s8 a, s8 b)
     }
 
     return true;
-} 
+}
 
 internal inline void s8_cat(s8 source_a, s8 source_b, s8 dest)
 {
@@ -112,7 +112,7 @@ internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
 
     for (size i = 0; i < len; ++i)
         result.data[i] = src.data[start+i];
-    
+
     return result;
 }
 
@@ -157,7 +157,7 @@ internal inline int s8_to_int(s8 s)
 
     while (i < s.len && char_is_whitespace(s.data[i]))
         ++i;
-    
+
     if (i >= s.len)
         return result;
 
@@ -175,7 +175,7 @@ internal inline int s8_to_int(s8 s)
 
     if (neg)
         result = -result;
-    
+
     return result;
 }
 
@@ -255,6 +255,20 @@ internal inline int str_len(char* str)
     return len;
 }
 
+inline internal b32 str_eq(char* a, char* b)
+{
+    while(*a && (*a == *b))
+    {
+        ++a;
+        ++b;
+    }
+
+    if (*a || *b)
+        return false;
+
+    return true;
+}
+
 internal inline void str_cat(char* source_a, size source_a_len, char* source_b, size source_b_len,
                  char* dest, size dest_len)
 {
@@ -286,7 +300,7 @@ internal inline char* str_sub(char* src, usize pos, usize len, MemoryArena* aren
 {
     usize src_len = str_len(src);
     char* result = push_array(arena, len+1, char);
-    
+
     if (pos >= src_len)
     {
         pos = len - 1;
@@ -297,7 +311,7 @@ internal inline char* str_sub(char* src, usize pos, usize len, MemoryArena* aren
 
     for (u32 i = 0; i < src_len; ++i, ++src)
         *(result + i) = *(src + pos);
-    
+
     *(result + len) = '\0';
     return result;
 }

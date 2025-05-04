@@ -29,6 +29,7 @@ set(ALCHEMY_SOURCE
     ${PROJECT_SOURCE_DIR}/src/renderer/ui.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_file.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
+    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_intrin.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c

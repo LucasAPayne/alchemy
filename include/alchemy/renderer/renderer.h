@@ -330,4 +330,31 @@ inline v4 color_magenta(void)     {return (v4){1.0f, 0.0f, 1.0f, 1.0f};}
 inline v4 color_yellow(void)      {return (v4){1.0f, 1.0f, 0.0f, 1.0f};}
 inline v4 color_transparent(void) {return (v4){0.0f, 0.0f, 0.0f, 0.0f};}
 
+inline v4 srgb255_to_linear1(v4 c)
+{
+    v4 result = v4_zero();
+
+    f32 inv_255 = 1.0f/255.0f;
+
+    result.r = sq_f32(inv_255*c.r);
+    result.g = sq_f32(inv_255*c.g);
+    result.b = sq_f32(inv_255*c.b);
+    result.a = inv_255*c.a;
+
+    return result;
+}
+
+inline v4 linear1_to_srgb255(v4 c)
+{
+    v4 result = v4_zero();
+
+    result.r = 255.0f*sqrt_f32(c.r);
+    result.g = 255.0f*sqrt_f32(c.g);
+    result.b = 255.0f*sqrt_f32(c.b);
+    result.a = 255.0f*c.a;
+
+    return result;
+}
+
+
 void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr);

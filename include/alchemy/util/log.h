@@ -35,6 +35,8 @@ void log_log(LogLevel level, const char* fmt, ...);
 #define log_success(...) log_log(LOG_SUCCESS, __VA_ARGS__)
 #define log_failure(...) log_log(LOG_FAILURE, __VA_ARGS__)
 
+#define CLEAR_LINE "\33[2K\r"
+
 #define LOG_FILE_PATH YELLOW"%s"COLOR_RESET
 #define LOG_FUNC_NAME CYAN"%s"COLOR_RESET
 #define LOG_LINE_NUM BWHITE"%d"COLOR_RESET
@@ -48,7 +50,10 @@ void log_log(LogLevel level, const char* fmt, ...);
 
 #ifdef ALCHEMY_DEBUG
     #define ASSERT(expr, msg, ...) \
-        if(!(expr)) {log_fatal(LOG_POS msg, LOG_POS_ARGS PASS_ARGS(__VA_ARGS__)); *(int *)0 = 0;}
+        if(!(expr)) {log_fatal(LOG_POS msg, LOG_POS_ARGS); *(int *)0 = 0;}
+    #define ASSERTF(expr, msg, ...) \
+        if(!(expr)) {log_fatal(LOG_POS msg, LOG_POS_ARGS, __VA_ARGS__); *(int *)0 = 0;}
 #else
-    #define ASSERT(expr, msg, ...) if(!(expr)) log_fatal(LOG_POS msg, LOG_POS_ARGS PASS_ARGS(__VA_ARGS__));
+    #define ASSERT(expr, msg, ...)
+    #define ASSERTF(expr, msg, ...)
 #endif
