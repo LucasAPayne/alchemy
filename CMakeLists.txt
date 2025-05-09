@@ -14,6 +14,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(alchemy VERSION 0.1)
 
 option(ALCHEMY_INCLUDE_EXAMPLES "Include example projects" OFF)
+option(ALCHEMY_HOT_RELOAD "Allow hot reloading when game code is packaged in a DLL" OFF)
 
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
@@ -91,17 +92,10 @@ if(MSVC)
     endif()
 endif()
 
-macro(RANDOMIZE_PDB_NAME target)
-    string(RANDOM random_string)
-    set(pdbname "${target}_")
-    string(APPEND pdbname ${random_string})
-    set_target_properties(${target}
-        PROPERTIES
-        COMPILE_PDB_NAME ${pdbname}
-        PDB_NAME ${pdbname})
-endmacro()
-
 if(ALCHEMY_INCLUDE_EXAMPLES)
     add_subdirectory(examples/example)
     add_subdirectory(examples/snake)
+endif()
+if(ALCHEMY_HOT_RELOAD)
+    add_compile_definitions(ALCHEMY_HOT_RELOAD)
 endif()

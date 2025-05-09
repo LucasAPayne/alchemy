@@ -315,3 +315,17 @@ internal inline char* str_sub(char* src, usize pos, usize len, MemoryArena* aren
     *(result + len) = '\0';
     return result;
 }
+
+internal inline char* str_find_last(char* s, char c)
+{
+    char* result = 0;
+
+    // NOTE(lucas): This is a do...while for the case where c == '\0'.
+    do
+    {
+        if (*s == c)
+            result = s;
+    } while (*s++);
+
+    return result;
+}
