@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+include(cmake/randomize_pdb_name.cmake)
+
 # TODO(lucas): For now, all executables and libraries built will go directly into the build directory.
 # Once there is more profiling and testing, they can be spilt back into debug and release folders.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -14,7 +16,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(alchemy VERSION 0.1)
 
 option(ALCHEMY_INCLUDE_EXAMPLES "Include example projects" OFF)
-option(ALCHEMY_HOT_RELOAD "Allow hot reloading when game code is packaged in a DLL" OFF)
+option(ALCHEMY_NO_HOT_RELOAD "Disable hot reloading when game code is packaged in a DLL" OFF)
 
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 

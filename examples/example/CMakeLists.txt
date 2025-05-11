@@ -11,6 +11,7 @@ target_link_libraries(example PRIVATE alchemy cglm_headers)
 # If this is used, the executable should also be called from the res direcotry outisde VS.
 # These steps are not necessary, but it makes working with relative paths easier
 set_target_properties(example PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/res)
+set_target_properties(example_dll PROPERTIES OUTPUT_NAME "example")
 
 if(MSVC)
     target_compile_options(example PRIVATE ${COMMON_COMPILER_FLAGS})
@@ -28,4 +29,5 @@ endif()
 
 # When hot reloading is performed during debugging, the PDB file can become locked.
 # Randomizing its name prevents this issue.
+# This function only evaluates if hot reloading is enabled.
 RANDOMIZE_PDB_NAME(example_dll)

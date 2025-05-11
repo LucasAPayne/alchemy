@@ -36,7 +36,7 @@ GameCode game_code_load(char* dll_name)
 {
     GameCode result = {0};
 
-#ifdef ALCHEMY_HOT_RELOAD
+#ifndef ALCHEMY_NO_HOT_RELOAD
 
     char temp_dll_name[MAX_FILEPATH_LEN];
     char lock_file_name[MAX_FILEPATH_LEN];
@@ -82,7 +82,7 @@ GameCode game_code_load(char* dll_name)
 
 void game_code_unload(GameCode* game_code)
 {
-#ifdef ALCHEMY_HOT_RELOAD
+#ifndef ALCHEMY_NO_HOT_RELOAD
 
     if (game_code->game_code_dll)
         FreeLibrary(game_code->game_code_dll);
@@ -96,7 +96,7 @@ void game_code_unload(GameCode* game_code)
 // Check if game DLL has been updated, and if so, reload it.
 void game_code_update(GameCode* game_code)
 {
-#ifdef ALCHEMY_HOT_RELOAD
+#ifndef ALCHEMY_NO_HOT_RELOAD
 
     // NOTE(lucas): Preserve input looping info
     ReplayBuffer replay_buffer = game_code->replay_buffer;
@@ -196,7 +196,7 @@ internal void input_loop_playback_input(GameCode* game_code, GameMemory* game_me
 
 void input_loop_init(GameCode* game_code, GameMemory* game_memory)
 {
-#ifdef ALCHEMY_HOT_RELOAD
+#ifndef ALCHEMY_NO_HOT_RELOAD
 
     // TODO(lucas): Recording system still seems to take too long on recrod start.
     // Find out what Windows is doing and if we can speed up/defer some of that processing.
@@ -205,12 +205,12 @@ void input_loop_init(GameCode* game_code, GameMemory* game_memory)
     input_loop_get_file_location(game_code, false, replay_buffer->filename, sizeof(replay_buffer->filename));
 
     replay_buffer->file_handle = CreateFileA(replay_buffer->filename, GENERIC_READ|GENERIC_WRITE,
-                                                0, 0, CREATE_ALWAYS, 0, 0);
+                                             0, 0, CREATE_ALWAYS, 0, 0);
 
     LARGE_INTEGER max_size;
     max_size.QuadPart = game_memory->total_bytes;
     replay_buffer->memory_map = CreateFileMappingA(replay_buffer->memory_map, 0, PAGE_READWRITE,
-                                    max_size.HighPart, max_size.LowPart, 0);
+                                                   max_size.HighPart, max_size.LowPart, 0);
     replay_buffer->memory_block = MapViewOfFile(replay_buffer->memory_map, FILE_MAP_ALL_ACCESS, 0, 0,
                                                 game_memory->total_bytes);
 
@@ -222,7 +222,7 @@ void input_loop_init(GameCode* game_code, GameMemory* game_memory)
 
 void input_loop_update(GameCode* game_code, GameMemory* game_memory, Input* input)
 {
-#ifdef ALCHEMY_HOT_RELOAD
+#ifndef ALCHEMY_NO_HOT_RELOAD
 
     if (key_released(&input->keyboard, KEY_F1))
     {

@@ -20,7 +20,7 @@ int main(void)
     renderer.clear_color = (v4){0.10f, 0.18f, 0.24f, 1.0f};
     Input input = {0};
 
-    GameCode game = game_code_load("example_dll.dll", "example_dll_temp.dll", "example_dll_lock.tmp");
+    GameCode game = game_code_load("example.dll");
     input_loop_init(&game, &memory);
 
     while(window->open)
