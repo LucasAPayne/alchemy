@@ -16,7 +16,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(alchemy VERSION 0.1)
 
 option(ALCHEMY_INCLUDE_EXAMPLES "Include example projects" OFF)
-option(ALCHEMY_NO_HOT_RELOAD "Disable hot reloading when game code is packaged in a DLL" OFF)
+option(ALCHEMY_NO_HOT_RELOAD "Disable hot reloading through game DLL" OFF)
 
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 

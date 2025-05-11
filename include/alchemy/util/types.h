@@ -5,7 +5,11 @@
 #include <float.h>
 #include <stdint.h>
 
-#define ALCHEMY_EXPORT __declspec(dllexport)
+#ifndef ALCHEMY_NO_HOT_RELOAD
+    #define ALCHEMY_EXPORT
+#else
+    #define ALCHEMY_EXPORT __declspec(dllexport)
+#endif
 
 #define countof(array) (sizeof((array)) / sizeof((array)[0]))
 #define lengthof(array) (countof(array) - 1)
