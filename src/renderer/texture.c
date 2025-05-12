@@ -42,19 +42,15 @@ typedef struct BitmapHeader
 } BitmapHeader;
 #pragma pack(pop)
 
-internal Texture load_bmp_from_file(void* file, size file_size, Renderer* renderer, MemoryArena* arena)
+Texture load_bmp_from_memory(u8* data, size data_size)
 {
-    u8* file_contents = push_size(arena, file_size);
-    file_read(file, file_contents, file_size);
-
     Texture tex = {0};
-    if (file_size)
+    if (data_size)
     {
-        BitmapHeader* header = (BitmapHeader*)file_contents;
+        BitmapHeader* header = (BitmapHeader*)data;
 
         u32 bytes_per_pixel = header->bits_per_pixel / 8;
 
-        tex.id = renderer_next_tex_id(renderer);
         tex.size.x = (f32)header->width;
         tex.size.y = (f32)header->height;
         tex.channels = bytes_per_pixel;
@@ -64,7 +60,7 @@ internal Texture load_bmp_from_file(void* file, size file_size, Renderer* render
             case 0: // BI_RGB: no compression
             {
                 // BGR -> RGB
-                u8* pixels = file_contents + header->pixel_array_offset;
+                u8* pixels = data + header->pixel_array_offset;
                 tex.data = pixels;
                 u32 row_size = ((header->width * bytes_per_pixel + 3) & ~3); // Each row is padded to multiple of 4 bytes
                 for (i32 y = 0; y < header->height; ++y)
@@ -83,7 +79,7 @@ internal Texture load_bmp_from_file(void* file, size file_size, Renderer* render
 
             case 3: // BI_BITFIELDS
             {
-                u32* pixels = (u32*)(file_contents + header->pixel_array_offset);
+                u32* pixels = (u32*)(data + header->pixel_array_offset);
                 tex.data = (u8*)pixels;
 
                 u32 red_mask = header->red_mask;
@@ -142,12 +138,22 @@ internal Texture load_bmp_from_file(void* file, size file_size, Renderer* render
     return tex;
 }
 
-internal Texture load_any_texture_from_file(char* filename, Renderer* renderer)
+Texture load_bmp_from_file(const char* filename, MemoryArena* arena)
+{
+    size file_size = file_get_size(filename);
+    void* file = file_open(filename, FileMode_Read);
+    u8* data = push_size(arena, file_size);
+    file_read(file, data, file_size);
+    Texture result = load_bmp_from_memory(data, file_size);
+
+    return result;
+}
+
+Texture load_any_texture_from_file(const char* filename)
 {
     stbi_set_flip_vertically_on_load(true);
 
     Texture tex = {0};
-    tex.id = renderer_next_tex_id(renderer);
 
     // Load image for texture
     int size_x, size_y;
@@ -203,16 +209,19 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
     if (is_bmp)
     {
         file_seek(file, 0, FileSeek_Begin);
-        tex = load_bmp_from_file(file, file_size, renderer, arena);
+        u8* data = push_size(arena, file_size);
+        file_read(file, data, file_size);
+        tex = load_bmp_from_memory(data, file_size);
         file_close(file);
     }
     else
     {
         file_close(file);
-        tex = load_any_texture_from_file(filename, renderer);
+        tex = load_any_texture_from_file(filename);
     }
     ASSERT(tex.data, "Failed to load texture");
 
+    tex.id = renderer_next_tex_id(renderer);
     renderer_push_texture(renderer, tex);
     return tex;
 }

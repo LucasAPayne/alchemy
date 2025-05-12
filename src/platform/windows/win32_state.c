@@ -270,7 +270,6 @@ void input_loop_update(GameCode* game_code, GameMemory* game_memory, Input* inpu
         {
             input_loop_end_playback(game_code);
         }
-
     }
 
     if (game_code->replay_buffer.is_recording)
