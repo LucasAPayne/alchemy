@@ -122,13 +122,19 @@ void game_code_update(GameCode* game_code)
 
 internal void input_loop_get_file_location(GameCode* game_code, b32 input_stream, char* dest, int dest_len)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     char filename[64];
     wsprintf(filename, "loop_edit_%s.input", input_stream ? "input" : "state");
     win32_build_exe_path_filename(game_code, filename, dest, dest_len);
+
+#endif
 }
 
 internal void input_loop_begin_recording(GameCode* game_code, GameMemory* game_memory)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     ReplayBuffer* replay_buffer = &game_code->replay_buffer;
     if (!replay_buffer->memory_block)
     {
@@ -142,22 +148,34 @@ internal void input_loop_begin_recording(GameCode* game_code, GameMemory* game_m
     replay_buffer->is_recording = true;
 
     CopyMemory(replay_buffer->memory_block, game_memory->memory_block, game_memory->total_bytes);
+
+#endif
 }
 
 internal void input_loop_end_recording(GameCode* game_code)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     CloseHandle(game_code->replay_buffer.recording_handle);
     game_code->replay_buffer.is_recording = false;
+
+#endif
 }
 
 internal void input_loop_record_input(GameCode* game_code, Input* input)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     DWORD bytes_written;
     WriteFile(game_code->replay_buffer.recording_handle, input, sizeof(*input), &bytes_written, 0);
+
+#endif
 }
 
 internal void input_loop_begin_playback(GameCode* game_code, GameMemory* game_memory)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     ReplayBuffer* replay_buffer = &game_code->replay_buffer;
     if (!replay_buffer->memory_block)
     {
@@ -171,16 +189,24 @@ internal void input_loop_begin_playback(GameCode* game_code, GameMemory* game_me
     replay_buffer->is_playing = true;
 
     CopyMemory(game_memory->memory_block, replay_buffer->memory_block, game_memory->total_bytes);
+
+#endif
 }
 
 internal void input_loop_end_playback(GameCode* game_code)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     CloseHandle(game_code->replay_buffer.playback_handle);
     game_code->replay_buffer.is_playing = false;
+
+#endif
 }
 
 internal void input_loop_playback_input(GameCode* game_code, GameMemory* game_memory, Input* input)
 {
+#ifndef ALCHEMY_NO_HOT_RELOAD
+
     DWORD bytes_read = 0;
     if (ReadFile(game_code->replay_buffer.playback_handle, input, sizeof(*input), &bytes_read, 0))
     {
@@ -192,6 +218,8 @@ internal void input_loop_playback_input(GameCode* game_code, GameMemory* game_me
             ReadFile(game_code->replay_buffer.playback_handle, input, sizeof(*input), &bytes_read, 0);
         }
     }
+
+#endif
 }
 
 void input_loop_init(GameCode* game_code, GameMemory* game_memory)

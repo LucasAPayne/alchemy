@@ -5,7 +5,7 @@
 #include <float.h>
 #include <stdint.h>
 
-#ifndef ALCHEMY_NO_HOT_RELOAD
+#ifdef ALCHEMY_NO_HOT_RELOAD
     #define ALCHEMY_EXPORT
 #else
     #define ALCHEMY_EXPORT __declspec(dllexport)
