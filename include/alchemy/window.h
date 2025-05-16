@@ -31,6 +31,7 @@ void window_set_max_size(Window* window, int max_width, int max_height);
 // TODO(lucas): Set window attributes
 void* window_icon_load_from_file(const char* filename);
 void  window_icon_set_from_memory(Window* window, void* icon);
+void  window_icon_set_from_resource(int id); // NOTE(lucas): Must be called before window_create
 
 // Gets the number of seconds passed since the previous frame
 /* IMPORTANT: Only call this function once per frame.

@@ -6,6 +6,8 @@
 
 #include <windows.h>
 
+global HICON global_window_icon;
+
 internal inline i64 win32_get_ticks(void)
 {
     LARGE_INTEGER ticks;
@@ -26,11 +28,11 @@ f32 get_frame_seconds(Window* window)
 	// to microseconds *before* dividing by ticks-per-second.
 	microseconds_elapsed *= 1000000;
 	microseconds_elapsed /= window->_ticks_per_second;
-    
+
     f32 seconds_elapsed = (f32)microseconds_elapsed / 1000000.0f;
     if (seconds_elapsed < 0.0f)
         seconds_elapsed = 0.0f;
-    
+
     window->_prev_frame_ticks = win32_get_ticks();
     return seconds_elapsed;
 }
@@ -52,7 +54,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
         case WM_SIZE:
         {
             Window* window = (Window*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
-         
+
             // WM_SIZE is called on window creation, before the window data gets associated with the hwnd.
             if (window)
                 window_update_size(window);
@@ -123,7 +125,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
             result = DefWindowProcA(hwnd, msg, wparam, lparam);
         } break;
     }
-    
+
     return result;
 }
 
@@ -145,11 +147,16 @@ Window* window_create(const char* title, int width, int height)
     window_class.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
     window_class.lpfnWndProc = &win32_main_window_callback;
     window_class.hInstance = instance;
-    window_class.hIcon = LoadIconA(0, IDI_APPLICATION);
-    window_class.hIconSm = LoadIconA(0, IDI_APPLICATION);
     window_class.lpszClassName = "MyWindowClass";
     window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
-    
+
+    if (global_window_icon == NULL)
+    {
+        global_window_icon = LoadIconA(0, IDI_APPLICATION);
+    }
+    window_class.hIcon = global_window_icon;
+    window_class.hIconSm = global_window_icon;
+
     if(!RegisterClassExA(&window_class))
         win32_error_callback();
 
@@ -206,6 +213,13 @@ void window_icon_set_from_memory(Window* window, void* icon)
     SendMessage(window->ptr, WM_SETICON, ICON_SMALL, (LPARAM)icon);
     SendMessage(window->ptr, WM_SETICON, ICON_BIG, (LPARAM)icon);
 }
+
+void window_icon_set_from_resource(int id)
+{
+    global_window_icon = (HICON)LoadImageA(GetModuleHandleA(0), MAKEINTRESOURCEA(id), IMAGE_ICON,
+                                           0, 0, LR_DEFAULTSIZE|LR_SHARED);
+}
+
 
 void console_launch(void)
 {
