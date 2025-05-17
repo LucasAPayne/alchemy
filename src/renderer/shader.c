@@ -1,19 +1,15 @@
 #include "alchemy/renderer/shader.h"
+#include "alchemy/renderer/renderer.h"
+#include "alchemy/util/log.h"
+#include "alchemy/util/memory.h"
+#include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
 #include <glad/glad.h>
 
-#include <stdio.h>  // File I/O
-#include <stdlib.h> // malloc
+#include <stdio.h> // File I/O
 
-// NOTE(lucas): This is a temporary file loading function that will probably be changed or replaced
-/*
-* Reads the file 'path' into a string 'buf'. If 'add_null' is true, terminates string with '\0'.
-* If successful, returns file size.
-* If unsuccessful, returns -1.
-* WARNING: Remember to free 'buf' after calling this function.
-*/
-internal char* file_to_string(const char* path)
+internal char* file_to_string(const char* path, MemoryArena* arena)
 {
     char* buf = NULL;
     i64 length = 0;
@@ -25,7 +21,7 @@ internal char* file_to_string(const char* path)
         fseek(f, 0, SEEK_END);
         length = ftell(f);
         fseek(f, 0, SEEK_SET);
-        buf = (char*)malloc(length+1);
+        buf = push_array(arena, length+1, char);
 
         if (buf)
             fread(buf, 1, length, f);
@@ -37,7 +33,7 @@ internal char* file_to_string(const char* path)
 }
 
 // Check whether there are errors in shader compilation/linking and print the log if so.
-internal void shader_error_check(GLuint shader)
+internal void shader_error_check(GLuint shader, const char* filename)
 {
     GLint success = 0;
     GLchar info_log[512];
@@ -47,71 +43,64 @@ internal void shader_error_check(GLuint shader)
     else if (glIsProgram(shader))
         glGetProgramiv(shader, GL_LINK_STATUS, &success);
     else
-    {
-        // TODO(lucas): Logging
-        // Shader error: Object is not a shader or shader program!
-        ASSERT(0);
-    }
+        ASSERT(0, "Shader error (%s): Object is not a shader or shader program.", filename);
 
     if (!success)
     {
         if (glIsShader(shader))
         {
             glGetShaderInfoLog(shader, sizeof(info_log), NULL, info_log);
-            // TODO(lucas): Logging
-            // Shader error: Shader compilation failed
-            ASSERT(0);
+            log_error(info_log);
+            ASSERT(0, "Shader error (%s): Compilation failed", filename);
         }
         else if (glIsProgram(shader))
         {
             GLsizei log_length = 0;
             glGetProgramInfoLog(shader, sizeof(info_log), &log_length, info_log);
-            // TODO(lucas): Logging
-            // Shader Error: Shader linking failed
-            ASSERT(0);
+            log_error(info_log);
+            ASSERT(0, "Shader error: Shader linking failed");
         }
-        // TODO(lucas): Output info log
     }
 }
 
-u32 shader_init(const char* vertex_shader_path, const char* fragment_shader_path)
+u32 shader_init(Renderer* renderer, const char* vert_shader_path, const char* frag_shader_path)
 {
     // Read shaders from files
-    char* vertex_shader_source = file_to_string(vertex_shader_path);
-    char* fragment_shader_source = file_to_string(fragment_shader_path);
+    char* vert_shader_source = file_to_string(vert_shader_path, &renderer->scratch_arena);
+    char* frag_shader_source = file_to_string(frag_shader_path, &renderer->scratch_arena);
+
+    int vert_shader_len = str_len(vert_shader_source);
+    int frag_shader_len = str_len(frag_shader_source);
 
     // Create and compile shaders
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
-    glCompileShader(vertex_shader);
-    shader_error_check(vertex_shader);
+    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert_shader, 1, &vert_shader_source, NULL);
+    glCompileShader(vert_shader);
+    shader_error_check(vert_shader, vert_shader_path);
 
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
-    glCompileShader(fragment_shader);
-    shader_error_check(fragment_shader);
+    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag_shader, 1, &frag_shader_source, NULL);
+    glCompileShader(frag_shader);
+    shader_error_check(frag_shader, frag_shader_path);
 
     // Link both shaders into a shader program
-    GLuint shader_program = glCreateProgram();
-    // TODO(lucas): Logging
-    if (!shader_program)
-    {
-        // Shader Error: Shader program creation failed!
-        ASSERT(0);
-    }
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-    glLinkProgram(shader_program);
-    shader_error_check(shader_program);
+    GLuint shader = glCreateProgram();
+    if (!shader)
+        ASSERT(0, "Shader compilation failed");
 
-    free(vertex_shader_source);
-    free(fragment_shader_source);
+    glAttachShader(shader, vert_shader);
+    glAttachShader(shader, frag_shader);
+    glLinkProgram(shader);
+    shader_error_check(shader, vert_shader_path);
+
+    memory_arena_pop(&renderer->scratch_arena, vert_shader_len+1);
+    memory_arena_pop(&renderer->scratch_arena, frag_shader_len+1);
 
     // Delete the shader sources as they are no longer needed
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
+    glDeleteShader(vert_shader);
+    glDeleteShader(frag_shader);
 
-    return shader_program;
+    return shader;
 }
 
 void shader_bind(u32 id)
@@ -129,6 +118,42 @@ void shader_delete(u32 id)
     glDeleteProgram(id);
 }
 
+void shader_set_i32(u32 shader, const char* name, i32 value)
+{
+    shader_bind(shader);
+    glUniform1i(glGetUniformLocation(shader, name), value);
+}
+
+void shader_set_iv2(u32 shader, const char* name, iv2 value)
+{
+    shader_bind(shader);
+    glUniform2i(glGetUniformLocation(shader, name), value.x, value.y);
+}
+
+void shader_set_iv3(u32 shader, const char* name, iv3 value)
+{
+    shader_bind(shader);
+    glUniform3i(glGetUniformLocation(shader, name), value.x, value.y, value.z);
+}
+
+void shader_set_iv4(u32 shader, const char* name, iv4 value)
+{
+    shader_bind(shader);
+    glUniform4i(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
+}
+
+void shader_set_f32(u32 shader, const char* name, f32 value)
+{
+    shader_bind(shader);
+    glUniform1f(glGetUniformLocation(shader, name), value);
+}
+
+void shader_set_v2(u32 shader, const char* name, v2 value)
+{
+    shader_bind(shader);
+    glUniform2f(glGetUniformLocation(shader, name), value.x, value.y);
+}
+
 void shader_set_v3(u32 shader, const char* name, v3 value)
 {
     shader_bind(shader);
@@ -141,15 +166,20 @@ void shader_set_v4(u32 shader, const char* name, v4 value)
     glUniform4f(glGetUniformLocation(shader, name), value.x, value.y, value.z, value.w);
 }
 
+void shader_set_m2(u32 shader, const char* name, m2 value, b32 transpose)
+{
+    shader_bind(shader);
+    glUniformMatrix2fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
+}
+
+void shader_set_m3(u32 shader, const char* name, m3 value, b32 transpose)
+{
+    shader_bind(shader);
+    glUniformMatrix3fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
+}
+
 void shader_set_m4(u32 shader, const char* name, m4 value, b32 transpose)
 {
     shader_bind(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, name), 1, (GLboolean)transpose, value.raw[0]);
-}
-
-
-void shader_set_int(u32 shader, const char* name, int value)
-{
-    shader_bind(shader);
-    glUniform1i(glGetUniformLocation(shader, name), value);
 }

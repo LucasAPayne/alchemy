@@ -1,5 +1,9 @@
 #include "alchemy/util/time.h"
 
+#if _WIN32
+    #include <windows.h>
+#endif
+
 void timer_init(Timer* timer, f32 start_seconds, b32 start_active)
 {
     timer->start_seconds = start_seconds;
@@ -82,4 +86,20 @@ void stopwatch_stop(Stopwatch* stopwatch)
 void stopwatch_reset(Stopwatch* stopwatch)
 {
     stopwatch->ms_elapsed = 0.0f;
+}
+
+LocalTime get_local_time(void)
+{
+    LocalTime result = {0};
+
+#if _WIN32
+    SYSTEMTIME lt;
+    GetLocalTime(&lt);
+    result.hour = lt.wHour;
+    result.minute = lt.wMinute;
+    result.second = lt.wSecond;
+    result.millisecond = lt.wMilliseconds;
+#endif
+
+    return result;
 }

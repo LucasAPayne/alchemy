@@ -1,5 +1,6 @@
 #include "alchemy/input.h"
 #include "alchemy/window.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
 #include <windows.h>
@@ -146,11 +147,11 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
     keyboard->current_char = 0;
 
     // Release state should not persist, so make sure it is false for each button
-    for (int key = 0; key < ARRAY_COUNT(keyboard->keys); key++)
+    for (int key = 0; key < countof(keyboard->keys); key++)
         keyboard->keys[key].released = false;
 
     // Release and double click state should not persist, so set it to false
-    for (int button = 0; button < ARRAY_COUNT(mouse->buttons); button++)
+    for (int button = 0; button < countof(mouse->buttons); button++)
     {
         mouse->buttons[button].released = false;
         mouse->buttons[button].double_clicked = false;
@@ -346,24 +347,61 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 mouse->x = GET_X_LPARAM(msg.lParam);
                 mouse->y = GET_Y_LPARAM(msg.lParam);
             } break;
+
             case WM_MOUSEWHEEL: mouse->scroll = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA; break;
 
-            case WM_LBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0); break;
-            case WM_LBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 1); break;
+            case WM_LBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 1);
+            } break;
+
+            case WM_MBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 1);
+            } break;
+
+            case WM_RBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 1);
+            } break;
+
+            case WM_XBUTTONDOWN:
+            {
+                SetCapture(window->ptr);
+                win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 1);
+            } break;
+
+            case WM_LBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0);
+            } break;
+            
+            case WM_MBUTTONUP:     
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0);
+            } break;
+            
+            case WM_RBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 0);
+            } break;
+
+            case WM_XBUTTONUP:
+            {
+                ReleaseCapture();
+                win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 0);
+            } break;
+
             case WM_LBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 2); break;
-
-            case WM_MBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0); break;
-            case WM_MBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 1); break;
             case WM_MBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 2); break;
-
-            case WM_RBUTTONUP:     win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 0); break;
-            case WM_RBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 1); break;
             case WM_RBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[MOUSE_RIGHT], 2); break;
-
-            case WM_XBUTTONUP:     win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 0); break;
-            case WM_XBUTTONDOWN:   win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 1); break;
             case WM_XBUTTONDBLCLK: win32_process_mouse_button(&mouse->buttons[win32_get_mouse_xbutton(msg)], 2); break;
-
 
             default:
             {
@@ -409,8 +447,7 @@ void cursor_set_from_system(CursorType type)
         case CURSOR_HELP:                       cursor = LoadCursorA(NULL, IDC_HELP);        break;
         case CURSOR_NOT_ALLOWED:                cursor = LoadCursorA(NULL, IDC_NO);          break;
 
-        // TODO(lucas): Logging, invalid type value
-        default: break;
+        default: log_error("Invalid system cursor type: %d", type); break;
     }
     SetCursor(cursor);
 }
@@ -577,7 +614,7 @@ void win32_xinput_gamepad_process_input(Input* input)
         gamepad = &input->gamepads[i];
 
         // Release state should not persist, so make sure it is false for each button
-        for (int button_index = 0; button_index < ARRAY_COUNT(gamepad->buttons); button_index++)
+        for (int button_index = 0; button_index < countof(gamepad->buttons); button_index++)
             gamepad->buttons[button_index].released = false;
 
         XINPUT_STATE controller_state;
@@ -605,7 +642,7 @@ void win32_xinput_gamepad_process_input(Input* input)
                 {
                     // Controller was connected and has become disconnected
                     gamepad->is_connected = false;
-                    // TODO(lucas): Logging
+                    log_info("Gamepad %d disconnected", i);
                 }
             } break; 
             case ERROR_SUCCESS:

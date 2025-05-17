@@ -1,10 +1,12 @@
 #include "alchemy/window.h"
+#include "alchemy/util/log.h"
 #include "alchemy/util/types.h"
 
-#define VC_EXTRALEAN
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#include "win32_base.c"
+
 #include <windows.h>
+
+global HICON global_window_icon;
 
 internal inline i64 win32_get_ticks(void)
 {
@@ -26,11 +28,11 @@ f32 get_frame_seconds(Window* window)
 	// to microseconds *before* dividing by ticks-per-second.
 	microseconds_elapsed *= 1000000;
 	microseconds_elapsed /= window->_ticks_per_second;
-    
+
     f32 seconds_elapsed = (f32)microseconds_elapsed / 1000000.0f;
     if (seconds_elapsed < 0.0f)
         seconds_elapsed = 0.0f;
-    
+
     window->_prev_frame_ticks = win32_get_ticks();
     return seconds_elapsed;
 }
@@ -52,7 +54,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
         case WM_SIZE:
         {
             Window* window = (Window*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
-         
+
             // WM_SIZE is called on window creation, before the window data gets associated with the hwnd.
             if (window)
                 window_update_size(window);
@@ -111,7 +113,7 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
         {
-            ASSERT(!"Keyboard input came in through a non-dispatch message!");
+            ASSERT(0, "Keyboard input came in through a non-dispatch message!");
         } break;
 
         /*
@@ -123,12 +125,14 @@ internal LRESULT CALLBACK win32_main_window_callback(HWND hwnd, UINT msg, WPARAM
             result = DefWindowProcA(hwnd, msg, wparam, lparam);
         } break;
     }
-    
+
     return result;
 }
 
-void window_init(Window* window, const char* title, int width, int height)
+Window* window_create(const char* title, int width, int height)
 {
+    Window* window = VirtualAllocEx(GetCurrentProcess(), NULL, sizeof(Window), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+
     window->width = width;
     window->height = height;
 
@@ -143,35 +147,30 @@ void window_init(Window* window, const char* title, int width, int height)
     window_class.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
     window_class.lpfnWndProc = &win32_main_window_callback;
     window_class.hInstance = instance;
-    window_class.hIcon = LoadIconA(0, IDI_APPLICATION);
-    window_class.hIconSm = LoadIconA(0, IDI_APPLICATION);
     window_class.lpszClassName = "MyWindowClass";
-    
-    if(!RegisterClassExA(&window_class))
+    window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
+
+    if (global_window_icon == NULL)
     {
-        GetLastError();
-        MessageBoxA(0, "RegisterClassEx failed", "Fatal Error", MB_OK);
+        global_window_icon = LoadIconA(0, IDI_APPLICATION);
     }
+    window_class.hIcon = global_window_icon;
+    window_class.hIconSm = global_window_icon;
+
+    if(!RegisterClassExA(&window_class))
+        win32_error_callback();
 
     RECT initial_window_rect = {0, 0, width, height};
     AdjustWindowRectEx(&initial_window_rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_OVERLAPPEDWINDOW);
     LONG initial_window_width = initial_window_rect.right - initial_window_rect.left;
     LONG initial_window_height = initial_window_rect.bottom - initial_window_rect.top;
 
-    HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW,
-                            window_class.lpszClassName,
-                            title,
-                            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                            CW_USEDEFAULT, CW_USEDEFAULT,
-                            initial_window_width, 
-                            initial_window_height,
-                            0, 0, instance, 0);
+    HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW, window_class.lpszClassName, title,
+                                WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+                                initial_window_width,  initial_window_height, 0, 0, instance, 0);
 
     if(!hwnd)
-    {
-        GetLastError();
-        MessageBoxA(0, "CreateWindowEx failed", "Fatal Error", MB_OK);
-    }
+        win32_error_callback();
 
     window->ptr = hwnd;
     window->open = true;
@@ -180,6 +179,8 @@ void window_init(Window* window, const char* title, int width, int height)
     SetWindowLongPtrA(window->ptr, GWLP_USERDATA, (LONG_PTR)window);
 
     window->_prev_frame_ticks = win32_get_ticks();
+
+    return window;
 }
 
 void window_render(Window* window)
@@ -211,4 +212,43 @@ void window_icon_set_from_memory(Window* window, void* icon)
 {
     SendMessage(window->ptr, WM_SETICON, ICON_SMALL, (LPARAM)icon);
     SendMessage(window->ptr, WM_SETICON, ICON_BIG, (LPARAM)icon);
+}
+
+void window_icon_set_from_resource(int id)
+{
+    global_window_icon = (HICON)LoadImageA(GetModuleHandleA(0), MAKEINTRESOURCEA(id), IMAGE_ICON,
+                                           0, 0, LR_DEFAULTSIZE|LR_SHARED);
+}
+
+void console_launch(void)
+{
+#ifdef ALCHEMY_CONSOLE
+    AllocConsole();
+
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    freopen_s(&fp, "CONIN$", "r", stdin);
+
+    // Enable printing colored text
+    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (out == INVALID_HANDLE_VALUE) return;
+
+    DWORD mode = GetConsoleMode(out, &mode);
+    if (!mode) return;
+
+    mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(out, mode);
+
+    SetConsoleOutputCP(CP_UTF8);
+
+    // Set bright blue text to a more vibrant and readable shade
+    CONSOLE_SCREEN_BUFFER_INFOEX cbi = {sizeof(CONSOLE_SCREEN_BUFFER_INFOEX)};
+    if (GetConsoleScreenBufferInfoEx(out, &cbi))
+    {
+        cbi.ColorTable[9] = RGB(0, 120, 255);
+        SetConsoleScreenBufferInfoEx(out, &cbi);
+    }
+
+#endif
 }
