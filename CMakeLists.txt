@@ -17,6 +17,7 @@ project(alchemy VERSION 0.1)
 
 option(ALCHEMY_INCLUDE_EXAMPLES "Include example projects" OFF)
 option(ALCHEMY_NO_HOT_RELOAD "Disable hot reloading through game DLL" OFF)
+option(ALCHEMY_CONSOLE "Enable debug console" ON)
 
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
@@ -100,4 +101,7 @@ if(ALCHEMY_INCLUDE_EXAMPLES)
 endif()
 if(ALCHEMY_NO_HOT_RELOAD)
     target_compile_definitions(alchemy PUBLIC ALCHEMY_NO_HOT_RELOAD)
+endif()
+if(ALCHEMY_CONSOLE)
+    target_compile_definitions(alchemy PUBLIC ALCHEMY_CONSOLE)
 endif()

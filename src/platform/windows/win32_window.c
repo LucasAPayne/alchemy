@@ -222,6 +222,7 @@ void window_icon_set_from_resource(int id)
 
 void console_launch(void)
 {
+#ifdef ALCHEMY_CONSOLE
     AllocConsole();
 
     FILE* fp;
@@ -248,4 +249,6 @@ void console_launch(void)
         cbi.ColorTable[9] = RGB(0, 120, 255);
         SetConsoleScreenBufferInfoEx(out, &cbi);
     }
+
+#endif
 }
