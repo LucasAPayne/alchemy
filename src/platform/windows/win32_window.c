@@ -220,7 +220,6 @@ void window_icon_set_from_resource(int id)
                                            0, 0, LR_DEFAULTSIZE|LR_SHARED);
 }
 
-
 void console_launch(void)
 {
     AllocConsole();
