@@ -4,8 +4,10 @@
 #include "memory.h"
 
 #include <stdarg.h>
+#include <string.h>
 
-#define s8(s) (s8){(u8*)s, lengthof(s)}
+#define s8(s) (s8){(u8*)s, lengthof(s)} // For use inside functions
+#define S8(s) {(u8*)s, lengthof(s)} // For file or global scope
 typedef struct s8
 {
     u8* data;
@@ -54,8 +56,7 @@ internal inline s8 s8_copyn(s8 src, size len, MemoryArena* arena)
         len = src.len;
 
     s8 result = s8_alloc(arena, len);
-    for (size i = 0; i < len; ++i)
-        result.data[i] = src.data[i];
+    memcpy(result.data, src.data, src.len);
 
     return result;
 }
@@ -65,18 +66,29 @@ internal inline s8 s8_copy(s8 src, MemoryArena* arena)
     return s8_copyn(src, src.len, arena);
 }
 
-inline internal b32 s8_eq(s8 a, s8 b)
+internal inline b32 s8_eq(s8 a, s8 b)
 {
     if (a.len != b.len)
         return false;
 
-    for (size i = 0; i < a.len; ++i)
+    return memcmp(a.data, b.data, a.len) == 0;
+}
+
+internal inline b32 s8_contains(s8 s, s8 sub)
+{
+    if (sub.len > s.len)
+        return false;
+
+    for (size i = 0; i <= (s.len - sub.len); ++i)
     {
-        if (a.data[i] != b.data[i])
-            return false;
+        if (s.data[i] == sub.data[0])
+        {
+            if (memcmp(s.data + i, sub.data, sub.len) == 0)
+                return true;
+        }
     }
 
-    return true;
+    return false;
 }
 
 internal inline void s8_cat(s8 source_a, s8 source_b, s8 dest)

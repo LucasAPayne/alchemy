@@ -4,7 +4,7 @@
 #include "alchemy/util/intrin.h"
 #include "alchemy/util/log.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <stb_image/stb_image.h>
 
 // TODO(lucas): Full bitmap support should separate the BMP header from the DIB header
@@ -144,6 +144,7 @@ Texture load_bmp_from_file(const char* filename, MemoryArena* arena)
     void* file = file_open(filename, FileMode_Read);
     u8* data = push_size(arena, file_size);
     file_read(file, data, file_size);
+    file_close(file);
     Texture result = load_bmp_from_memory(data, file_size);
 
     return result;

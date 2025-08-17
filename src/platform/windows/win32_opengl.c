@@ -2,15 +2,25 @@
 #include "alchemy/window.h"
 #include "alchemy/util/log.h"
 
-#include <glad/glad.h>
+#define GLAD_GL_IMPLEMENTATION
+#define GLAD_WGL_IMPLEMENTATION
+#include <glad/wgl.h>
+#include <glad/gl.h>
 
 #include <windows.h>
+
+void exit_fail(HWND window, HDC window_dc)
+{
+    ReleaseDC(window, window_dc);
+    DestroyWindow(window);
+    ExitProcess(1);
+}
 
 void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                                       const GLchar* message, const void* user_param)
 {
     persist b32 shader_recomp_warning_printed = false;
-    if (shader_recomp_warning_printed) return; 
+    if (shader_recomp_warning_printed) return;
 
     // Filter out purely informational messages, which might print every frame.
     // 131185 says since GL_STATIC_DRAW is used, the buffer is placed in video memory.
@@ -19,7 +29,7 @@ void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLe
     if (id == 131185 || id == 131169 || id == 131204) return;
 
     // Only log performance-related messages once. Otherwise, they might print every frame.
-    if(id == 131218)
+    if (id == 131218)
         shader_recomp_warning_printed = true;
 
     switch (severity)
@@ -46,7 +56,7 @@ void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLe
     {
         case GL_DEBUG_TYPE_ERROR:               log_debug("OpenGL error type: Error");               break;
         case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: log_debug("OpenGL error type: Deprecated Behavior"); break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  log_debug("OpenGL error type: Undefined Behavior");  break; 
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  log_debug("OpenGL error type: Undefined Behavior");  break;
         case GL_DEBUG_TYPE_PORTABILITY:         log_debug("OpenGL error type: Portability");         break;
         case GL_DEBUG_TYPE_PERFORMANCE:         log_debug("OpenGL error type: Performance");         break;
         case GL_DEBUG_TYPE_MARKER:              log_debug("OpenGL error type: Marker");              break;
@@ -60,32 +70,75 @@ void GLAPIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id, GLe
 void opengl_init(Window* window)
 {
     HDC window_dc = GetDC(window->ptr);
+    if (!window_dc)
+    {
+        log_fatal("Failed to get window device context");
+        DestroyWindow(window->ptr);
+        ExitProcess(1);
+    }
 
     // State desired pixel format properties
-    PIXELFORMATDESCRIPTOR desired_pixel_format = {0};
-    desired_pixel_format.nSize = sizeof(desired_pixel_format);
-    desired_pixel_format.nVersion = 1;
-    desired_pixel_format.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
-    desired_pixel_format.cColorBits = 32;
-    desired_pixel_format.cDepthBits = 24;
-    desired_pixel_format.cStencilBits = 8;
-    desired_pixel_format.iPixelType = PFD_TYPE_RGBA;
-    desired_pixel_format.iLayerType = PFD_MAIN_PLANE;
+    PIXELFORMATDESCRIPTOR pfd = {0};
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 8;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.iLayerType = PFD_MAIN_PLANE;
 
-    // Find the closest available pixel format on the graphics card and use that
-    int suggested_pixel_format_index = ChoosePixelFormat(window_dc, &desired_pixel_format);
-    PIXELFORMATDESCRIPTOR suggested_pixel_format = {0};
-    DescribePixelFormat(window_dc, suggested_pixel_format_index,
-                        sizeof(suggested_pixel_format), &suggested_pixel_format);
-    SetPixelFormat(window_dc, suggested_pixel_format_index, &suggested_pixel_format);
+    int format = ChoosePixelFormat(window_dc, &pfd);
+    b32 format_success = SetPixelFormat(window_dc, format, &pfd);
+    if (!format || !format_success)
+    {
+        log_fatal("Failed to set pixel format");
+        exit_fail(window->ptr, window_dc);
+    }
 
-    // Get an OpenGL rendering context and set it as the current context
-    HGLRC opengl_rc = wglCreateContext(window_dc);
-    if (!wglMakeCurrent(window_dc, opengl_rc))
-        log_error("wglMakeCurrent failed. Unable to set OpenGL rendering context.");
+    // Create a temporary OpenGL context. The real one is made through WGL
+    HGLRC temp_context = wglCreateContext(window_dc);
+    if (!temp_context)
+    {
+        log_fatal("Failed to create OpenGL context");
+        exit_fail(window->ptr, window_dc);
+    }
+    wglMakeCurrent(window_dc, temp_context);
 
-    if (!gladLoadGL())
-        log_error("Glad initilization failed");
+    // Load WGL extensions
+    gladLoaderLoadWGL(window_dc);
+
+    int attribs[] =
+    {
+        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+        WGL_CONTEXT_MINOR_VERSION_ARB, 6,
+        WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+        0
+    };
+
+    // Create final OpenGL context and delete temporary one
+    HGLRC opengl_context = wglCreateContextAttribsARB(window_dc, 0, attribs);
+    if (!opengl_context)
+    {
+        log_fatal("Failed to create OpenGL context.");
+        exit_fail(window->ptr, window_dc);
+    }
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(temp_context);
+
+    if (!wglMakeCurrent(window_dc, opengl_context))
+    {
+        log_fatal("wglMakeCurrent failed. Unable to set OpenGL rendering context.");
+        exit_fail(window->ptr, window_dc);
+    }
+
+    if (!gladLoaderLoadGL())
+    {
+        log_fatal("GLAD initialization failed.");
+        wglMakeCurrent(NULL, NULL);
+        wglDeleteContext(opengl_context);
+        exit_fail(window->ptr, window_dc);
+    }
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -95,11 +148,11 @@ void opengl_init(Window* window)
 
     // Set up debug context
 #ifdef ALCHEMY_DEBUG
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(opengl_error_callback, (void*)0);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE);
-        log_debug("OpenGL debug mode enabled.");
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(opengl_error_callback, (void*)0);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE);
+    log_debug("OpenGL debug mode enabled.");
 #endif
 
     ReleaseDC(window->ptr, window_dc);

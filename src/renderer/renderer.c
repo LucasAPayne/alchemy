@@ -4,7 +4,7 @@
 #include "alchemy/util/memory.h"
 #include "alchemy/util/str.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <stb_image/stb_image.h>
 
 internal void vao_bind(u32 vao)
@@ -162,7 +162,7 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
 
-    vao_bind(0);    
+    vao_bind(0);
 
     return framebuffer_renderer;
 }
@@ -179,8 +179,8 @@ internal RenderObject sprite_renderer_init(u32 shader)
     RenderObject sprite_renderer = {0};
     sprite_renderer.shader = shader;
 
-    f32 vertices[] = 
-    { 
+    f32 vertices[] =
+    {
         // pos      // tex
         0.0f, 1.0f, 0.0f, 0.0f, // bottom left
         1.0f, 1.0f, 1.0f, 0.0f, // bottom right
@@ -188,10 +188,10 @@ internal RenderObject sprite_renderer_init(u32 shader)
         0.0f, 0.0f, 0.0f, 1.0f  // top left
     };
 
-    u32 indices[] = 
+    u32 indices[] =
     {
         0, 1, 3,
-        1, 2, 3  
+        1, 2, 3
     };
 
     sprite_renderer.vao = vao_init();
@@ -200,7 +200,7 @@ internal RenderObject sprite_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-    
+
     vao_bind(0);
 
     return sprite_renderer;
@@ -256,7 +256,7 @@ internal RenderObject quad_renderer_init(u32 shader)
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
 
     vao_bind(0);
-    
+
     return quad_renderer;
 }
 
@@ -265,20 +265,26 @@ internal RenderObject font_renderer_init(u32 shader)
     RenderObject font_renderer = {0};
     font_renderer.shader = shader;
 
-    // NOTE(lucas): While vertex buffer data changes a lot, the order in which indices are drawn
-    // does not. So, indices and index buffer can be defined here.
-    u32 indices[] = 
+    f32 vertices[] =
     {
-      0, 1, 3,
-      1, 2, 3
+        0.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f
     };
 
-    font_renderer.vao = vao_init();
-    font_renderer.vbo = vbo_init_empty();
-    font_renderer.ibo = ibo_init(indices, sizeof(indices));
+    // u32 indices[] =
+    // {
+    //   0, 1, 3,
+    //   1, 2, 3
+    // };
 
-    vertex_layout_set(0, 2, 4*sizeof(f32), 0);
-    vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
+    font_renderer.vao = vao_init();
+    font_renderer.vbo = vbo_init(vertices, sizeof(vertices));
+    // font_renderer.ibo = ibo_init(indices, sizeof(indices));
+
+    vertex_layout_set(0, 2, 0, 0);
+    // vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
 
     vao_bind(0);
 
@@ -393,9 +399,7 @@ internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_h
         default: ASSERT(0, "OpenGL framebuffer error: Unexpected value from glCheckFramebufferStatus()"); break;
     }
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    
-
-    fbo_unbind();    
+        fbo_unbind();
 
     shader_bind(shader);
 
@@ -484,9 +488,9 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
     if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
-    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
-    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y;
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y;
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y;
 
     v2 scale = v2_sub(max_point, min_point);
 
@@ -590,9 +594,9 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
     if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
-    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
-    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y;
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y;
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y;
 
     v2 scale = v2_sub(max_point, min_point);
 
@@ -637,7 +641,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    vao_bind(0);    
+    vao_bind(0);
 }
 
 internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
@@ -1201,7 +1205,7 @@ internal void render_command_buffer_output(Renderer* renderer)
 
             INVALID_DEFAULT_CASE();
         }
-    }    
+    }
 }
 
 internal void path_from_install_dir(char* path, char* dest)
@@ -1285,7 +1289,7 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
 
     renderer.poly_shader = poly_shader;
     renderer.poly_border_shader = poly_border_shader;
-    
+
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
@@ -1406,7 +1410,7 @@ void renderer_render(Renderer* renderer)
     vao_unbind();
 
     // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
-    // window dimensions if the user does not resize the viewport themselves 
+    // window dimensions if the user does not resize the viewport themselves
     renderer->viewport = rect_zero();
     memory_arena_clear(&renderer->scratch_arena);
     memory_arena_clear(&renderer->command_buffer_arena);
@@ -1625,7 +1629,7 @@ void draw_scissor_test(Renderer* renderer, rect clip)
 u32 renderer_next_tex_id(Renderer* renderer)
 {
     u32 id = 0;
-    
+
     if (renderer->tex_index <= countof(renderer->tex_ids))
     {
         id = renderer->tex_ids[renderer->tex_index].id;

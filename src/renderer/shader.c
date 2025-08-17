@@ -5,7 +5,7 @@
 #include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include <stdio.h> // File I/O
 

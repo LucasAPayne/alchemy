@@ -26,3 +26,8 @@ MemoryArena memory_arena_alloc(size bytes)
         arena.bytes = bytes;
     return arena;
 }
+
+void memory_arena_free(MemoryArena* arena)
+{
+    VirtualFreeEx(GetCurrentProcess(), arena->memory, 0, MEM_RELEASE);
+}

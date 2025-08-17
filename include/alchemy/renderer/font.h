@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alchemy/renderer/texture.h"
 #include "alchemy/util/math.h"
 #include "alchemy/util/memory.h"
 #include "alchemy/util/str.h"
@@ -11,10 +12,26 @@
 typedef struct Renderer Renderer;
 typedef struct RenderCommandText RenderCommandText;
 
+typedef struct
+{
+    u32 tex_id;
+    v2 dim;
+    v2 bearing;
+    u32 advance;
+} Glyph;
+
 // NOTE(lucas): For now, there will be a font renderer for each different font
 typedef struct Font
 {
     FT_Face face;
+    u32 px;
+    // u32 tex_array_id;
+
+    b32 loaded;
+
+    Glyph* glyph_cache;
+    // m4* transforms;
+    // int* letter_map;
 } Font;
 
 typedef struct Text
@@ -25,7 +42,8 @@ typedef struct Text
     v4 color;
 
     u32 px;
-    u32 px_width;
+    u32 px_original;
+    v2 scale;
     f32 string_width;
     f32 line_height;
 
@@ -64,7 +82,7 @@ typedef struct TextArea
     Text text;
 } TextArea;
 
-Font font_load_from_file(const char* filename);
+Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena);
 
 Text text_init(s8 string, Font* font, v2 position, u32 px);
 void text_set_size_px(Text* text, u32 px);

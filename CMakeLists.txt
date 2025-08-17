@@ -22,7 +22,6 @@ option(ALCHEMY_CONSOLE "Enable debug console" ON)
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
 set(ALCHEMY_SOURCE
-    ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
     ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
     ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
     ${PROJECT_SOURCE_DIR}/src/renderer/font.c

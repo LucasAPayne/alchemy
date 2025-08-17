@@ -3,7 +3,7 @@
 #include "alchemy/util/types.h"
 #include "alchemy/util/str.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -17,12 +17,10 @@ typedef struct Vertex {
 // NOTE(lucas): Parameter list must match nk_text_width_f
 internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* str, int len)
 {
-    f32 result = 0.0f;
-
     s8 s = (s8){(u8*)str, len};
     Font* font = (Font*)handle.ptr;
     Text text = text_init(s, font, v2_zero(), (u32)height);
-    result = text_get_width(&text);
+    f32 result = text_get_width(&text);
 
     return result;
 }
