@@ -273,19 +273,10 @@ internal RenderObject font_renderer_init(u32 shader)
         1.0f, 0.0f
     };
 
-    // u32 indices[] =
-    // {
-    //   0, 1, 3,
-    //   1, 2, 3
-    // };
-
     font_renderer.vao = vao_init();
     font_renderer.vbo = vbo_init(vertices, sizeof(vertices));
-    // font_renderer.ibo = ibo_init(indices, sizeof(indices));
 
     vertex_layout_set(0, 2, 0, 0);
-    // vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-
     vao_bind(0);
 
     return font_renderer;
@@ -413,34 +404,6 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     fbo_delete(&framebuffer->id);
 }
 
-internal void renderer_gen_texture(Texture tex)
-{
-    if (!tex.data)
-        return;
-
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-
-    // TODO(lucas): Make options configurable
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    GLenum format = 0;
-    switch(tex.channels)
-    {
-        case 1: format = GL_RED;  break;
-        case 2: format = GL_RG;   break;
-        case 3: format = GL_RGB;  break;
-        case 4: format = GL_RGBA; break;
-        default: break;
-    }
-
-    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
-    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-}
-
 internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
 
 internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
@@ -465,7 +428,7 @@ internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
         size = v2(cmd->thickness, delta.y);
 
     // TODO(lucas): The initial rotation needs to be about the starting point,
-    // white the additional rotation needs to be about the origin
+    // and the additional rotation needs to be about the origin
     RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, size, cmd->color,
                                   glm_deg(initial_rotation) + cmd->rotation};
     output_quad(renderer, &quad_cmd);
@@ -960,8 +923,6 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
 
     u32 segs = renderer->config.circle_line_segments;
-    // u32 tris = 2*segs + 14;
-    // u32 n_verts = 4*segs + 28;
     u32 tris = 4*segs;
     u32 n_verts = 24*segs;
     u32 n_indices = 3*tris;
@@ -1294,12 +1255,6 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
 
-    for (u32 i = 0; i < countof(renderer.tex_ids); ++i)
-    {
-        RenderID* tex_id = renderer.tex_ids + i;
-        glGenTextures(1, &tex_id->id);
-    }
-
     return renderer;
 }
 
@@ -1365,17 +1320,6 @@ void renderer_new_frame(Renderer* renderer, Window* window)
 
 void renderer_render(Renderer* renderer)
 {
-    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
-    {
-        RenderID* tex_id = renderer->tex_ids + i;
-        if (tex_id->used)
-        {
-            Texture tex = renderer->textures_to_generate[i];
-            renderer_gen_texture(tex);
-            glGenTextures(1, &tex_id->id);
-        }
-    }
-
     rect viewport = renderer->viewport;
 
     // TODO(lucas): Use renderer AA settings
@@ -1415,9 +1359,6 @@ void renderer_render(Renderer* renderer)
     memory_arena_clear(&renderer->scratch_arena);
     memory_arena_clear(&renderer->command_buffer_arena);
     render_command_buffer_clear(&renderer->command_buffer);
-
-    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
-        renderer->textures_to_generate[i] = (Texture){0};
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -1624,26 +1565,4 @@ void draw_scissor_test(Renderer* renderer, rect clip)
     if (!cmd)
         return;
     cmd->clip = clip;
-}
-
-u32 renderer_next_tex_id(Renderer* renderer)
-{
-    u32 id = 0;
-
-    if (renderer->tex_index <= countof(renderer->tex_ids))
-    {
-        id = renderer->tex_ids[renderer->tex_index].id;
-        renderer->tex_ids[renderer->tex_index].used = true;
-    }
-
-    return id;
-}
-
-void renderer_push_texture(Renderer* renderer, Texture tex)
-{
-    if (renderer->tex_index <= countof(renderer->tex_ids))
-    {
-        renderer->textures_to_generate[renderer->tex_index] = tex;
-        ++renderer->tex_index;
-    }
 }

@@ -24,23 +24,14 @@ Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
 
     FT_Bitmap bmp = font->face->glyph->bitmap;
 
-    // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
-    // but we need 1-byte alignment for grayscale glyph bitmaps
-    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    // new_glyph.tex = texture_generate(0);
     glGenTextures(1, &new_glyph.tex_id);
     glBindTexture(GL_TEXTURE_2D, new_glyph.tex_id);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bmp.width, bmp.rows, 0, GL_RED, GL_UNSIGNED_BYTE, bmp.buffer);
-    // TODO(lucas): Some Latin characters are giving issues, at least with my current fonts, so they are excluded for now.
-    // if (!(charcode >= 7680 && charcode <= 7935))
-    // {
-        // glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, glyph_idx, bmp.width, bmp.rows, 1, GL_RED, GL_UNSIGNED_BYTE, bmp.buffer);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     new_glyph.dim = v2((f32)bmp.width, (f32)bmp.rows);
     new_glyph.bearing = v2((f32)font->face->glyph->bitmap_left, (f32)font->face->glyph->bitmap_top);
@@ -65,6 +56,8 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
     if (FT_Set_Pixel_Sizes(font.face, 0, px))
         log_error("FreeType2 error: Failed to set pixel size");
 
+    font.has_kerning = FT_HAS_KERNING(font.face);
+
     // TODO(lucas): Store b32 has_kerning in font
 
     // TODO(lucas): font.face->num_glyphs seems to be the size of the glyph index space, rather than the
@@ -73,12 +66,6 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
     font.px = px;
     font.glyph_cache = push_array(arena, font.face->num_glyphs, Glyph);
     zero_array(font.glyph_cache, font.face->num_glyphs, Glyph);
-
-    // font.transforms = push_array(arena, MAX_CHARS_PER_DRAW, m4);
-    // font.letter_map = push_array(arena, MAX_CHARS_PER_DRAW, int);
-    // zero_array(font.letter_map, MAX_CHARS_PER_DRAW, int);
-    // for (u32 i = 0; i < MAX_CHARS_PER_DRAW; ++i)
-        // font.transforms[i] = m4_identity();
 
     return font;
 }
@@ -148,11 +135,9 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     // the font glyphs need to be cached here because the OpenGL functions must be called from the engine side.
     if (!font->loaded)
     {
+        // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
+        // but we need 1-byte alignment for grayscale glyph bitmaps
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        // glGenTextures(1, &font->tex_array_id);
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D_ARRAY, font->tex_array_id);
-        // glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8, 256, 256, font->face->num_glyphs, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
         u32 glyph_idx = 0;
         u32 charcode = FT_Get_First_Char(font->face, &glyph_idx);
@@ -166,32 +151,21 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
 
     f32 scale_y = text.scale.y;
     f32 scale_x = text.scale.x > 0.0f ? text.scale.x : scale_y;
-    // f32 scale_y = text.scale.y / 256.0f;
-    // f32 scale_x = text.scale.x > 0.0f ? text.scale.x/256.0f : scale_y;
 
     FT_Face face = font->face;
     FT_GlyphSlot glyph = face->glyph;
-    // FT_Bool use_kerning = FT_HAS_KERNING(text.font->face);
     FT_UInt glyph_index = 0;
-    // FT_UInt previous_glyph_index = 0;
+    FT_UInt previous_glyph_index = 0;
 
     shader_set_v4(renderer->font_renderer.shader, "text_color", text.color);
-    // glActiveTexture(GL_TEXTURE0);
-    // glBindTexture(GL_TEXTURE_2D_ARRAY, font->tex_array_id);
     glBindVertexArray(renderer->font_renderer.vao);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->font_renderer.vbo);
 
     f32 x = text.position.x;
     f32 y = text.position.y;
 
-    m4 transform = {0};
-
-    // u32 working_idx = 0;
     for (size i = 0; i < text.string.len; ++i)
     {
-        // if (working_idx >= MAX_CHARS_PER_DRAW - 1)
-            // break;
-
         u8* c = text.string.data + i;
 
         if ((*c == '\r') && (*(c+1) == '\n'))
@@ -200,12 +174,14 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
             y += text.line_height;
             x = text.position.x;
             ++i;
+            previous_glyph_index = 0;
             continue;
         }
         else if (*c == '\n')
         {
             y += text.line_height;
             x = text.position.x;
+            previous_glyph_index = 0;
             continue;
         }
 
@@ -216,14 +192,13 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
         glyph_index = FT_Get_Char_Index(face, charcode);
 
         // When appropriate, retrieve kerning information and advance cursor
-        // if (use_kerning && previous_glyph_index && glyph_index)
-        // {
-        //     FT_Vector delta;
-        //     FT_Get_Kerning(face, previous_glyph_index, glyph_index, FT_KERNING_DEFAULT, &delta);
-        //     x += (f32)(delta.x >> 6);
-        // }
-
-        // previous_glyph_index = glyph_index;
+        if (font->has_kerning && previous_glyph_index && glyph_index)
+        {
+            FT_Vector delta;
+            FT_Get_Kerning(face, previous_glyph_index, glyph_index, FT_KERNING_DEFAULT, &delta);
+            x += (f32)(delta.x >> 6)*scale_x;
+            previous_glyph_index = glyph_index;
+        }
 
         Glyph* g = font->glyph_cache + glyph_index;
         if (*c == ' ')
@@ -237,32 +212,18 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
         f32 w = g->dim.x*scale_x;
         f32 h = g->dim.y*scale_y;
 
-        transform = m4_translate(m4_identity(), v3(x2, y2, 0.0f));
+        m4 transform = transform = m4_translate(m4_identity(), v3(x2, y2, 0.0f));
         transform = m4_scale(transform, v3(w, h , 0.0f));
         shader_set_m4(renderer->font_renderer.shader, "transform", transform, false);
         texture_bind_id(g->tex_id, 0);
         glBindBuffer(GL_ARRAY_BUFFER, renderer->font_renderer.vbo);
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1);
 
-        // m4 m = m4_identity();
-        // m = m4_translate(m, v3(x2, y2, 0.0f));
-        // m = m4_scale(m, v3(w, h, 0.0f));
-        // font->transforms[working_idx] = m;
-        // font->letter_map[working_idx] = glyph_index;
-
         x += (g->advance >> 6)*scale_x;
-
-        // ++working_idx;
     }
-
-    // shader_bind(renderer->font_renderer.shader);
-    // glUniformMatrix4fv(glGetUniformLocation(renderer->font_renderer.shader, "transforms"), working_idx, GL_FALSE, (const f32*)font->transforms);
-    // glUniform1iv(glGetUniformLocation(renderer->font_renderer.shader, "letter_map"), working_idx, font->letter_map);
-    // glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, working_idx);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-    // glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 

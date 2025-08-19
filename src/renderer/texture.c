@@ -185,6 +185,27 @@ Texture texture_generate(int samples)
     return texture;
 }
 
+void texture_upload(Texture tex)
+{
+    if (!tex.data)
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    GLenum format = 0;
+    switch(tex.channels)
+    {
+        case 1: format = GL_RED;  break;
+        case 2: format = GL_RG;   break;
+        case 3: format = GL_RGB;  break;
+        case 4: format = GL_RGBA; break;
+        default: break;
+    }
+
+    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
+}
+
 void texture_fill_empty_data(Texture* texture, int width, int height, int samples)
 {
     texture_bind(texture, samples);
@@ -206,7 +227,7 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
     file_read(file, &signature, sizeof(signature));
     b32 is_bmp = (signature == 0x4D42);
 
-    Texture tex = {0};
+    Texture tex = texture_generate(0);
     if (is_bmp)
     {
         file_seek(file, 0, FileSeek_Begin);
@@ -221,21 +242,19 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
         tex = load_any_texture_from_file(filename);
     }
     ASSERT(tex.data, "Failed to load texture");
+    texture_upload(tex);
 
-    tex.id = renderer_next_tex_id(renderer);
-    renderer_push_texture(renderer, tex);
     return tex;
 }
 
 Texture texture_load_from_memory(Renderer* renderer, int width, int height, int channels, ubyte* memory)
 {
-    Texture tex = {0};
-    tex.id = renderer_next_tex_id(renderer);
+    Texture tex = texture_generate(0);
     tex.data = memory;
     tex.size = v2((f32)width, (f32)height);
     tex.channels = channels;
+    texture_upload(tex);
 
-    renderer_push_texture(renderer, tex);
     return tex;
 }
 

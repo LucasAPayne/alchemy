@@ -269,10 +269,6 @@ typedef struct Renderer
     RendererConfig config;
     MemoryArena command_buffer_arena;
     MemoryArena scratch_arena;
-
-    RenderID tex_ids[1024];
-    Texture textures_to_generate[1024];
-    u32 tex_index;
 } Renderer;
 
 void opengl_init(Window* window);
@@ -316,9 +312,6 @@ void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
 
 void draw_scissor_test(Renderer* renderer, rect clip);
-
-u32 renderer_next_tex_id(Renderer* renderer);
-void renderer_push_texture(Renderer* renderer, Texture texture);
 
 inline v4 color_red(void)         {return (v4){1.0f, 0.0f, 0.0f, 1.0f};}
 inline v4 color_green(void)       {return (v4){0.0f, 1.0f, 0.0f, 1.0f};}

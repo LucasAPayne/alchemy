@@ -25,13 +25,9 @@ typedef struct Font
 {
     FT_Face face;
     u32 px;
-    // u32 tex_array_id;
-
     b32 loaded;
-
+    b32 has_kerning;
     Glyph* glyph_cache;
-    // m4* transforms;
-    // int* letter_map;
 } Font;
 
 typedef struct Text
