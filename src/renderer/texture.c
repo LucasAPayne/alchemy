@@ -42,9 +42,51 @@ typedef struct BitmapHeader
 } BitmapHeader;
 #pragma pack(pop)
 
+Texture texture_generate(int samples)
+{
+    GLenum target = (samples > 0) ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+
+    // Generate texture
+    Texture texture = {0};
+    glGenTextures(1, &texture.id);
+    glBindTexture(target, texture.id);
+
+    // Texture options
+    if (samples <= 0)
+    {
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+
+    return texture;
+}
+
+internal void texture_upload(Texture tex)
+{
+    if (!tex.data)
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    GLenum format = 0;
+    switch(tex.channels)
+    {
+        case 1: format = GL_RED;  break;
+        case 2: format = GL_RG;   break;
+        case 3: format = GL_RGB;  break;
+        case 4: format = GL_RGBA; break;
+        default: break;
+    }
+
+    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
+}
+
 Texture load_bmp_from_memory(u8* data, size data_size)
 {
-    Texture tex = {0};
+    Texture tex = texture_generate(0);
     if (data_size)
     {
         BitmapHeader* header = (BitmapHeader*)data;
@@ -135,6 +177,7 @@ Texture load_bmp_from_memory(u8* data, size data_size)
     }
 
     ASSERT(tex.data, "Failed to load texture");
+    texture_upload(tex);
     return tex;
 }
 
@@ -162,48 +205,6 @@ Texture load_any_texture_from_file(const char* filename)
     tex.size = v2((f32)size_x, (f32)size_y);
 
     return tex;
-}
-
-Texture texture_generate(int samples)
-{
-    GLenum target = (samples > 0) ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-
-    // Generate texture
-    Texture texture = {0};
-    glGenTextures(1, &texture.id);
-    glBindTexture(target, texture.id);
-
-    // Texture options
-    if (samples <= 0)
-    {
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    }
-
-    return texture;
-}
-
-void texture_upload(Texture tex)
-{
-    if (!tex.data)
-        return;
-
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-
-    GLenum format = 0;
-    switch(tex.channels)
-    {
-        case 1: format = GL_RED;  break;
-        case 2: format = GL_RG;   break;
-        case 3: format = GL_RGB;  break;
-        case 4: format = GL_RGBA; break;
-        default: break;
-    }
-
-    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
-    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
 }
 
 void texture_fill_empty_data(Texture* texture, int width, int height, int samples)

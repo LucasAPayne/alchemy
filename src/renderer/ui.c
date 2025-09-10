@@ -148,13 +148,12 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
             } break;
 
             // TODO(lucas): This command has width and height, so it probably expects more of an ellipse
-            // TODO(lucas): Verify center
             case NK_COMMAND_CIRCLE:
             {
                 const struct nk_command_circle* c = (const struct nk_command_circle*)cmd;
                 v4 color = nk_color_to_v4(c->color);
                 v2 center = {(f32)c->x + (f32)c->w/2.0f, (f32)c->y + (f32)c->h/2.0f};
-                draw_circle_outline(renderer, center, c->w, color, (f32)c->line_thickness);
+                draw_circle_outline(renderer, center, c->w/2.0f, color, (f32)c->line_thickness);
             } break;
 
             case NK_COMMAND_CIRCLE_FILLED:
@@ -162,7 +161,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 const struct nk_command_circle_filled* c = (const struct nk_command_circle_filled*)cmd;
                 v4 color = nk_color_to_v4(c->color);
                 v2 center = {(f32)c->x + (f32)c->w/2.0f, (f32)c->y + (f32)c->h/2.0f};
-                draw_circle(renderer, center, c->w, color);
+                draw_circle(renderer, center, c->w/2.0f, color);
             } break;
 
             // TODO(lucas): Verify angles
@@ -297,6 +296,9 @@ void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* ar
     renderer->ui_state = state;
 }
 
+// TODO(lucas): Keys should be able to repeat (needs to be handled in win32_input.c)
+// TODO(lucas): Allow key combos like Ctrl+Backspace to delete to the next word/separator
+// TODO(lucas): In some contexts, it seems annoying and unresponsive to wait for the double click time
 void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
 {
     UIState* state = &renderer->ui_state;
