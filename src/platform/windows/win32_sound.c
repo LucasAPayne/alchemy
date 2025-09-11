@@ -10,6 +10,7 @@ typedef struct XAudio2State
     b32 initialized;
     IXAudio2* xaudio2;
     IXAudio2MasteringVoice* master_voice;
+    IXAudio2SourceVoice* source_voice;
 } XAudio2State;
 
 // Little-Endian
@@ -154,7 +155,6 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-// TODO(lucas): IMPORTANT(lucas): Looks like there is a memory leak in or around this function.
 void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
 {
     persist XAudio2State xaudio2_state = {0};
@@ -206,24 +206,33 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     buffer.pAudioData = data_buffer;
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source voice not to expect data after this buffer
 
-    IXAudio2SourceVoice* source_voice;
-    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0,
-                                          XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
+    // IXAudio2SourceVoice* source_voice;
+    if (!xaudio2_state.source_voice)
     {
-        log_error("IXAudio2_CreateSourceVoice() failed");
+        if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &xaudio2_state.source_voice, (WAVEFORMATEX*)&wave, 0,
+            XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
+        {
+            log_error("IXAudio2_CreateSourceVoice() failed");
+        }
     }
 
-    if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(source_voice, &buffer, NULL)))
-        log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
+    if (sound_output->volume > 1.0f)
+        sound_output->volume = 1.0f;
+    if (sound_output->volume < 0.0f)
+        sound_output->volume = 0.0f;
+    if (FAILED(IXAudio2SourceVoice_SetVolume(xaudio2_state.source_voice, sound_output->volume, 0)))
+        log_error("IXAudio2SourceVoice_SetVolume() failed");
+
+
 
     if (sound_output->should_play)
     {
-        if (FAILED(IXAudio2SourceVoice_Start(source_voice, 0, XAUDIO2_COMMIT_NOW)))
-            log_error("IXAudio2SourceVoice_Start() failed");
+    if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(xaudio2_state.source_voice, &buffer, NULL)))
+        log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
     }
-
-    if (FAILED(IXAudio2SourceVoice_SetVolume(source_voice, sound_output->volume, 0)))
-        log_error("IXAudio2SourceVoice_SetVolume() failed");
+        if (FAILED(IXAudio2SourceVoice_Start(xaudio2_state.source_voice, 0, XAUDIO2_COMMIT_NOW)))
+            log_error("IXAudio2SourceVoice_Start() failed");
+    // }
 
     CloseHandle(sound_file);
 }
