@@ -33,7 +33,7 @@ inline f32 clamp_f32(f32 value, f32 min, f32 max)
         result = min;
     else if (value > max)
         result = max;
-    
+
     return result;
 }
 
@@ -455,7 +455,7 @@ inline b32 rect_point_in_bounds(rect bounds, v2 test)
 
     b32 result = ((test.x >= min.x) &&
                   (test.y >= min.y) &&
-                  (test.x <  max.x) && 
+                  (test.x <  max.x) &&
                   (test.y <  max.y));
 
     return result;

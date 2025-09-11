@@ -93,11 +93,11 @@ internal b32 find_chunk(HANDLE file, DWORD fourcc, DWORD* chunk_size, DWORD* chu
         // The first 4 bytes (characters) are the chunk type (e.g., RIFF)
         if (ReadFile(file, &chunk_type, sizeof(DWORD), &read, NULL) == 0)
             hr = HRESULT_FROM_WIN32(GetLastError());
-        
+
         // The next 4 bytes give the size of the data in the file
         if (ReadFile(file, &chunk_data_size, sizeof(DWORD), &read, NULL) == 0)
             hr = HRESULT_FROM_WIN32(GetLastError());
-        
+
         switch(chunk_type)
         {
             case FOURCC_RIFF:
@@ -181,7 +181,7 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     DWORD chunk_size;
     DWORD chunk_pos;
     DWORD file_type;
-    
+
     // Find the "RIFF" chunk and determine file type
     find_chunk(sound_file, FOURCC_RIFF, &chunk_size, &chunk_pos);
     read_chunk_data(sound_file, &file_type, sizeof(DWORD), chunk_pos);
@@ -192,7 +192,7 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
         log_error("Unsupported file type for sound file");
         return;
     }
-    
+
     // Locate "fmt" chunk and copy contents into wave struct
     find_chunk(sound_file, FOURCC_FMT, &chunk_size, &chunk_pos);
     read_chunk_data(sound_file, &wave, chunk_size, chunk_pos);
@@ -205,14 +205,14 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     buffer.AudioBytes = chunk_size;
     buffer.pAudioData = data_buffer;
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source voice not to expect data after this buffer
-    
+
     IXAudio2SourceVoice* source_voice;
     if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0,
                                           XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
     {
         log_error("IXAudio2_CreateSourceVoice() failed");
     }
-    
+
     if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(source_voice, &buffer, NULL)))
         log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
 

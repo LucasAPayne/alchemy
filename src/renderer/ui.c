@@ -67,7 +67,7 @@ void ui_draw_text_area(Renderer* renderer, TextArea* text_area, v2 offset)
     ui_text_area->renderer = renderer;
     ui_text_area->text_area = text_area;
 
-    struct nk_context* ctx = &renderer->ui_state.ctx; 
+    struct nk_context* ctx = &renderer->ui_state.ctx;
     struct nk_command_buffer* out = nk_window_get_canvas(ctx);
     struct nk_rect bounds = nk_rect(text_area->bounds.x + offset.x, text_area->bounds.y + offset.y,
                                     text_area->bounds.width, text_area->bounds.height);

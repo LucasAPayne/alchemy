@@ -19,7 +19,7 @@ internal void win32_toggle_fullscreen(HWND window)
     if (style & WS_OVERLAPPEDWINDOW)
     {
         MONITORINFO monitor_info = {sizeof(monitor_info)};
-        if (GetWindowPlacement(window, &global_window_position_prev) && 
+        if (GetWindowPlacement(window, &global_window_position_prev) &&
             GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor_info))
         {
             /* NOTE(lucas): Make sure there are no styles that could potentially cause aritfacts, borders, etc.
@@ -62,12 +62,12 @@ internal UINT map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam
      * For example, VK_LSHIFT and VK_RSHIFT are just converted to VK_SHIFT, which is true if either shift key is
      * pressed.
      * This function converts generic virtual-key codes to specific left and right ones.
-     */ 
+     */
     UINT vk = LOWORD(wparam); // virtual-key code
     WORD key_flags = HIWORD(lparam);
     UINT scan_code = LOBYTE(key_flags); // scancode
     BOOL extended = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
-    
+
     if (extended)
         scan_code = MAKEWORD(scan_code, 0xE0);
 
@@ -184,7 +184,7 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 // Could just grab the value of the bit, but comparison forces result to be bool
                 b32 was_down = (msg.lParam & (1 << 30)) != 0; // 30th bit is previous state (1 for down, 0 for up)
                 b32 is_down = (msg.lParam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
-               
+
                 // Disregard key repeats
                 // if (was_down == is_down)
                 //     break;
@@ -379,13 +379,13 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 ReleaseCapture();
                 win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0);
             } break;
-            
-            case WM_MBUTTONUP:     
+
+            case WM_MBUTTONUP:
             {
                 ReleaseCapture();
                 win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0);
             } break;
-            
+
             case WM_RBUTTONUP:
             {
                 ReleaseCapture();
@@ -466,7 +466,7 @@ void cursor_set_from_memory(void* cursor)
 internal void win32_xinput_button_release(ButtonState* button)
 {
     button->released = true;
-    button->pressed  = false; 
+    button->pressed  = false;
 }
 
 internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* gamepad)
@@ -561,7 +561,7 @@ internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* 
             case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright);   break;
             case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft);  break;
             case VK_PAD_RTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->right_stick_downright); break;
-            
+
             default: break;
         }
     }
@@ -584,7 +584,7 @@ internal f32 win32_process_xinput_stick(SHORT xinput_stick_value, SHORT deadzone
     {
         if (xinput_stick_value < SHRT_MIN)
             xinput_stick_value = SHRT_MIN;
-        
+
         xinput_stick_value += deadzone;
         result = (f32)xinput_stick_value / (f32)(SHRT_MAX - deadzone);
     }
@@ -644,17 +644,17 @@ void win32_xinput_gamepad_process_input(Input* input)
                     gamepad->is_connected = false;
                     log_info("Gamepad %d disconnected", i);
                 }
-            } break; 
+            } break;
             case ERROR_SUCCESS:
             {
                 win32_process_xinput_buttons(keystroke, gamepad);
-            } break;    
+            } break;
             default: break;
         }
 
         // Sticks
         XINPUT_GAMEPAD xinput_gamepad = controller_state.Gamepad;
-        gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX, 
+        gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->left_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbLY,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);

@@ -32,7 +32,7 @@ int main(void)
 
     Window* window = window_create("Snake", initial_window_width, initial_window_height);
     window_set_min_size(window, initial_window_width, initial_window_height);
-    
+
     void* potion_icon = window_icon_load_from_file("icons/potion.ico");
     window_icon_set_from_memory(window, potion_icon);
 

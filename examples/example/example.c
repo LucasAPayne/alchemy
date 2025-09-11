@@ -6,9 +6,11 @@
 
 #include "ui_overview.h"
 
+#include <glad/gl.h>
+
 #include <stdlib.h> // rand
 
-internal void bounce_dvd(ExampleState* state, f32* direction)
+internal void bounce_logo(ExampleState* state, f32* direction)
 {
     // Bounce off screen boundary
     *direction *= -1.0f;
@@ -21,7 +23,7 @@ internal void bounce_dvd(ExampleState* state, f32* direction)
     state->last_color_index = color_index;
 }
 
-internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
+internal void update_logo(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
     rect window_bounds = rect_min_max(v2_zero(), v2((f32)(window_width - state->logo.size.x),
@@ -32,9 +34,9 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
     v2 min = window_bounds.position;
     v2 max = v2_add(min, window_bounds.size);
     if ((state->logo.position.x > max.x) || (state->logo.position.x < min.x))
-        bounce_dvd(state, &state->logo_direction.x);
+        bounce_logo(state, &state->logo_direction.x);
     if ((state->logo.position.y > max.y) || (state->logo.position.y < min.y))
-        bounce_dvd(state, &state->logo_direction.y);
+        bounce_logo(state, &state->logo_direction.y);
 
     state->logo.position = v2_clamp_to_rect(state->logo.position, window_bounds);
 }
@@ -103,18 +105,21 @@ internal void update_player(ExampleState* state, Input* input, f32 delta_time, u
 
 internal void example_state_init(ExampleState* state, GameMemory* memory, Input* input, Renderer* renderer, Window* window)
 {
+    gladLoaderLoadGL();
+
     srand(0);
 
+    void* permanent_base = (void*)((u8*)memory->permanent_storage + sizeof(ExampleState));
+    state->permanent_arena = memory_arena_init_from_base(permanent_base, memory->permanent_storage_bytes - sizeof(ExampleState));
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_bytes);
-    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_bytes);
 
-    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
-    state->immortal_font = font_load_from_file("fonts/immortal.ttf");
-    state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
+    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena);
+    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena);
+    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena);
 
-    state->logo_tex = texture_load_from_file("textures/dvd.png", renderer, &state->permanent_arena);
+    state->logo_tex = texture_load_from_file("textures/potion.png", renderer, &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);
-    state->logo.size = v2(300.0f, 150.0f);
+    state->logo.size = v2(150.0f, 150.0f);
     state->logo.position = v2_zero();
     state->logo_direction = v2(1.0f, -1.0f);
 
@@ -169,7 +174,7 @@ UPDATE_AND_RENDER(update_and_render)
     stopwatch_update(&state->stopwatch, delta_time);
     Gamepad* gamepad = &input->gamepads[0];
     Keyboard* keyboard = &input->keyboard;
-    update_dvd(state, delta_time, window->width, window->height);
+    update_logo(state, delta_time, window->width, window->height);
     update_player(state, input, delta_time, window->width, window->height);
 
     if (key_pressed(keyboard, KEY_LBRACKET))
@@ -257,9 +262,10 @@ UPDATE_AND_RENDER(update_and_render)
     rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    s8 str = s8("●If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
-                "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "the Duel.");
+    s8 str = s8("●Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
+                "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+                "aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse "
+                "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa.");
 
     TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();

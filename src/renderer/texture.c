@@ -197,7 +197,7 @@ Texture load_any_texture_from_file(const char* filename)
 {
     stbi_set_flip_vertically_on_load(true);
 
-    Texture tex = {0};
+    Texture tex = texture_generate(0);
 
     // Load image for texture
     int size_x, size_y;
@@ -228,7 +228,7 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
     file_read(file, &signature, sizeof(signature));
     b32 is_bmp = (signature == 0x4D42);
 
-    Texture tex = texture_generate(0);
+    Texture tex = {0};
     if (is_bmp)
     {
         file_seek(file, 0, FileSeek_Begin);
@@ -278,6 +278,7 @@ void texture_unbind(int samples)
     glBindTexture(target, 0);
 }
 
+// TODO(lucas): This is only valid for non-BMP textures
 void texture_delete(Texture* tex)
 {
     glDeleteTextures(1, &tex->id);

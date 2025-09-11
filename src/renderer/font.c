@@ -56,14 +56,11 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
     if (FT_Set_Pixel_Sizes(font.face, 0, px))
         log_error("FreeType2 error: Failed to set pixel size");
 
-    font.has_kerning = FT_HAS_KERNING(font.face);
-
-    // TODO(lucas): Store b32 has_kerning in font
-
     // TODO(lucas): font.face->num_glyphs seems to be the size of the glyph index space, rather than the
     // number of supported glyphs in the font. This works for now because the glyph index is used as a direct index.
     // However, depending on the font, the glyph cache could become pretty sparse.
     font.px = px;
+    font.has_kerning = FT_HAS_KERNING(font.face);
     font.glyph_cache = push_array(arena, font.face->num_glyphs, Glyph);
     zero_array(font.glyph_cache, font.face->num_glyphs, Glyph);
 

@@ -215,7 +215,7 @@ i64 file_seek(void* file_handle, i64 byte_offset, FileSeekMethod seek_method)
     {
         case FileSeek_Begin:   method = FILE_BEGIN;   break;
         case FileSeek_Current: method = FILE_CURRENT; break;
-        case FileSeek_End:     method = FILE_END;     break; 
+        case FileSeek_End:     method = FILE_END;     break;
         default: log_error("Invalid file seek method: %d", seek_method); break;
     }
 

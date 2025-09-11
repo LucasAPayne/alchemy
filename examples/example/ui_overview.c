@@ -159,7 +159,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
                 }
                 else
                     menu_state = (menu_state == MENU_CHART) ? MENU_NONE: menu_state;
-                
+
                 nk_menu_end(ctx);
             }
             /* menu widgets */
@@ -637,7 +637,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
                 // if (nk_widget_is_hovered(ctx))
                 //     cursor_set_from_system(CURSOR_TEXT);
                 nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_default);
-                
+
                 nk_label(ctx, "Int:", NK_TEXT_LEFT);
                 nk_edit_string(ctx, NK_EDIT_SIMPLE, text[1], &text_len[1], 64, nk_filter_decimal);
                 nk_label(ctx, "Float:", NK_TEXT_LEFT);
@@ -668,7 +668,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
                 nk_edit_string(ctx, NK_EDIT_BOX, box_buffer, &box_len, 512, nk_filter_default);
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
-                active = nk_edit_string(ctx, NK_EDIT_FIELD|NK_EDIT_SIG_ENTER, text[7], &text_len[7], 64,  nk_filter_ascii);
+                active = nk_edit_string(ctx, NK_EDIT_FIELD, text[7], &text_len[7], 64,  nk_filter_ascii);
                 if (nk_button_label(ctx, "Submit") ||
                     (active & NK_EDIT_COMMITED))
                 {
@@ -1442,7 +1442,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
         if (nk_tree_push(ctx, NK_TREE_TAB, "Shapes", NK_MINIMIZED))
         {
             nk_layout_row_dynamic(ctx, 200, 1);
-            
+
             struct nk_command_buffer* out = nk_window_get_canvas(ctx);
             struct nk_rect space;
             nk_widget(&space, ctx);
