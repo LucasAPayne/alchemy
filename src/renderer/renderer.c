@@ -161,8 +161,7 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
+    vao_unbind();
 
     return framebuffer_renderer;
 }
@@ -200,8 +199,7 @@ internal RenderObject sprite_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
+    vao_unbind();
 
     return sprite_renderer;
 }
@@ -222,8 +220,7 @@ internal RenderObject triangle_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
+    vao_unbind();
 
     return triangle_renderer;
 }
@@ -254,10 +251,25 @@ internal RenderObject quad_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
+    vao_unbind();
 
     return quad_renderer;
+}
+
+internal RenderObject circle_renderer_init(u32 shader, u32 segs)
+{
+    RenderObject circle_renderer = {0};
+    circle_renderer.shader = shader;
+    circle_renderer.vao = vao_init();
+
+    circle_renderer.vbo = vbo_init_empty();
+    circle_renderer.ibo = ibo_init_empty();
+
+    vertex_layout_set(0, 2, 6*sizeof(f32), 0);
+    vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
+    vao_unbind();
+
+    return circle_renderer;
 }
 
 internal RenderObject font_renderer_init(u32 shader)
@@ -277,25 +289,9 @@ internal RenderObject font_renderer_init(u32 shader)
     font_renderer.vbo = vbo_init(vertices, sizeof(vertices));
 
     vertex_layout_set(0, 2, 0, 0);
-    vao_bind(0);
+    vao_unbind();
 
     return font_renderer;
-}
-
-internal RenderObject circle_renderer_init(u32 shader, u32 segs)
-{
-    RenderObject circle_renderer = {0};
-    circle_renderer.shader = shader;
-    circle_renderer.vao = vao_init();
-
-    circle_renderer.vbo = vbo_init_empty();
-    circle_renderer.ibo = ibo_init_empty();
-
-    vertex_layout_set(0, 2, 6*sizeof(f32), 0);
-    vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
-    vao_bind(0);
-
-    return circle_renderer;
 }
 
 internal void render_object_delete(RenderObject* render_object)
@@ -493,7 +489,7 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     shader_set_v4(renderer->triangle_renderer.shader, "color", cmd->color);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
@@ -604,7 +600,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
@@ -627,7 +623,7 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 
     vao_bind(renderer->quad_renderer.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
@@ -694,7 +690,7 @@ internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
@@ -746,7 +742,7 @@ internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
@@ -826,7 +822,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
@@ -899,7 +895,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
@@ -997,7 +993,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 
     // NOTE(lucas): Draw cap lines
     // TODO(lucas): Figure out how to properly include cap lines directly in vertex data?
@@ -1232,6 +1228,10 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
     path_from_install_dir("/res/shaders/ui.vs", ui_vert_shader_full_path);
     path_from_install_dir("/res/shaders/ui.fs", ui_frag_shader_full_path);
     path_from_install_dir("/res/shaders/border.fs", border_frag_shader_full_path);
+
+    // TODO(lucas): Seems to silence a warning of the polygon shader. Look into this more deeply.
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
     u32 framebuffer_shader = shader_init(&renderer, framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
     u32 poly_shader        = shader_init(&renderer, poly_vert_shader_full_path, poly_frag_shader_full_path);

@@ -78,6 +78,12 @@ add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 target_compile_definitions(alchemy PRIVATE
                            ALCHEMY_INSTALL_PATH="${CMAKE_CURRENT_LIST_DIR}"
                            CMAKE_EXPORT_COMPILE_COMMANDS=1)
+
+# NOTE(lucas): For some reason, CMake insists on trying to set /RTC1 on Release builds,
+# which of course doesn't work. So just remove any RTC variation
+STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+
 if(MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
     target_compile_definitions(alchemy PUBLIC VC_EXTRALEAN WIN32_LEAN_AND_MEAN NOMINMAX)

@@ -18,25 +18,17 @@ internal void win32_toggle_fullscreen(HWND window)
     DWORD style = GetWindowLongA(window, GWL_STYLE);
     if (style & WS_OVERLAPPEDWINDOW)
     {
-        MONITORINFO monitor_info = {sizeof(monitor_info)};
+        MONITORINFO mi = {sizeof(mi)};
         if (GetWindowPlacement(window, &global_window_position_prev) &&
-            GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor_info))
+            GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &mi))
         {
-            /* NOTE(lucas): Make sure there are no styles that could potentially cause aritfacts, borders, etc.
-             * in fullscreen mode.
-             * In my case, one of the extended border styles was adding a 2 pixel white border
-             * around the whole screen.
-             */
-            style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-            DWORD ex_style = GetWindowLong(window, GWL_EXSTYLE);
-            ex_style &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-            SetWindowLongA(window, GWL_EXSTYLE, ex_style);
-
+            // TODO(lucas): Prevent window from immediately redrawing with each of these calls, which gives an
+            // odd appearance until the next time SwapBuffers is called.
             SetWindowLongA(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
             SetWindowPos(window, HWND_TOP,
-                         monitor_info.rcMonitor.left, monitor_info.rcMonitor.top,
-                         monitor_info.rcMonitor.right - monitor_info.rcMonitor.left,
-                         monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top,
+                         mi.rcMonitor.left, mi.rcMonitor.top,
+                         mi.rcMonitor.right - mi.rcMonitor.left,
+                         mi.rcMonitor.bottom - mi.rcMonitor.top,
                          SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         }
     }
@@ -317,14 +309,17 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                     if ((virtual_key_code == VK_F4) && alt_key_down)
                         PostQuitMessage(0);
 
-                    // NOTE(lucas): Fullscreen key set to F11 for now,
-                    // but probably want ot make this configurable in the future
-                    // Also want to allow key combos like ALT+ENTER
+                    // TODO(lucas): Make fullscreen key/combo configurable
                     if (virtual_key_code == VK_F11)
                     {
                         if (msg.hwnd)
                             win32_toggle_fullscreen(msg.hwnd);
+
+                        return;
                     }
+                    // TODO(lucas): At least for now, Alt+Enter is disabled to prevent the chime from playing
+                    if ((virtual_key_code == VK_RETURN) && alt_key_down)
+                        return;
                 }
 
                 TranslateMessage(&msg);

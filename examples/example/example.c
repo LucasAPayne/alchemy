@@ -266,6 +266,10 @@ UPDATE_AND_RENDER(update_and_render)
                 "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
                 "aliquip ex ea commodo consequat.");
 
+    // s8 str = s8("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
+    //             "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+    //             "aliquip ex ea commodo consequat.");
+
     TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;

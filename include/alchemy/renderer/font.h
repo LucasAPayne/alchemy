@@ -20,7 +20,6 @@ typedef struct
     u32 advance;
 } Glyph;
 
-// NOTE(lucas): For now, there will be a font renderer for each different font
 typedef struct Font
 {
     FT_Face face;
@@ -37,11 +36,13 @@ typedef struct Text
     v2 position;
     v4 color;
 
-    u32 px;
-    u32 px_original;
+    f32 px;
+    f32 px_original;
     v2 scale;
     f32 string_width;
     f32 line_height;
+
+    f32 extra_width_per_space;
 
     s8 string;
 } Text;
@@ -80,15 +81,15 @@ typedef struct TextArea
 
 Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena);
 
-Text text_init(s8 string, Font* font, v2 position, u32 px);
-void text_set_size_px(Text* text, u32 px);
+Text text_init(s8 string, Font* font, v2 position, f32 px);
+void text_set_size_px(Text* text, f32 px);
 void text_scale(Text* text, f32 factor);
 
 f32 text_get_width(Text* text);
 
 void output_text(Renderer* renderer, RenderCommandText* cmd);
 
-TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, u32 text_size_px);
+TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, f32 text_size_px);
 void text_area_scale(TextArea* text_area, f32 factor);
 
 void draw_text_area(Renderer* renderer, TextArea* text_area);

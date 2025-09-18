@@ -19,7 +19,7 @@ internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const 
 {
     s8 s = (s8){(u8*)str, len};
     Font* font = (Font*)handle.ptr;
-    Text text = text_init(s, font, v2_zero(), (u32)height);
+    Text text = text_init(s, font, v2_zero(), height);
     f32 result = text_get_width(&text);
 
     return result;
@@ -214,7 +214,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 Font* font = (Font*)t->font->userdata.ptr;
                 v2 pos = {(f32)t->x, (f32)t->y + (f32)t->font->height*0.75f};
                 s8 s = {(u8*)t->string, (size)str_len(t->string)};
-                Text text = text_init(s, font, pos, (u32)t->font->height);
+                Text text = text_init(s, font, pos, t->font->height);
                 text.color = color;
                 draw_text(renderer, text);
             } break;

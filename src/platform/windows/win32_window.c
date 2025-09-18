@@ -151,23 +151,24 @@ Window* window_create(const char* title, int width, int height)
     window_class.hCursor = LoadCursorA(NULL, IDC_ARROW);
 
     if (global_window_icon == NULL)
-    {
         global_window_icon = LoadIconA(0, IDI_APPLICATION);
-    }
+
     window_class.hIcon = global_window_icon;
     window_class.hIconSm = global_window_icon;
+
+    RECT initial_window_rect = {0, 0, width, height};
+    AdjustWindowRectEx(&initial_window_rect, WS_VISIBLE|WS_CAPTION, 0, 0);
+    // AdjustWindowRectEx(&initial_window_rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_OVERLAPPEDWINDOW);
 
     if(!RegisterClassExA(&window_class))
         win32_error_callback();
 
-    RECT initial_window_rect = {0, 0, width, height};
-    AdjustWindowRectEx(&initial_window_rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_OVERLAPPEDWINDOW);
     LONG initial_window_width = initial_window_rect.right - initial_window_rect.left;
     LONG initial_window_height = initial_window_rect.bottom - initial_window_rect.top;
 
-    HWND hwnd = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW, window_class.lpszClassName, title,
+    HWND hwnd = CreateWindowExA(0, window_class.lpszClassName, title,
                                 WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
-                                initial_window_width,  initial_window_height, 0, 0, instance, 0);
+                                initial_window_width, initial_window_height, 0, 0, instance, 0);
 
     if(!hwnd)
         win32_error_callback();

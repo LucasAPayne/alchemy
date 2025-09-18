@@ -88,10 +88,10 @@ internal inline void utf8_from_codepoint(u8* c, u32 codepoint)
     }
 }
 
-internal inline void s8_iter_move(s8_iter* it, size amount)
+internal inline void s8_iter_move(s8_iter* it, size bytes)
 {
-    it->at += amount;
-    it->idx += amount;
+    it->at += bytes;
+    it->idx += bytes;
 }
 
 // TODO(lucas): This should not set the length of the string
@@ -141,6 +141,15 @@ internal inline s8 s8_format(MemoryArena* arena, const char* format, ...)
     va_start(args, format);
     vsnprintf((char*)result.data, len+1, format, args);
     va_end(args);
+
+    return result;
+}
+
+internal inline s8 s8_slice(s8 s, size begin, size end)
+{
+    s8 result = {0};
+    result.data = s.data + begin;
+    result.len = end - begin + 1;
 
     return result;
 }
