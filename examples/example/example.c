@@ -113,9 +113,9 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->permanent_arena = memory_arena_init_from_base(permanent_base, memory->permanent_storage_bytes - sizeof(ExampleState));
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_bytes);
 
-    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena);
-    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena);
-    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena);
+    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena, false);
+    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena, false);
+    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena, false);
 
     state->logo_tex = texture_load_from_file("textures/potion.png", renderer, &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);
@@ -259,22 +259,26 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
+    // rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
+    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(200.0f, 80.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    s8 str = s8("●Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
-                "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
-                "aliquip ex ea commodo consequat.");
-
-    // s8 str = s8("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
+    // s8 str = s8("●Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
     //             "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
     //             "aliquip ex ea commodo consequat.");
 
+    // TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    // text_area.text.color = color_black();
+    // text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
+    // text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
+    // text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
+    // draw_text_area(renderer, &text_area);
+
+    s8 str = s8("Blue-Eyes White Dragon");
     TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();
-    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
-    text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
+    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_LEFT;
+    text_area.vert_alignment = TEXT_ALIGN_VERT_BOTTOM;
     draw_text_area(renderer, &text_area);
 
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);

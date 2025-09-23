@@ -24,8 +24,9 @@ typedef struct Font
 {
     FT_Face face;
     u32 px;
-    b32 loaded;
     b32 has_kerning;
+    b32 small_caps;
+    f32 ascender;
     Glyph* glyph_cache;
 } Font;
 
@@ -42,7 +43,7 @@ typedef struct Text
     f32 string_width;
     f32 line_height;
 
-    f32 extra_width_per_space;
+    f32 extra_width_per_space; // For horizontal justification
 
     s8 string;
 } Text;
@@ -79,7 +80,7 @@ typedef struct TextArea
     Text text;
 } TextArea;
 
-Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena);
+Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena, b32 small_caps);
 
 Text text_init(s8 string, Font* font, v2 position, f32 px);
 void text_set_size_px(Text* text, f32 px);
