@@ -5,6 +5,7 @@
 
 #include <math.h>
 
+#define rect(x, y, w, h) (rect){(x), (y), (w), (h)}
 typedef struct rect
 {
     union

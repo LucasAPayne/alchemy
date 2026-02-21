@@ -145,11 +145,19 @@ internal inline s8 s8_format(MemoryArena* arena, const char* format, ...)
     return result;
 }
 
+// Get a slice of a string from [begin, end)
 internal inline s8 s8_slice(s8 s, size begin, size end)
 {
     s8 result = {0};
-    result.data = s.data + begin;
-    result.len = end - begin + 1;
+
+    if (begin <= end && begin < s.len)
+    {
+        if (end > s.len)
+            end = s.len;
+
+        result.data = s.data + begin;
+        result.len = end - begin;
+    }
 
     return result;
 }
@@ -160,7 +168,7 @@ internal inline s8 s8_copyn(s8 src, size len, MemoryArena* arena)
         len = src.len;
 
     s8 result = s8_alloc(arena, len);
-    memcpy(result.data, src.data, src.len);
+    memcpy(result.data, src.data, len);
 
     return result;
 }

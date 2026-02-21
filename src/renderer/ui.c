@@ -183,7 +183,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 f32 start_angle = deg_f32(a->a[0]);
                 f32 end_angle = deg_f32(a->a[1]);
                 draw_ring(renderer, center, a->r, 0.0f, start_angle, end_angle, color, 0.0f);
-            };
+            } break;
 
             case NK_COMMAND_TRIANGLE:
             {
@@ -213,7 +213,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 v4 color = nk_color_to_v4(t->foreground);
                 Font* font = (Font*)t->font->userdata.ptr;
                 v2 pos = {(f32)t->x, (f32)t->y + (f32)t->font->height*0.75f};
-                s8 s = {(u8*)t->string, (size)str_len(t->string)};
+                s8 s = {(u8*)t->string, t->length};
                 Text text = text_init(s, font, pos, t->font->height);
                 text.color = color;
                 draw_text(renderer, text);
@@ -237,7 +237,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
             {
                 const struct nk_command_custom* c = (const struct nk_command_custom*)cmd;
                 c->callback(NULL, c->x, c->y, c->w, c->h, c->callback_data);
-            }
+            } break;
 
             default: break;
         }

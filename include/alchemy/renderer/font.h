@@ -26,7 +26,10 @@ typedef struct Font
     u32 px;
     b32 has_kerning;
     b32 small_caps;
-    f32 ascender;
+
+    // Vertical distance from baseline to highest ASCII character coordinate of the font.
+    f32 max_top;
+
     Glyph* glyph_cache;
 } Font;
 
