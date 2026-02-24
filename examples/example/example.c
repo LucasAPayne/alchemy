@@ -113,9 +113,9 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->permanent_arena = memory_arena_init_from_base(permanent_base, memory->permanent_storage_bytes - sizeof(ExampleState));
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_bytes);
 
-    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena, false);
-    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena, false);
-    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena, false);
+    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena);
+    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena);
+    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena);
 
     state->logo_tex = texture_load_from_file("textures/potion.png", renderer, &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);

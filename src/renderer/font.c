@@ -9,8 +9,6 @@
 
 #include <freetype/ftoutln.h>
 
-#define MAX_CHARS_PER_DRAW 200
-
 Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
 {
     Glyph new_glyph = {0};
@@ -46,7 +44,7 @@ Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
 // TODO(lucas): Some fields of the font need to be checked before using certain metrics.
 // See here: https://freetype.org/freetype2/docs/tutorial/step2.html
 
-Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena, b32 small_caps)
+Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
 {
     Font font = {0};
     FT_Library ft;
@@ -64,7 +62,6 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena, b32 s
     // number of supported glyphs in the font. This works for now because the glyph index is used as a direct index.
     // However, depending on the font, the glyph cache could become pretty sparse.
     font.px = px;
-    font.small_caps = small_caps;
     font.has_kerning = FT_HAS_KERNING(font.face);
     font.glyph_cache = push_array(arena, font.face->num_glyphs, Glyph);
     zero_array(font.glyph_cache, font.face->num_glyphs, Glyph);
@@ -129,7 +126,7 @@ void text_set_size_px(Text* text, f32 px)
 {
     text->px = px;
     text->scale.y = text->px / (f32)text->font->px;
-    text->scale.x *= text->scale.y;
+    text->scale.x = text->scale.x == 0.0f ? 0.0f : text->scale.y;
     text->string_width = text_get_width(text);
     text->line_height = (f32)(text->font->face->size->metrics.height >> 6)*text->scale.y;
 }
@@ -258,7 +255,6 @@ TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, f32
 {
     TextArea result = {0};
     result.bounds = bounds;
-    // v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - text_size_px};
     v2 text_pos = v2(result.bounds.x, result.bounds.y);
     result.text = text_init(str, font, text_pos, text_size_px);
     return result;
@@ -357,14 +353,14 @@ internal void find_best_px(TextArea* text_area)
     f32 h = 0.0f;
     f32 max_h = text_area->bounds.height;
 
-    u32 attempts = 0;
-
     f32 low = 0.0f;
     f32 high = text_area->text.px;
     f32 eps = 0.1f; // Acceptable error on font's pixel size
-    while (abs_f32(high - low) >= eps)
+    b32 done = false;
+
+    // Binary search
+    while (!done)
     {
-        ++attempts;
         f32 mid = low + (high - low) / 2.0f;
         text_set_size_px(&text_area->text, mid);
         h = get_text_height(text_area);
@@ -373,11 +369,12 @@ internal void find_best_px(TextArea* text_area)
             high = mid;
         else
             low = mid;
+
+        if (h <= max_h && abs_f32(high - low) < eps)
+            done = true;
     }
 
     text_set_size_px(&text_area->text, low);
-
-    log_debug("Binary search took %u iterations", attempts);
 }
 
 internal b32 text_in_bounds(TextArea* text_area)
@@ -396,22 +393,16 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
     f32 width_remaining = max_width - line_width;
     switch (text_area->horiz_alignment)
     {
-        case TEXT_ALIGN_HORIZ_LEFT: break;
+        case TEXT_ALIGN_HORIZ_LEFT:   break;
+        case TEXT_ALIGN_HORIZ_RIGHT:  line_text.position.x += width_remaining;      break;
+        case TEXT_ALIGN_HORIZ_CENTER: line_text.position.x += 0.5f*width_remaining; break;
 
         case TEXT_ALIGN_HORIZ_JUSTIFIED:
         {
+            // If the text is justified, distribute the remaining width among all spaces in the line.
+            // However, the final line in a text area should not be justified.
             if (!last_line && spaces_in_line != 0)
                 line_text.extra_width_per_space = width_remaining / (f32)spaces_in_line;
-        } break;
-
-        case TEXT_ALIGN_HORIZ_RIGHT:
-        {
-            line_text.position = v2_add(line_text.position, v2(width_remaining, 0.0f));
-        } break;
-
-        case TEXT_ALIGN_HORIZ_CENTER:
-        {
-            line_text.position = v2_add(line_text.position, v2(0.5f*width_remaining, 0.0f));
         } break;
 
         INVALID_DEFAULT_CASE();
@@ -420,278 +411,115 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
     draw_text(renderer, line_text);
 }
 
-// #pragma optimize("", off)
-// internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
-// {
-//     if (!(text_area->style & TEXT_AREA_WRAP))
-//     {
-//         f32 width_remaining = text_area->bounds.width - text_area->text.string_width;
-//         switch (text_area->horiz_alignment)
-//         {
-//             case TEXT_ALIGN_HORIZ_CENTER: text_area->text.position.x += 0.5f * width_remaining; break;
-//             case TEXT_ALIGN_HORIZ_RIGHT:  text_area->text.position.x += width_remaining; break;
-//             default: break;
-//         }
-//         draw_text(renderer, text_area->text);
-//         return;
-//     }
-
-//     Text* text = &text_area->text;
-//     s8 s = text->string;
-//     Font* font = text->font;
-//     f32 max_width = text_area->bounds.width;
-
-//     size line_begin = 0;
-//     f32  line_width = 0.0f;
-//     u32  spaces_in_line = 0;
-//     i32  line_index = 0;
-
-//     size i = 0;
-//     while (i < s.len)
-//     {
-//         // Handle explicit newline
-//         if (s.data[i] == '\n')
-//         {
-//             s8 line_slice = s8_slice(s, line_begin, i);
-//             v2 pos = v2(text->position.x,
-//                         text->position.y + line_index * text->line_height);
-
-//             Text line_text = text_init(line_slice, font, pos, text->px);
-//             flush_line(renderer, text_area, line_text, line_width, spaces_in_line, false);
-
-//             ++line_index;
-//             ++i;
-//             line_begin = i;
-//             line_width = 0.0f;
-//             spaces_in_line = 0;
-//             continue;
-//         }
-
-//         // Consume a word
-//         size word_begin = i;
-//         while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
-//             ++i;
-
-//         s8 word_slice = s8_slice(s, word_begin, i);
-//         Text word = text_init(word_slice, font, v2_zero(), text->px);
-
-//         if (line_width + word.string_width > max_width && line_width > 0.0f)
-//         {
-//             s8 line_slice = s8_slice(s, line_begin, word_begin);
-//             v2 pos = v2(text->position.x,
-//                         text->position.y + line_index * text->line_height);
-
-//             Text line_text = text_init(line_slice, font, pos, text->px);
-//             flush_line(renderer, text_area, line_text, line_width, spaces_in_line, false);
-
-//             ++line_index;
-//             line_begin = word_begin;
-//             line_width = 0.0f;
-//             spaces_in_line = 0;
-//         }
-
-//         line_width += word.string_width;
-
-//         // Consume trailing whitespace
-//         size space_begin = i;
-//         while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
-//             ++i;
-
-//         if (i > space_begin)
-//         {
-//             s8 space_slice = s8_slice(s, space_begin, i);
-//             Text space = text_init(space_slice, font, v2_zero(), text->px);
-
-//             if (line_width + space.string_width > max_width)
-//                 continue;
-
-//             line_width += space.string_width;
-//             ++spaces_in_line;
-//         }
-//     }
-
-//     // Flush final line
-//     if (line_begin < s.len)
-//     {
-//         s8 line_slice = s8_slice(s, line_begin, s.len);
-//         v2 pos = v2(text->position.x, text->position.y + line_index * text->line_height);
-
-//         Text line_text = text_init(line_slice, font, pos, text->px);
-//         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
-//     }
-// }
-// #pragma optimize("", on)
-
-// TODO(lucas): Break line on \r\n
-// TODO(lucas): See if this function can be simplified
 #pragma optimize("", off)
 internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
 {
+    // If the text should not wrap, simply perform horizontal alignment and draw the text as-is.
     if (!(text_area->style & TEXT_AREA_WRAP))
     {
         f32 width_remaining = text_area->bounds.width - text_area->text.string_width;
-        switch(text_area->horiz_alignment)
+        switch (text_area->horiz_alignment)
         {
             case TEXT_ALIGN_HORIZ_LEFT: break;
-            case TEXT_ALIGN_HORIZ_JUSTIFIED: break;
-            case TEXT_ALIGN_HORIZ_CENTER: text_area->text.position.x += 0.5f*width_remaining; break;
-            case TEXT_ALIGN_HORIZ_RIGHT: text_area->text.position.x += width_remaining; break;
-
+            case TEXT_ALIGN_HORIZ_CENTER: text_area->text.position.x += 0.5f * width_remaining; break;
+            case TEXT_ALIGN_HORIZ_RIGHT:  text_area->text.position.x += width_remaining; break;
             INVALID_DEFAULT_CASE();
         }
         draw_text(renderer, text_area->text);
         return;
     }
 
-    Text* text  = &text_area->text;
+    Text* text = &text_area->text;
     s8 s = text->string;
     Font* font = text->font;
     f32 max_width = text_area->bounds.width;
 
-    i32 line_idx = 0;
-    i32 spaces_in_line = 0;
-
     size line_begin = 0;
-    size begin = 0;
-    size whitespace_begin = 0;
-    Text token = {0};
-    Text whitespace = {0};
-
     f32 line_width = 0.0f;
-    for (size i = 0; i < s.len; ++i)
-    // size i = 0;
-    // while (i < s.len)
-    {
-        u8 c = s.data[i];
+    u32 spaces_in_line = 0;
+    i32 line_idx = 0;
 
-        // Handle newline
-        if (c == '\n')
+    Text word = {0};
+    Text space = {0};
+
+    size i = 0;
+    while (i < s.len)
+    {
+        // Handle explicit newline (no horizontal justification)
+        if (s.data[i] == '\n')
         {
             s8 line_slice = s8_slice(s, line_begin, i);
-            v2 pos = v2(text->position.x, text->position.y + ((f32)line_idx*text->line_height));
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
+
             Text line_text = text_init(line_slice, font, pos, text->px);
+            // Pass max_width instead of line_width to avoid justification
             flush_line(renderer, text_area, line_text, max_width, spaces_in_line, false);
 
+            // Reset everything and move immediately to the next line.
             ++line_idx;
             ++i;
-
-            spaces_in_line = 0;
-            line_width = 0.0f;
-            begin = i;
             line_begin = i;
-
+            line_width = 0.0f;
+            spaces_in_line = 0;
             continue;
         }
 
-        u32 num_whitespaces = 0;
-        while (i < s.len && char_is_whitespace(c))
-        {
-            whitespace_begin = i;
-            ++num_whitespaces;
-
-            if (num_whitespaces == 1)
-            {
-                ++spaces_in_line;
-
-                s8 slice = s8_slice(s, begin, i);
-                token = text_init(slice, font, v2_zero(), text->px);
-                line_width += token.string_width;
-            }
-
+        // Consume a word
+        size word_begin = i;
+        while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
             ++i;
-            if (i >= s.len) break;
-            c = s.data[i];
 
-            if (line_width > max_width)
-            {
-                spaces_in_line -= 2;
-                size whitespace_end = whitespace_begin + num_whitespaces;
-                s8 s_whitespace = s8_slice(s, whitespace_begin, whitespace_end);
-                whitespace = text_init(s_whitespace, font, v2_zero(), text->px);
+        s8 word_slice = s8_slice(s, word_begin, i);
+        word = text_init(word_slice, font, v2_zero(), text->px);
 
-                size token_end = whitespace_begin;
-                size line_end = token_end - token.string.len - 1;
-
-                line_width -= (token.string_width + whitespace.string_width);
-
-                s8 line_slice = s8_slice(s, line_begin, line_end);
-                v2 pos = v2(text->position.x, text->position.y + ((f32)line_idx*text->line_height));
-                Text line_text = text_init(line_slice, font, pos, text->px);
-
-                flush_line(renderer, text_area, line_text, line_width, spaces_in_line, false);
-
-                // If a word pushes the line over the bounds, then carry over its width.
-                line_width = token.string_width;
-                ++line_idx;
-                spaces_in_line = 1; // Because there's an overflow word, there is an extra space for the next line
-                line_begin = line_end+1;
-            }
-        }
-
-        if (num_whitespaces)
+        // Check if the word overflowed the line
+        if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
-            s8 s_whitespace = s8_slice(s, whitespace_begin, i);
-            whitespace = text_init(s_whitespace, font, v2_zero(), text->px);
-            line_width += whitespace.string_width;
-            if (line_width > max_width)
-            {
-                --spaces_in_line;
-                size line_end = whitespace_begin;
+            s8 line_slice = s8_slice(s, line_begin, word_begin);
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
 
-                line_width -= whitespace.string_width;
+            Text line_text = text_init(line_slice, font, pos, text->px);
 
-                s8 line_slice = s8_slice(s, line_begin, line_end);
-                v2 pos = v2(text->position.x, text->position.y + ((f32)line_idx*text->line_height));
-                Text line_text = text_init(line_slice, font, pos, text->px);
-                flush_line(renderer, text_area, line_text, line_width, spaces_in_line, false);
+            // When a word overflows the line, the space following the last word of the line
+            // should not be counted.
+            line_width -= space.string_width;
+            flush_line(renderer, text_area, line_text, line_width, spaces_in_line-1, false);
 
-                // If whitespace pushes the line over the bounds, then reset the width.
-                line_width = 0.0f;
-                ++line_idx;
-                spaces_in_line = 0;
-                line_begin = line_end+s_whitespace.len;
-            }
-            begin = i;
-
-            // NOTE(lucas): When the end of whitespace is reached, i is at the beginning of the next word.
-            // But the end of the loop will also increment it, so it needs to go back by 1.
-            --i;
+            // Move to the next line and reset the metrics
+            ++line_idx;
+            line_begin = word_begin;
+            line_width = 0.0f;
+            spaces_in_line = 0;
         }
 
-        if (i == s.len-1)
+        line_width += word.string_width;
+
+        // Consume whitespace
+        size space_begin = i;
+        while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        // Check if there was any whitespace
+        if (i > space_begin)
         {
-            s8 slice = s8_slice(s, begin, s.len);
-            token = text_init(slice, font, v2_zero(), text->px);
-            line_width += token.string_width;
+            s8 space_slice = s8_slice(s, space_begin, i);
+            space = text_init(space_slice, font, v2_zero(), text->px);
 
-            if (line_width > max_width)
-            {
-                --spaces_in_line;
-                size line_end = whitespace_begin;
-                line_width -= (token.string_width + whitespace.string_width);
-
-                s8 line_slice = s8_slice(s, line_begin, line_end);
-                v2 pos = v2(text->position.x, text->position.y + ((f32)line_idx*text->line_height));
-                Text line_text = text_init(line_slice, font, pos, text->px);
-
-                flush_line(renderer, text_area, line_text, line_width, spaces_in_line, false);
-                ++line_idx;
-
-                line_width = token.string_width;
-                pos.y += text->line_height;
-                token.position = pos;
-                spaces_in_line = 0;
-                flush_line(renderer, text_area, token, line_width, spaces_in_line, true);
-            }
-            else
-            {
-                size line_end = s.len;
-                s8 line_slice = s8_slice(s, line_begin, line_end);
-                v2 pos = v2(text->position.x, text->position.y + ((f32)line_idx*text->line_height));
-                Text line_text = text_init(line_slice, font, pos, text->px);
-                flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
-            }
+            // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
+            // with the next word that gets consumed.
+            ++spaces_in_line;
+            line_width += space.string_width;
         }
+    }
+
+    // Flush final line
+    if (line_begin < s.len)
+    {
+        s8 line_slice = s8_slice(s, line_begin, s.len);
+        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
+
+        Text line_text = text_init(line_slice, font, pos, text->px);
+        flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
     }
 }
 #pragma optimize("", on)
@@ -703,18 +531,23 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     if (text_area->style & TEXT_AREA_SHRINK_TO_FIT)
     {
         // Shrink to fit, and the text height is larger than the overall bounds height.
-        if (text_area->text.px > text_area->bounds.height)
+        // TODO(lucas): Consider calculating the tallest character in the string, rather than the tallest overall.
+        text_height = text_area->text.font->max_top*text_area->text.scale.y;
+        if (text_height > text_area->bounds.height)
         {
-            f32 delta = text_area->text.px - text_area->bounds.height;
-            f32 new_size = text_area->text.px - delta;
+            // Resize the text to be exactly the same size as the bounds.
+            // The text needs to move down by the difference in the original size of the text and the bounds size.
+            f32 delta = text_height - text_area->bounds.height;
             text_area->text.position.y += delta;
+            f32 new_size = text_area->bounds.height;
             text_set_size_px(&text_area->text, new_size);
+            text_height = text_area->text.font->max_top*text_area->text.scale.y;
         }
 
         // Wrap text and shrink to fit.
-        // Wrap text, and if text height exceeds bounds, decrease font size.
         if (text_area->style & TEXT_AREA_WRAP)
         {
+            // If text height exceeds bounds, find the best pixel size to fit the bounds as closely as possible.
             text_height = get_text_height(text_area);
             if (text_height > text_area->bounds.height)
             {
@@ -722,16 +555,21 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
                 text_height = get_text_height(text_area);
             }
 
+            // TODO(lucas): Test with very small text area
             if (text_area->text.px < 1.0f)
                 return;
         }
+        // Don't wrap but shrink text to fit.
         else
         {
-            // NOTE(lucas): Don't wrap but shrink text to fit.
-            text_height = text_area->text.px;
+            // If text width exceeds bounds, squeeze text horizontally to fit.
+            text_height = text_area->text.font->max_top*text_area->text.scale.y;
             f32 text_width = text_get_width(&text_area->text);
+
+            // NOTE(lucas): The text's x scale starts at 0, so in addition to scaling with relation to the bounds,
+            // it also needs to inherit the y scale.
             if (text_width > text_area->bounds.width)
-                text_area->text.scale.x = (text_area->bounds.width / text_width) * (0.99f * text_area->text.scale.y);
+                text_area->text.scale.x = (text_area->bounds.width / text_width)*text_area->text.scale.y;
         }
     }
     // Wrap but don't shrink to fit
@@ -742,7 +580,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     // Don't wrap or shrink to fit
     else
     {
-        text_height = text_area->text.px;
+        text_height = text_area->text.font->max_top*text_area->text.scale.y;
     }
 
     f32 vert_space_remaining = text_area->bounds.height - text_height;
@@ -752,18 +590,19 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     f32 ascent = text_area->text.font->max_top*text_area->text.scale.y;
     text_area->text.position.y += ascent;
 
+    /* TODO(lucas): Currently, the descender not subtracted from bottom-aligned text.
+    * This means that descending characters like "y" can extend below the box, and everything is flush with the bottom bound.
+    * Revisit whether this seems "correct" after using it more.
+    */
     // f32 descent = -(f32)(text_area->text.font->face->descender >> 6);
 
-    // TODO(lucas): Currently, the descender is added to bottom-aligned text.
-    // This means that descending characters like "y" can extend below the box, and everything is flush with the bottom bound.
-    // Revisit whether this seems "correct" after using it.
-    // switch (text_area->vert_alignment)
-    // {
-    //     case TEXT_ALIGN_VERT_TOP:    break;
-    //     case TEXT_ALIGN_VERT_BOTTOM: text_area->text.position.y += vert_space_remaining + descent; break;
-    //     case TEXT_ALIGN_VERT_CENTER: text_area->text.position.y += 0.5f*vert_space_remaining;      break;
-    //     INVALID_DEFAULT_CASE();
-    // }
+    switch (text_area->vert_alignment)
+    {
+        case TEXT_ALIGN_VERT_TOP:    break;
+        case TEXT_ALIGN_VERT_BOTTOM: text_area->text.position.y += vert_space_remaining;      break;
+        case TEXT_ALIGN_VERT_CENTER: text_area->text.position.y += 0.5f*vert_space_remaining; break;
+        INVALID_DEFAULT_CASE();
+    }
 
     // TODO(lucas): If text is not shrink to fit, discard any text that overflows the y bound
     parse_and_draw_text(renderer, text_area);
