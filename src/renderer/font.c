@@ -9,7 +9,8 @@
 
 #include <freetype/ftoutln.h>
 
-Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
+// Generate the grayscale texture for one glyph from a font
+internal Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
 {
     Glyph new_glyph = {0};
     if (FT_Load_Glyph(font->face, glyph_idx, FT_LOAD_RENDER))
@@ -49,12 +50,11 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
     Font font = {0};
     FT_Library ft;
 
+    // Init FreeType and load the font at the specific px size.
     if (FT_Init_FreeType(&ft))
         log_error("FreeType2 error: Failed to iniitialize FreeType");
-
     if (FT_New_Face(ft, filename, 0, &font.face))
         log_error("FreeType2 error: Failed to open font %s", filename);
-
     if (FT_Set_Pixel_Sizes(font.face, 0, px))
         log_error("FreeType2 error: Failed to set pixel size");
 
@@ -70,6 +70,8 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
     // but we need 1-byte alignment for grayscale glyph bitmaps
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
+    // Generate and cache textures for all glyphs in the font.
+    // They are stored at the original px size, and the user can scale them as needed.
     u32 glyph_idx = 0;
     u32 charcode = FT_Get_First_Char(font.face, &glyph_idx);
     while (glyph_idx != 0)
@@ -78,6 +80,11 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
 
         if (FT_Load_Glyph(font.face, glyph_idx, FT_LOAD_NO_BITMAP) == 0)
         {
+            /* TODO(lucas): For now, a font will cache the metric for the tallest A-Z character for the
+             * purposes of vertical alignment.
+             * In the future, it will probably make more sense to get this measurement for a specific line of text
+             * to get more consistency.
+             */
             if (charcode >= 'A' && charcode <= 'Z')
             {
                 FT_GlyphSlot slot = font.face->glyph;
@@ -125,6 +132,8 @@ f32 text_get_width(Text* text)
 void text_set_size_px(Text* text, f32 px)
 {
     text->px = px;
+
+    // Since the px size changed, the measurements that depend on it need to change as well.
     text->scale.y = text->px / (f32)text->font->px;
     text->scale.x = text->scale.x == 0.0f ? 0.0f : text->scale.y;
     text->string_width = text_get_width(text);
@@ -236,6 +245,7 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+// Returns whether all characters in the string of a `Text` object are whitespace.
 internal b32 text_is_whitespace(Text text)
 {
     b32 result = false;
@@ -266,81 +276,67 @@ void text_area_scale(TextArea* text_area, f32 factor)
     text_scale(&text_area->text, factor);
 }
 
+// Get the minimum pixel height required by the text in a text area, assuming the text wraps.
+// Other text styling, such as being flush on both the top and bottom bounds, does not affect this measurement.
 internal f32 get_text_height(TextArea* text_area)
 {
     i32 lines_req = 1;
 
+    Text* text = &text_area->text;
     s8 s = text_area->text.string;
-    size begin = 0;
-    size whitespace_begin = 0;
-    Text token = {0};
-    Text whitespace = {0};
+    Font* font = text->font;
+    f32 max_width = text_area->bounds.width;
+
+    Text word = {0};
+    Text space = {0};
 
     f32 line_width = 0.0f;
-    for (size i = 0; i < s.len; ++i)
+    size i = 0;
+    while (i < s.len)
     {
-        u8 c = s.data[i];
-
-        if (c == '\n')
+        // Handle explicit newline
+        if (s.data[i] == '\n')
         {
             ++lines_req;
             line_width = 0.0f;
+
+            ++i;
             continue;
         }
 
-        u32 num_whitespaces = 0;
-        while (char_is_whitespace(c))
-        {
-            whitespace_begin = i;
-            ++num_whitespaces;
-
-            if (num_whitespaces == 1)
-            {
-                s8 slice = s8_slice(s, begin, i);
-                token = text_init(slice, text_area->text.font, v2_zero(), text_area->text.px);
-                line_width += token.string_width;
-
-            }
-
-            if (line_width > text_area->bounds.width)
-            {
-                // If a word pushes the line over the bounds, then carry over its width.
-                ++lines_req;
-                line_width = token.string_width;
-            }
-
+        // Consume a word
+        size word_begin = i;
+        while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
             ++i;
-            c = s.data[i];
+
+        s8 word_slice = s8_slice(s, word_begin, i);
+        word = text_init(word_slice, font, v2_zero(), text->px);
+
+        // Chedk if the word overflowed the line
+        if (line_width + word.string_width > max_width && line_width > 0.0f)
+        {
+            // Move to the next line and reset the metrics
+            ++lines_req;
+            line_width = 0.0f;
         }
 
-        if (num_whitespaces)
+        line_width += word.string_width;
+
+        // Consume whitespace
+        size space_begin = i;
+        while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        // Check if there was any whitesapce
+        if (i > space_begin)
         {
-            s8 s_whitespace = s8_slice(s, whitespace_begin, i);
-            whitespace = text_init(s_whitespace, text_area->text.font, v2_zero(), text_area->text.px);
-            line_width += whitespace.string_width;
-            if (line_width > text_area->bounds.width)
-            {
-                // If whitespace pushes the line over the bounds, then reset the width.
-                ++lines_req;
-                line_width = 0.0f;
-
-            }
-            begin = i;
-
-            // NOTE(lucas): When the end of whitespace is reached, i is at the beginning of the next word.
-            // But the end of the loop will also increment it, so it needs to go back by 1.
-            --i;
+            // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
+            // with the next word that gets consumed.
+            s8 space_slice = s8_slice(s, space_begin, i);
+            space = text_init(space_slice, font, v2_zero(), text->px);
+            line_width += space.string_width;
         }
     }
-
-    s8 slice = s8_slice(s, begin, s.len);
-    token = text_init(slice, text_area->text.font, v2_zero(), text_area->text.px);
-    line_width += token.string_width;
-
-    // Catches the case where the last word overflows the bounds,
-    // especially for text that would otherwise fit on one line
-    if (line_width > text_area->bounds.width)
-        ++lines_req;
 
     f32 text_height = (f32)(lines_req)*text_area->text.line_height;
     return text_height;
@@ -377,12 +373,7 @@ internal void find_best_px(TextArea* text_area)
     text_set_size_px(&text_area->text, low);
 }
 
-internal b32 text_in_bounds(TextArea* text_area)
-{
-    b32 result = text_area->text.position.y < text_area->bounds.position.y + text_area->bounds.height;
-    return result;
-}
-
+// Submit a draw command for a line of text in a `TextArea`.
 internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text, f32 line_width, u32 spaces_in_line,
     b32 last_line)
 {
@@ -412,6 +403,7 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
 }
 
 #pragma optimize("", off)
+// Parse text line by line, according to `TextArea` style, and submit draw commands for each line.
 internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
 {
     // If the text should not wrap, simply perform horizontal alignment and draw the text as-is.
