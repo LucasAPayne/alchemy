@@ -41,6 +41,7 @@ internal Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
     return new_glyph;
 }
 
+// TODO(lucas): Rework glyph caching to cache an atlas instead of individual textures.
 // TODO(lucas): Almost all FreeType functions return an error. Check each of these.
 // TODO(lucas): Some fields of the font need to be checked before using certain metrics.
 // See here: https://freetype.org/freetype2/docs/tutorial/step2.html
@@ -170,7 +171,6 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     f32 scale_x = text.scale.x > 0.0f ? text.scale.x : scale_y;
 
     FT_Face face = font->face;
-    FT_GlyphSlot glyph = face->glyph;
     FT_UInt glyph_index = 0;
     FT_UInt previous_glyph_index = 0;
 
@@ -374,14 +374,15 @@ internal void find_best_px(TextArea* text_area)
 }
 
 // Submit a draw command for a line of text in a `TextArea`.
-internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text, f32 line_width, u32 spaces_in_line,
+internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text, f32 line_width, i32 spaces_in_line,
     b32 last_line)
 {
-    Text* text  = &text_area->text;
-    Font* font = text->font;
+    Text* text = &text_area->text;
     f32 max_width = text_area->bounds.width;
 
     f32 width_remaining = max_width - line_width;
+    ASSERT(width_remaining >= 0.0f, "Negative width remaining");
+    ASSERT(spaces_in_line >= 0, "Negative spaces in line");
     switch (text_area->horiz_alignment)
     {
         case TEXT_ALIGN_HORIZ_LEFT:   break;
@@ -402,7 +403,6 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
     draw_text(renderer, line_text);
 }
 
-#pragma optimize("", off)
 // Parse text line by line, according to `TextArea` style, and submit draw commands for each line.
 internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
 {
@@ -410,14 +410,26 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (!(text_area->style & TEXT_AREA_WRAP))
     {
         f32 width_remaining = text_area->bounds.width - text_area->text.string_width;
+        ASSERT(width_remaining >= 0.0f, "Negative width remaining");
+
+        /* NOTE(lucas): Directly submitting text_area->text to draw_text() results in access violations with
+         * the /Og flag enabled in MSVC.
+         * Slicing the whole string and making another copy fixes it and matches the behavior of other paths.
+         */
+        s8 line_slice = s8_slice(text_area->text.string, 0, text_area->text.string.len);
+        v2 pos = text_area->text.position;
+        Text line_text = text_init(line_slice, text_area->text.font, pos, text_area->text.px);
+        line_text.scale = text_area->text.scale;
+
         switch (text_area->horiz_alignment)
         {
-            case TEXT_ALIGN_HORIZ_LEFT: break;
-            case TEXT_ALIGN_HORIZ_CENTER: text_area->text.position.x += 0.5f * width_remaining; break;
-            case TEXT_ALIGN_HORIZ_RIGHT:  text_area->text.position.x += width_remaining; break;
+            case TEXT_ALIGN_HORIZ_LEFT:      break;
+            case TEXT_ALIGN_HORIZ_JUSTIFIED: break; // One line of justified text is the same as left-aligned.
+            case TEXT_ALIGN_HORIZ_CENTER:    line_text.position.x += 0.5f * width_remaining; break;
+            case TEXT_ALIGN_HORIZ_RIGHT:     line_text.position.x += width_remaining;        break;
             INVALID_DEFAULT_CASE();
         }
-        draw_text(renderer, text_area->text);
+        draw_text(renderer, line_text);
         return;
     }
 
@@ -427,8 +439,10 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     f32 max_width = text_area->bounds.width;
 
     size line_begin = 0;
+    size word_begin = 0;
+    size space_begin = 0;
     f32 line_width = 0.0f;
-    u32 spaces_in_line = 0;
+    i32 spaces_in_line = 0;
     i32 line_idx = 0;
 
     Text word = {0};
@@ -457,7 +471,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         }
 
         // Consume a word
-        size word_begin = i;
+        word_begin = i;
         while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
             ++i;
 
@@ -467,7 +481,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         // Check if the word overflowed the line
         if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
-            s8 line_slice = s8_slice(s, line_begin, word_begin);
+            s8 line_slice = s8_slice(s, line_begin, space_begin);
             v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
 
             Text line_text = text_init(line_slice, font, pos, text->px);
@@ -487,7 +501,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         line_width += word.string_width;
 
         // Consume whitespace
-        size space_begin = i;
+        space_begin = i;
         while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
             ++i;
 
@@ -514,7 +528,6 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
     }
 }
-#pragma optimize("", on)
 
 void draw_text_area(Renderer* renderer, TextArea* text_area)
 {

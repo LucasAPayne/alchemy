@@ -15,7 +15,7 @@ typedef struct Vertex {
 } Vertex;
 
 // NOTE(lucas): Parameter list must match nk_text_width_f
-internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* str, int len)
+internal inline f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const char* str, int len)
 {
     s8 s = (s8){(u8*)str, len};
     Font* font = (Font*)handle.ptr;
@@ -25,53 +25,46 @@ internal f32 nk_alchemy_font_get_text_width(nk_handle handle, f32 height, const 
     return result;
 }
 
-internal v4 nk_color_to_v4(struct nk_color color)
+internal inline v4 nk_color_to_v4(struct nk_color color)
 {
     struct nk_colorf cf = nk_color_cf(color);
     v4 result = {cf.r, cf.g, cf.b, cf.a};
     return result;
 }
 
-/* FIXME(Lucas): There is a sneaky issue here that only occurs when optimizations are enabled.
- * At some point in the call stack, there will always be a read access violation, whether it is on the text area
- * or something to do with the text area parsing. For now, optimizations have been disabled on all the offending
- * functions, but clearly this is just a temporary solution.
- * Look for undefined behavior, pointer aliasing, alignment issues, etc.
- * Try enabling only specific optimizations to try and pinpoint what optimization actually causes the problem.
- * This might make it easier to determine the root cause.
- */
 /* TODO(lucas): Currently, this only works for very static UIs since it uses absolute position relative to the window.
  * The position needs to be relative to the parent widget.
  * Maybe automatic like the other UI components with an optional additional offset.
  */
-typedef struct UITextArea
+typedef struct UITextAreaCmd
 {
     Renderer* renderer;
     TextArea* text_area;
-} UITextArea;
+} UITextAreaCmd;
 internal void nk_draw_text_area(void* canvas, i16 x, i16 y, u16 w, u16 h, nk_handle callback_data)
 {
-    UITextArea* ui_text_area = (UITextArea*)callback_data.ptr;
-    Renderer* renderer = ui_text_area->renderer;
-    TextArea* text_area = ui_text_area->text_area;
-    v2 temp = text_area->bounds.position;
+    UITextAreaCmd* cmd = (UITextAreaCmd*)callback_data.ptr;
+
+    Renderer* renderer = cmd->renderer;
+    TextArea* text_area = cmd->text_area;
+    rect bounds = text_area->bounds;
     text_area->bounds.x = (f32)x;
     text_area->bounds.y = (f32)y;
-    draw_text_area(renderer, text_area);
-    text_area->bounds.position = temp;
+    draw_text_area(cmd->renderer, text_area);
+    text_area->bounds = bounds;
 }
 
 void ui_draw_text_area(Renderer* renderer, TextArea* text_area, v2 offset)
 {
-    UITextArea* ui_text_area = push_struct(&renderer->scratch_arena, UITextArea);
-    ui_text_area->renderer = renderer;
-    ui_text_area->text_area = text_area;
+    UITextAreaCmd* cmd = push_struct(&renderer->scratch_arena, UITextAreaCmd);
+    cmd->renderer = renderer;
+    cmd->text_area = text_area;
 
     struct nk_context* ctx = &renderer->ui_state.ctx;
     struct nk_command_buffer* out = nk_window_get_canvas(ctx);
     struct nk_rect bounds = nk_rect(text_area->bounds.x + offset.x, text_area->bounds.y + offset.y,
-                                    text_area->bounds.width, text_area->bounds.height);
-    nk_handle data = nk_handle_ptr(ui_text_area);
+        text_area->bounds.width, text_area->bounds.height);
+    nk_handle data = nk_handle_ptr(cmd);
     nk_push_custom(out, bounds, nk_draw_text_area, data);
 }
 
@@ -212,9 +205,14 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 const struct nk_command_text* t = (const struct nk_command_text*)cmd;
                 v4 color = nk_color_to_v4(t->foreground);
                 Font* font = (Font*)t->font->userdata.ptr;
-                v2 pos = {(f32)t->x, (f32)t->y + (f32)t->font->height*0.75f};
+                v2 pos = {(f32)t->x, (f32)t->y};
                 s8 s = {(u8*)t->string, t->length};
                 Text text = text_init(s, font, pos, t->font->height);
+
+                // NOTE(lucas): Due to differences in coordinates between Nuklear and Alchemy,
+                // text needs to move down by the tallest character.
+                text.position.y += font->max_top*text.scale.y;
+
                 text.color = color;
                 draw_text(renderer, text);
             } break;
@@ -237,7 +235,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
             {
                 const struct nk_command_custom* c = (const struct nk_command_custom*)cmd;
                 c->callback(NULL, c->x, c->y, c->w, c->h, c->callback_data);
-            } break;
+            }
 
             default: break;
         }
@@ -282,12 +280,10 @@ void ui_state_init(Renderer* renderer, Font font, u32 font_size, MemoryArena* ar
     Font* new_font = push_struct(arena, Font);
     *new_font = font;
 
-    struct nk_user_font user_font = {0};
-    user_font.userdata = nk_handle_ptr(new_font);
-    user_font.height = (f32)font_size;
-    user_font.width = nk_alchemy_font_get_text_width;
-    nk_init_default(&state.ctx, &user_font);
-    state.user_font = user_font;
+    state.user_font.userdata = nk_handle_ptr(new_font);
+    state.user_font.height = (f32)font_size;
+    state.user_font.width = nk_alchemy_font_get_text_width;
+    nk_init_default(&state.ctx, &state.user_font);
 
     state.ctx.clip.copy = ui_clipboard_copy;
     state.ctx.clip.paste = ui_clipboard_paste;
@@ -347,11 +343,11 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
         }
         else
         {
-            nk_input_key(ctx, NK_KEY_LEFT, key_pressed(keyboard, KEY_LEFT));
+            nk_input_key(ctx, NK_KEY_LEFT,  key_pressed(keyboard, KEY_LEFT));
             nk_input_key(ctx, NK_KEY_RIGHT, key_pressed(keyboard, KEY_RIGHT));
-            nk_input_key(ctx, NK_KEY_COPY, 0);
+            nk_input_key(ctx, NK_KEY_COPY,  0);
             nk_input_key(ctx, NK_KEY_PASTE, 0);
-            nk_input_key(ctx, NK_KEY_CUT, 0);
+            nk_input_key(ctx, NK_KEY_CUT,   0);
             nk_input_key(ctx, NK_KEY_SHIFT, 0);
         }
     }
@@ -361,12 +357,12 @@ void ui_new_frame(Renderer* renderer, u32 window_width, u32 window_height)
         nk_input_motion(ctx, mouse->x, mouse->y);
         nk_input_scroll(ctx, nk_vec2(0.0f, (f32)mouse->scroll));
 
-        nk_input_button(ctx, NK_BUTTON_LEFT, mouse->x, mouse->y,   mouse_button_pressed(mouse, MOUSE_LEFT));
-        nk_input_button(ctx, NK_BUTTON_MIDDLE, mouse->x, mouse->y, mouse_button_pressed(mouse, MOUSE_MIDDLE));
-        nk_input_button(ctx, NK_BUTTON_RIGHT, mouse->x, mouse->y,  mouse_button_pressed(mouse, MOUSE_RIGHT));
-        nk_input_button(ctx, NK_BUTTON_DOUBLE, mouse->x, mouse->y, mouse_button_double_clicked(mouse, MOUSE_LEFT));
-        nk_input_end(&state->ctx);
+        nk_input_button(ctx, NK_BUTTON_LEFT,   mouse->x, mouse->y,  mouse_button_pressed(mouse, MOUSE_LEFT));
+        nk_input_button(ctx, NK_BUTTON_MIDDLE, mouse->x, mouse->y,  mouse_button_pressed(mouse, MOUSE_MIDDLE));
+        nk_input_button(ctx, NK_BUTTON_RIGHT,  mouse->x, mouse->y,  mouse_button_pressed(mouse, MOUSE_RIGHT));
+        nk_input_button(ctx, NK_BUTTON_DOUBLE, mouse->x, mouse->y,  mouse_button_double_clicked(mouse, MOUSE_LEFT));
     }
+    nk_input_end(&state->ctx);
     state->text_len = 0;
 }
 
