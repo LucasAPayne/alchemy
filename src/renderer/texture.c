@@ -220,7 +220,7 @@ void texture_fill_empty_data(Texture* texture, int width, int height, int sample
     texture_unbind(samples);
 }
 
-Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryArena* arena)
+Texture texture_load_from_file(const char* filename, MemoryArena* arena)
 {
     size file_size = file_get_size(filename);
     void* file = file_open(filename, FileMode_Read);
@@ -248,7 +248,7 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
     return tex;
 }
 
-Texture texture_load_from_memory(Renderer* renderer, int width, int height, int channels, ubyte* memory)
+Texture texture_load_from_memory(int width, int height, int channels, ubyte* memory)
 {
     Texture tex = texture_generate(0);
     tex.data = memory;

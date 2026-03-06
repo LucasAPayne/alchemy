@@ -139,7 +139,7 @@ f32 text_get_width(Text* text);
 void output_text(Renderer* renderer, RenderCommandText* cmd);
 
 // Initialize a TextArea. A TextArea is like text, but includes bounds and more styling options.
-TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, f32 text_size_px);
+TextArea text_area_init(rect bounds, s8 str, Font* font, f32 text_size_px);
 
 // Scale a text area and its text by a scaling factor, and recalculate sizing values of the text.
 void text_area_scale(TextArea* text_area, f32 factor);

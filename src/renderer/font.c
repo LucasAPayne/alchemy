@@ -261,7 +261,7 @@ internal b32 text_is_whitespace(Text text)
     return result;
 }
 
-TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, f32 text_size_px)
+TextArea text_area_init(rect bounds, s8 str, Font* font, f32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;

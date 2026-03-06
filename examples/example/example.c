@@ -117,7 +117,7 @@ internal void example_state_init(ExampleState* state, GameMemory* memory, Input*
     state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena);
     state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena);
 
-    state->logo_tex = texture_load_from_file("textures/potion.png", renderer, &state->permanent_arena);
+    state->logo_tex = texture_load_from_file("textures/potion.png", &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);
     state->logo.size = v2(150.0f, 150.0f);
     state->logo.position = v2_zero();
@@ -267,7 +267,7 @@ UPDATE_AND_RENDER(update_and_render)
     //             "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
     //             "aliquip ex ea commodo consequat.");
 
-    // TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    // TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
     // text_area.text.color = color_black();
     // text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
     // text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
@@ -275,7 +275,7 @@ UPDATE_AND_RENDER(update_and_render)
     // draw_text_area(renderer, &text_area);
 
     s8 str = s8("Blue-Eyes White Dragon");
-    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();
     text_area.horiz_alignment = TEXT_ALIGN_HORIZ_LEFT;
     text_area.vert_alignment = TEXT_ALIGN_VERT_BOTTOM;
