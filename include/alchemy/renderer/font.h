@@ -116,6 +116,9 @@ typedef struct TextArea
     TextAreaStyle style;
     rect bounds;
     Text text;
+
+    // Scales the spacing between lines for wrapping text (default 1.0)
+    f32 line_spacing;
 } TextArea;
 
 /* Load a font from a file. Glyph data is cached in a memory arena for the font size specified on load.

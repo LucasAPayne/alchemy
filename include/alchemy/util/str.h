@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <assert.h>
+
 #define s8(s) (s8){(u8*)s, lengthof(s)} // For use inside functions
 #define S8(s) {(u8*)s, lengthof(s)} // For file or global scope
 typedef struct s8
@@ -94,11 +96,18 @@ internal inline void s8_iter_move(s8_iter* it, size bytes)
     it->idx += bytes;
 }
 
-// TODO(lucas): This should not set the length of the string
-internal inline s8 s8_alloc(MemoryArena* arena, size len)
+// Allocate a string but do not set its len
+internal inline s8 s8_alloc(MemoryArena* arena, size cap)
 {
     s8 result = {0};
-    result.data = push_array(arena, len, u8);
+    result.data = push_array(arena, cap, u8);
+    return result;
+}
+
+// Allocate a string and set its len
+internal inline s8 s8_init(MemoryArena* arena, size len)
+{
+    s8 result = s8_alloc(arena, len);
     result.len = len;
     return result;
 }
@@ -136,7 +145,7 @@ internal inline s8 s8_format(MemoryArena* arena, const char* format, ...)
     size len = (size)vsnprintf(NULL, 0, format, args);
     va_end(args);
 
-    s8 result = s8_alloc(arena, len);
+    s8 result = s8_init(arena, len);
 
     va_start(args, format);
     vsnprintf((char*)result.data, len+1, format, args);
@@ -167,8 +176,11 @@ internal inline s8 s8_copyn(s8 src, size len, MemoryArena* arena)
     if (len > src.len)
         len = src.len;
 
-    s8 result = s8_alloc(arena, len);
+    s8 result = s8_init(arena, len);
     memcpy(result.data, src.data, len);
+
+    // assert(((uintptr_t)result.data & 15) == 0);
+    // assert(((uintptr_t)src.data & 15) == 0);
 
     return result;
 }
@@ -220,14 +232,14 @@ internal inline void s8_cat(s8 source_a, s8 source_b, s8 dest)
 
 internal inline s8 s8_cat_arena(s8 a, s8 b, MemoryArena* arena)
 {
-    s8 result = s8_alloc(arena, a.len + b.len);
+    s8 result = s8_init(arena, a.len + b.len);
     s8_cat(a, b, result);
     return result;
 }
 
 internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
 {
-    s8 result = s8_alloc(arena, len);
+    s8 result = s8_init(arena, len);
 
     if (start >= src.len)
     {
@@ -245,7 +257,7 @@ internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
 
 internal inline s8 s8_to_lower(s8 src, MemoryArena* arena)
 {
-    s8 result = s8_alloc(arena, src.len);
+    s8 result = s8_init(arena, src.len);
 
     u8* in = src.data;
     u8* out = result.data;
@@ -319,7 +331,7 @@ internal inline s8 s8_from_int(int x, MemoryArena* arena)
         ++len;
     } while (temp != 0);
 
-    s8 str = s8_alloc(arena, len);
+    s8 str = s8_init(arena, len);
     for (size i = len-1; i >= 0; --i)
     {
         str.data[i] = (x % 10) + '0';

@@ -134,7 +134,7 @@ b32 file_is_modified(char* filename, u64 reference_time)
 s8 file_to_string(char* filename, MemoryArena* arena)
 {
     size file_size = file_get_size(filename);
-    s8 result = s8_alloc(arena, file_size);
+    s8 result = s8_init(arena, file_size);
     u8* begin = result.data;
 
     HANDLE file = win32_file_open_normal_read(filename);

@@ -267,6 +267,7 @@ TextArea text_area_init(rect bounds, s8 str, Font* font, f32 text_size_px)
     result.bounds = bounds;
     v2 text_pos = v2(result.bounds.x, result.bounds.y);
     result.text = text_init(str, font, text_pos, text_size_px);
+    result.line_spacing = 1.0f;
     return result;
 }
 
@@ -338,7 +339,7 @@ internal f32 get_text_height(TextArea* text_area)
         }
     }
 
-    f32 text_height = (f32)(lines_req)*text_area->text.line_height;
+    f32 text_height = (f32)(lines_req)*text_area->text.line_height*text_area->line_spacing;
     return text_height;
 }
 
@@ -381,9 +382,13 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
     f32 max_width = text_area->bounds.width;
 
     f32 width_remaining = max_width - line_width;
-    ASSERT(width_remaining >= 0.0f, "Negative width remaining");
+    TextAlignmentHoriz alignment = text_area->horiz_alignment;
+
+    ASSERT((alignment != TEXT_ALIGN_HORIZ_JUSTIFIED && alignment != TEXT_ALIGN_HORIZ_RIGHT) ||
+        width_remaining >= 0.0f, "Negative width remaining");
     ASSERT(spaces_in_line >= 0, "Negative spaces in line");
-    switch (text_area->horiz_alignment)
+
+    switch (alignment)
     {
         case TEXT_ALIGN_HORIZ_LEFT:   break;
         case TEXT_ALIGN_HORIZ_RIGHT:  line_text.position.x += width_remaining;      break;
@@ -410,7 +415,10 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (!(text_area->style & TEXT_AREA_WRAP))
     {
         f32 width_remaining = text_area->bounds.width - text_area->text.string_width;
-        ASSERT(width_remaining >= 0.0f, "Negative width remaining");
+        TextAlignmentHoriz alignment = text_area->horiz_alignment;
+
+        ASSERT((alignment != TEXT_ALIGN_HORIZ_JUSTIFIED && alignment != TEXT_ALIGN_HORIZ_RIGHT) ||
+            width_remaining >= 0.0f, "Negative width remaining");
 
         /* NOTE(lucas): Directly submitting text_area->text to draw_text() results in access violations with
          * the /Og flag enabled in MSVC.
@@ -421,7 +429,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         Text line_text = text_init(line_slice, text_area->text.font, pos, text_area->text.px);
         line_text.scale = text_area->text.scale;
 
-        switch (text_area->horiz_alignment)
+        switch (alignment)
         {
             case TEXT_ALIGN_HORIZ_LEFT:      break;
             case TEXT_ALIGN_HORIZ_JUSTIFIED: break; // One line of justified text is the same as left-aligned.
@@ -455,7 +463,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (s.data[i] == '\n')
         {
             s8 line_slice = s8_slice(s, line_begin, i);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
             Text line_text = text_init(line_slice, font, pos, text->px);
             // Pass max_width instead of line_width to avoid justification
@@ -482,7 +490,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
             s8 line_slice = s8_slice(s, line_begin, space_begin);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
             Text line_text = text_init(line_slice, font, pos, text->px);
 
@@ -522,7 +530,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (line_begin < s.len)
     {
         s8 line_slice = s8_slice(s, line_begin, s.len);
-        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height);
+        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
         Text line_text = text_init(line_slice, font, pos, text->px);
         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
