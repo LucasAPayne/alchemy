@@ -108,8 +108,7 @@ Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
 f32 text_get_width(Text* text)
 {
     f32 result = 0.0f;
-    f32 scale = (f32)text->px / (f32)text->font->px;
-    f32 scale_x = text->scale.x > 0.0f ? text->scale.x : scale;
+    f32 scale_x = text->font_scale*text->scale.x;
 
     for (size i = 0; i < text->string.len; ++i)
     {
@@ -135,10 +134,9 @@ void text_set_size_px(Text* text, f32 px)
     text->px = px;
 
     // Since the px size changed, the measurements that depend on it need to change as well.
-    text->scale.y = text->px / (f32)text->font->px;
-    text->scale.x = text->scale.x == 0.0f ? 0.0f : text->scale.y;
+    text->font_scale = text->px / (f32)text->font->px;
     text->string_width = text_get_width(text);
-    text->line_height = (f32)(text->font->face->size->metrics.height >> 6)*text->scale.y;
+    text->line_height = (f32)(text->font->face->size->metrics.height >> 6)*text->font_scale*text->scale.y;
 }
 
 void text_scale(Text* text, f32 factor)
@@ -156,6 +154,7 @@ Text text_init(s8 string, Font* font, v2 position, f32 px)
     text.position = position;
     text.color = color_black();
     text.px_original = px;
+    text.scale = v2(1.0f, 1.0f);
 
     text_set_size_px(&text, px);
 
@@ -167,8 +166,8 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     Text text = cmd->text;
     Font* font = text.font;
 
-    f32 scale_y = text.scale.y;
-    f32 scale_x = text.scale.x > 0.0f ? text.scale.x : scale_y;
+    f32 scale_x = text.font_scale*text.scale.x;
+    f32 scale_y = text.font_scale*text.scale.y;
 
     FT_Face face = font->face;
     FT_UInt glyph_index = 0;
@@ -551,11 +550,12 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
 {
     f32 text_height = 0.0f;
     text_area->text.position = v2(text_area->bounds.x, text_area->bounds.y);
+    f32 scale_y = text_area->text.font_scale*text_area->text.scale.y;
     if (text_area->style & TEXT_AREA_SHRINK_TO_FIT)
     {
         // Shrink to fit, and the text height is larger than the overall bounds height.
         // TODO(lucas): Consider calculating the tallest character in the string, rather than the tallest overall.
-        text_height = text_area->text.font->max_top*text_area->text.scale.y;
+        text_height = text_area->text.font->max_top*scale_y;
         if (text_height > text_area->bounds.height)
         {
             // Resize the text to be exactly the same size as the bounds.
@@ -564,7 +564,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
             text_area->text.position.y += delta;
             f32 new_size = text_area->bounds.height;
             text_set_size_px(&text_area->text, new_size);
-            text_height = text_area->text.font->max_top*text_area->text.scale.y;
+            text_height = text_area->text.font->max_top*scale_y;
         }
 
         // Wrap text and shrink to fit.
@@ -589,13 +589,13 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
         else
         {
             // If text width exceeds bounds, squeeze text horizontally to fit.
-            text_height = text_area->text.font->max_top*text_area->text.scale.y;
+            text_height = text_area->text.font->max_top*scale_y;
             f32 text_width = text_get_width(&text_area->text);
 
             // NOTE(lucas): The text's x scale starts at 0, so in addition to scaling with relation to the bounds,
             // it also needs to inherit the y scale.
             if (text_width > text_area->bounds.width)
-                text_area->text.scale.x = (text_area->bounds.width / text_width)*text_area->text.scale.y;
+                text_area->text.scale.x = (text_area->bounds.width / text_width);
         }
     }
     // Wrap but don't shrink to fit
@@ -606,14 +606,14 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     // Don't wrap or shrink to fit
     else
     {
-        text_height = text_area->text.font->max_top*text_area->text.scale.y;
+        text_height = text_area->text.font->max_top*scale_y;
     }
 
     f32 vert_space_remaining = text_area->bounds.height - text_height;
 
     // The y position of the text area is the top, which the text will view as the baseline.
     // To correct this, use the ascender (baseline to highest glyph position) to make the text flush with the top bound.
-    f32 ascent = text_area->text.font->max_top*text_area->text.scale.y;
+    f32 ascent = text_area->text.font->max_top*scale_y;
     text_area->text.position.y += ascent;
 
     /* TODO(lucas): Currently, the descender not subtracted from bottom-aligned text.

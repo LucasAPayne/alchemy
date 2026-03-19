@@ -51,16 +51,18 @@ typedef struct Text
     f32 px;
     f32 px_original;
 
-    f32 string_width; // The total width, in pixels, of the string (not affected by line breaks).
-    f32 line_height;  // The distance, in pixels, from one baseline to another.
+    // The ratio of the text's current px size to the px size the at which the font was loaded
+    f32 font_scale;
 
-    // Text scale is calculated as the current px size divided by the px size the font was originally loaded with.
-    // Not to be confused with px/px_original.
-    // scale.x is only used for horizontally compressing text.
-    // Otherwise, scale.x is 0, and the text scales uniformly in both dimensions.
+    // Another scale factor on top of font_scale. Defaults to `v2(1.0f, 1.0f)`.
+    // Used to stretch and compress text in the x or y direction.
+    // Commonly used to compress text to shrink to fit text area bounds.
     v2 scale;
 
-    f32 extra_width_per_space; // For horizontal justification
+    f32 string_width; // The total width, in pixels, of the string (not affected by line breaks)
+    f32 line_height;  // The distance, in pixels, from one baseline to another
+
+    f32 extra_width_per_space; // Extra width to apply to each space to horizontally justify text
 
     s8 string;
 } Text;

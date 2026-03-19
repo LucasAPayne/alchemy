@@ -211,7 +211,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
 
                 // NOTE(lucas): Due to differences in coordinates between Nuklear and Alchemy,
                 // text needs to move down by the tallest character.
-                text.position.y += font->max_top*text.scale.y;
+                text.position.y += font->max_top*text.font_scale*text.scale.y;
 
                 text.color = color;
                 draw_text(renderer, text);
