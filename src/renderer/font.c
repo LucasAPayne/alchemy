@@ -277,11 +277,18 @@ void text_area_scale(TextArea* text_area, f32 factor)
     text_scale(&text_area->text, factor);
 }
 
-// Get the minimum pixel height required by the text in a text area, assuming the text wraps.
-// Other text styling, such as being flush on both the top and bottom bounds, does not affect this measurement.
-internal f32 get_text_height(TextArea* text_area)
+typedef struct
 {
-    i32 lines_req = 1;
+    f32 height;
+    i32 lines;
+} TextLayoutMetrics;
+
+// Get the minimum pixel height and lines required by the text in a text area, assuming the text wraps.
+// Other text styling, such as being flush on both the top and bottom bounds, does not affect this measurement.
+internal TextLayoutMetrics get_text_metrics(TextArea* text_area)
+{
+    TextLayoutMetrics result = {0};
+    result.lines = 1;
 
     Text* text = &text_area->text;
     s8 s = text_area->text.string;
@@ -298,7 +305,7 @@ internal f32 get_text_height(TextArea* text_area)
         // Handle explicit newline
         if (s.data[i] == '\n')
         {
-            ++lines_req;
+            ++result.lines;
             line_width = 0.0f;
 
             ++i;
@@ -317,7 +324,7 @@ internal f32 get_text_height(TextArea* text_area)
         if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
             // Move to the next line and reset the metrics
-            ++lines_req;
+            ++result.lines;
             line_width = 0.0f;
         }
 
@@ -339,8 +346,8 @@ internal f32 get_text_height(TextArea* text_area)
         }
     }
 
-    f32 text_height = (f32)(lines_req)*text_area->text.line_height*text_area->line_spacing;
-    return text_height;
+    result.height = (f32)(result.lines)*text_area->text.line_height*text_area->line_spacing;
+    return result;
 }
 
 // Find the best font size to fit the text area bounds as exactly as possible when
@@ -355,12 +362,16 @@ internal void find_best_px(TextArea* text_area)
     f32 eps = 0.1f; // Acceptable error on font's pixel size
     b32 done = false;
 
+    // TODO(lucas): Loop through x scales from maybe 1 - 0.9 and binary search for each one.
+    // Maybe move in increments to minimize the number of iterations in this loop.
+    // Keep track of the number of lines taken. If it is 1, stop. If it decreases, stop.
+
     // Binary search
     while (!done)
     {
         f32 mid = low + (high - low) / 2.0f;
         text_set_size_px(&text_area->text, mid);
-        h = get_text_height(text_area);
+        h = get_text_metrics(text_area).height;
 
         if (h > max_h)
             high = mid;
@@ -370,7 +381,6 @@ internal void find_best_px(TextArea* text_area)
         if (h <= max_h && abs_f32(high - low) < eps)
             done = true;
     }
-
     text_set_size_px(&text_area->text, low);
 }
 
@@ -561,11 +571,14 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
         if (text_area->style & TEXT_AREA_WRAP)
         {
             // If text height exceeds bounds, find the best pixel size to fit the bounds as closely as possible.
-            text_height = get_text_height(text_area);
+            // Also, tweak the line spacing to keep text flush with the bottom bound in this case.
+            text_height = get_text_metrics(text_area).height;
             if (text_height > text_area->bounds.height)
             {
                 find_best_px(text_area);
-                text_height = get_text_height(text_area);
+                TextLayoutMetrics metrics = get_text_metrics(text_area);
+                text_area->line_spacing = text_area->bounds.height / (text_area->text.line_height * metrics.lines);
+                text_height = text_area->bounds.height;
             }
 
             // TODO(lucas): Test with very small text area
@@ -588,7 +601,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
     // Wrap but don't shrink to fit
     else if (text_area->style & TEXT_AREA_WRAP)
     {
-        text_height = get_text_height(text_area);
+        text_height = get_text_metrics(text_area).height;
     }
     // Don't wrap or shrink to fit
     else
