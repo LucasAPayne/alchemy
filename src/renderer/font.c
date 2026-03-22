@@ -161,6 +161,22 @@ Text text_init(s8 string, Font* font, v2 position, f32 px)
     return text;
 }
 
+Text text_init_scale(s8 string, Font* font, v2 position, f32 px, v2 scale)
+{
+    Text text = {0};
+
+    text.string = string;
+    text.font = font;
+    text.position = position;
+    text.color = color_black();
+    text.px_original = px;
+    text.scale = scale;
+
+    text_set_size_px(&text, px);
+
+    return text;
+}
+
 void output_text(Renderer* renderer, RenderCommandText* cmd)
 {
     Text text = cmd->text;
@@ -317,7 +333,7 @@ internal TextLayoutMetrics get_text_metrics(TextArea* text_area)
             ++i;
 
         s8 word_slice = s8_slice(s, word_begin, i);
-        word = text_init(word_slice, font, v2_zero(), text->px);
+        word = text_init_scale(word_slice, font, v2_zero(), text->px, text->scale);
 
         // Chedk if the word overflowed the line
         if (line_width + word.string_width > max_width && line_width > 0.0f)
@@ -337,10 +353,10 @@ internal TextLayoutMetrics get_text_metrics(TextArea* text_area)
         // Check if there was any whitesapce
         if (i > space_begin)
         {
-            // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
+            // NOTE(lucas): While the space could overfloweme the line, it is simpler to catch all overflow
             // with the next word that gets consumed.
             s8 space_slice = s8_slice(s, space_begin, i);
-            space = text_init(space_slice, font, v2_zero(), text->px);
+            space = text_init_scale(space_slice, font, v2_zero(), text->px, text->scale);
             line_width += space.string_width;
         }
     }
@@ -359,14 +375,10 @@ internal void find_best_px(TextArea* text_area)
     f32 low = 0.0f;
     f32 high = text_area->text.px;
     f32 eps = 0.1f; // Acceptable error on font's pixel size
-    b32 done = false;
-
-    // TODO(lucas): Loop through x scales from maybe 1 - 0.9 and binary search for each one.
-    // Maybe move in increments to minimize the number of iterations in this loop.
-    // Keep track of the number of lines taken. If it is 1, stop. If it decreases, stop.
 
     // Binary search
-    while (!done)
+    b32 binary_search_done = false;
+    while (!binary_search_done)
     {
         f32 mid = low + (high - low) / 2.0f;
         text_set_size_px(&text_area->text, mid);
@@ -378,9 +390,27 @@ internal void find_best_px(TextArea* text_area)
             low = mid;
 
         if (h <= max_h && abs_f32(high - low) < eps)
-            done = true;
+            binary_search_done = true;
     }
     text_set_size_px(&text_area->text, low);
+
+    // Try horizontally compressing text if it will save a line
+    f32 original_scale_x = text_area->text.scale.x;
+    i32 original_lines = get_text_metrics(text_area).lines;
+    b32 fewer_lines = false;
+    for (f32 factor = 0.98f; factor > 0.9f; factor -= 0.02f)
+    {
+        text_area->text.scale.x = original_scale_x*factor;
+
+        i32 lines = get_text_metrics(text_area).lines;
+        if (lines < original_lines)
+            fewer_lines = true;
+
+        if (fewer_lines)
+            break;
+    }
+    if (!fewer_lines)
+        text_area->text.scale.x = original_scale_x;
 }
 
 // Submit a draw command for a line of text in a `TextArea`.
@@ -420,10 +450,15 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
 // Parse text line by line, according to `TextArea` style, and submit draw commands for each line.
 internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
 {
+    Text* text = &text_area->text;
+    s8 s = text->string;
+    Font* font = text->font;
+    f32 max_width = text_area->bounds.width;
+
     // If the text should not wrap, simply perform horizontal alignment and draw the text as-is.
     if (!(text_area->style & TEXT_AREA_WRAP))
     {
-        f32 width_remaining = text_area->bounds.width - text_area->text.string_width;
+        f32 width_remaining = max_width - text->string_width;
         TextAlignmentHoriz alignment = text_area->horiz_alignment;
 
         ASSERT((alignment != TEXT_ALIGN_HORIZ_JUSTIFIED && alignment != TEXT_ALIGN_HORIZ_RIGHT) ||
@@ -433,10 +468,8 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
          * the /Og flag enabled in MSVC.
          * Slicing the whole string and making another copy fixes it and matches the behavior of other paths.
          */
-        s8 line_slice = s8_slice(text_area->text.string, 0, text_area->text.string.len);
-        v2 pos = text_area->text.position;
-        Text line_text = text_init(line_slice, text_area->text.font, pos, text_area->text.px);
-        line_text.scale = text_area->text.scale;
+        s8 line_slice = s8_slice(s, 0, s.len);
+        Text line_text = text_init_scale(line_slice, font, text->position, text->px, text->scale);
 
         switch (alignment)
         {
@@ -449,11 +482,6 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         draw_text(renderer, line_text);
         return;
     }
-
-    Text* text = &text_area->text;
-    s8 s = text->string;
-    Font* font = text->font;
-    f32 max_width = text_area->bounds.width;
 
     size line_begin = 0;
     size word_begin = 0;
@@ -474,7 +502,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
             s8 line_slice = s8_slice(s, line_begin, i);
             v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
-            Text line_text = text_init(line_slice, font, pos, text->px);
+            Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
             // Pass max_width instead of line_width to avoid justification
             flush_line(renderer, text_area, line_text, max_width, spaces_in_line, false);
 
@@ -493,7 +521,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
             ++i;
 
         s8 word_slice = s8_slice(s, word_begin, i);
-        word = text_init(word_slice, font, v2_zero(), text->px);
+        word = text_init_scale(word_slice, font, v2_zero(), text->px, text->scale);
 
         // Check if the word overflowed the line
         if (line_width + word.string_width > max_width && line_width > 0.0f)
@@ -501,7 +529,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
             s8 line_slice = s8_slice(s, line_begin, space_begin);
             v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
-            Text line_text = text_init(line_slice, font, pos, text->px);
+            Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
 
             // When a word overflows the line, the space following the last word of the line
             // should not be counted.
@@ -526,7 +554,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (i > space_begin)
         {
             s8 space_slice = s8_slice(s, space_begin, i);
-            space = text_init(space_slice, font, v2_zero(), text->px);
+            space = text_init_scale(space_slice, font, v2_zero(), text->px, text->scale);
 
             // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
             // with the next word that gets consumed.
@@ -541,7 +569,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         s8 line_slice = s8_slice(s, line_begin, s.len);
         v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
 
-        Text line_text = text_init(line_slice, font, pos, text->px);
+        Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
     }
 }
