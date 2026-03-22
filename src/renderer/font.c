@@ -397,20 +397,25 @@ internal void find_best_px(TextArea* text_area)
     // Try horizontally compressing text if it will save a line
     f32 original_scale_x = text_area->text.scale.x;
     i32 original_lines = get_text_metrics(text_area).lines;
-    b32 fewer_lines = false;
-    for (f32 factor = 0.98f; factor > 0.9f; factor -= 0.02f)
+    // TODO(lucas): This condition is a band-aid for Yugioh cards, where shrinking below 6 lines causes the text area
+    // text to overlap with the text above it.
+    if (original_lines > 6)
     {
-        text_area->text.scale.x = original_scale_x*factor;
+        b32 fewer_lines = false;
+        for (f32 factor = 0.98f; factor > 0.9f; factor -= 0.02f)
+        {
+            text_area->text.scale.x = original_scale_x*factor;
 
-        i32 lines = get_text_metrics(text_area).lines;
-        if (lines < original_lines)
-            fewer_lines = true;
+            i32 lines = get_text_metrics(text_area).lines;
+            if (lines < original_lines)
+                fewer_lines = true;
 
-        if (fewer_lines)
-            break;
+            if (fewer_lines)
+                break;
+        }
+        if (!fewer_lines)
+            text_area->text.scale.x = original_scale_x;
     }
-    if (!fewer_lines)
-        text_area->text.scale.x = original_scale_x;
 }
 
 // Submit a draw command for a line of text in a `TextArea`.
@@ -500,7 +505,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (s.data[i] == '\n')
         {
             s8 line_slice = s8_slice(s, line_begin, i);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
             // Pass max_width instead of line_width to avoid justification
@@ -527,7 +532,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
             s8 line_slice = s8_slice(s, line_begin, space_begin);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
+            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
 
@@ -567,7 +572,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (line_begin < s.len)
     {
         s8 line_slice = s8_slice(s, line_begin, s.len);
-        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing);
+        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
         Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
@@ -605,7 +610,7 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
             {
                 find_best_px(text_area);
                 TextLayoutMetrics metrics = get_text_metrics(text_area);
-                text_area->line_spacing = text_area->bounds.height / (text_area->text.line_height * metrics.lines);
+                text_area->text.scale.y *= text_area->bounds.height / metrics.height;
                 text_height = text_area->bounds.height;
             }
 
