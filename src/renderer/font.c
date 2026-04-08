@@ -367,6 +367,7 @@ internal TextLayoutMetrics get_text_metrics(TextArea* text_area)
 
 // Find the best font size to fit the text area bounds as exactly as possible when
 // the text must shrink to fit and wrap.
+// Also, if it would save a line of text, horizontally compress the text.
 internal void find_best_px(TextArea* text_area)
 {
     f32 h = 0.0f;
@@ -397,8 +398,12 @@ internal void find_best_px(TextArea* text_area)
     // Try horizontally compressing text if it will save a line
     f32 original_scale_x = text_area->text.scale.x;
     i32 original_lines = get_text_metrics(text_area).lines;
-    // TODO(lucas): This condition is a band-aid for Yugioh cards, where shrinking below 6 lines causes the text area
-    // text to overlap with the text above it.
+    /* TODO(lucas): This condition is a band-aid for Yugioh cards, where shrinking below 6 lines causes the text area
+     * text to overlap with the text above it. This is because the next step currently increases y scale to compensate
+     * for extra vertical space, instead of increasing line spacing to compensate.
+     * Either add a max_lines parameter or use a hybrid approach of scaling the y up to a certain point and doing
+     * the rest with increased line spacing, which would avoid extreme stretching.
+     */
     if (original_lines > 6)
     {
         b32 fewer_lines = false;
@@ -609,6 +614,8 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
             if (text_height > text_area->bounds.height)
             {
                 find_best_px(text_area);
+
+                // Compensate for any leftover vertical whitespace
                 TextLayoutMetrics metrics = get_text_metrics(text_area);
                 text_area->text.scale.y *= text_area->bounds.height / metrics.height;
                 text_height = text_area->bounds.height;

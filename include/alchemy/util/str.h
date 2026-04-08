@@ -112,6 +112,7 @@ internal inline s8 s8_init(MemoryArena* arena, size len)
     return result;
 }
 
+// TODO(lucas): Something like s8_get_cstr would be a better name
 internal inline char* s8_get_char(MemoryArena* arena, s8 src)
 {
     char* dst = push_array(arena, src.len+1, char);

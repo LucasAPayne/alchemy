@@ -102,7 +102,6 @@ endif()
 
 if(ALCHEMY_INCLUDE_EXAMPLES)
     add_subdirectory(examples/example)
-    add_subdirectory(examples/snake)
 endif()
 if(ALCHEMY_NO_HOT_RELOAD)
     target_compile_definitions(alchemy PUBLIC ALCHEMY_NO_HOT_RELOAD)

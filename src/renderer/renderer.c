@@ -405,28 +405,13 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
 internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
 {
     v2 delta = v2_sub(cmd->end, cmd->start);
+    f32 length = v2_mag(delta);
+    if (length == 0.0f) return;
 
-    // NOTE(lucas): Horizontal and vertical lines need special treatment
-    // since they will cause trig functions to be undefined
-    v2 size = v2_zero();
-    f32 initial_rotation = 0.0f;
+    f32 angle = atan_f32(delta.y, delta.x);
 
-    // NOTE(lucas): atan is undefined for vertical lines,
-    // so only call it if the line has slope
-    if (delta.x)
-        initial_rotation = atan_f32(delta.y, delta.x);
-
-    if (delta.x && delta.y) // Diagonal line
-        size = v2(v2_mag(delta), cmd->thickness);
-    else if (delta.x && !delta.y) // Horizontal line
-        size = v2(delta.x, cmd->thickness);
-    else if (delta.y && !delta.x) // Vertical line
-        size = v2(cmd->thickness, delta.y);
-
-    // TODO(lucas): The initial rotation needs to be about the starting point,
-    // and the additional rotation needs to be about the origin
-    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, size, cmd->color,
-                                  glm_deg(initial_rotation) + cmd->rotation};
+    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, v2(length, cmd->thickness),
+        cmd->color, deg_f32(angle) + cmd->rotation};
     output_quad(renderer, &quad_cmd);
 }
 
@@ -523,15 +508,15 @@ internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleO
     RenderCommandTriangle outline_cmd = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin,
                                          cmd->color, cmd->rotation};
 
-    glEnable(GL_DEPTH_TEST);
-    stencil_buffer_enable_write();
+    // glEnable(GL_DEPTH_TEST);
+    // stencil_buffer_enable_write();
     output_triangle(renderer, &transparent_cmd);
 
-    glDisable(GL_DEPTH_TEST);
-    stencil_buffer_disable_write();
+    // glDisable(GL_DEPTH_TEST);
+    // stencil_buffer_disable_write();
     renderer->triangle_renderer.shader = renderer->poly_border_shader;
     output_triangle(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
+    // stencil_buffer_enable_write();
     renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
@@ -628,24 +613,22 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 
 internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
 {
-    v2 new_pos = v2_add(cmd->position, v2_full(cmd->thickness));
-    v2 new_size = v2_sub(cmd->size, v2_full(2.0f*cmd->thickness));
+    v2 top_left  = cmd->position;
+    v2 top_right = v2(top_left.x + cmd->size.x - cmd->thickness, top_left.y);
+    v2 bot_left  = v2(top_left.x, top_left.y + cmd->size.y - cmd->thickness);
 
-    RenderCommandQuad transparent_cmd = {RENDER_COMMAND_RenderCommandQuad, new_pos, cmd->origin, new_size,
-                                         color_transparent(), cmd->rotation};
-    RenderCommandQuad outline_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->position, cmd->origin, cmd->size,
-                                     cmd->color, cmd->rotation};
+    v2 horiz_dim = v2(cmd->size.x, cmd->thickness);
+    v2 vert_dim  = v2(cmd->thickness, cmd->size.y);
 
-    glEnable(GL_DEPTH_TEST);
-    stencil_buffer_enable_write();
-    output_quad(renderer, &transparent_cmd);
+    RenderCommandQuad top    = {RENDER_COMMAND_RenderCommandQuad, top_left,  cmd->origin, horiz_dim, cmd->color, cmd->rotation};
+    RenderCommandQuad left   = {RENDER_COMMAND_RenderCommandQuad, top_left,  cmd->origin, vert_dim,  cmd->color, cmd->rotation};
+    RenderCommandQuad bottom = {RENDER_COMMAND_RenderCommandQuad, bot_left,  cmd->origin, horiz_dim, cmd->color, cmd->rotation};
+    RenderCommandQuad right  = {RENDER_COMMAND_RenderCommandQuad, top_right, cmd->origin, vert_dim,  cmd->color, cmd->rotation};
 
-    glDisable(GL_DEPTH_TEST);
-    stencil_buffer_disable_write();
-    renderer->quad_renderer.shader = renderer->poly_border_shader;
-    output_quad(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
-    renderer->quad_renderer.shader = renderer->poly_shader;
+    output_quad(renderer, &top);
+    output_quad(renderer, &left);
+    output_quad(renderer, &bottom);
+    output_quad(renderer, &right);
 }
 
 internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
@@ -751,15 +734,15 @@ internal void output_circle_outline(Renderer* renderer, RenderCommandCircleOutli
                                            color_transparent(), cmd->radius - cmd->thickness};
     RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
 
-    glEnable(GL_DEPTH_TEST);
-    stencil_buffer_enable_write();
+    // glEnable(GL_DEPTH_TEST);
+    // stencil_buffer_enable_write();
     output_circle(renderer, &transparent_cmd);
 
-    glDisable(GL_DEPTH_TEST);
-    stencil_buffer_disable_write();
+    // glDisable(GL_DEPTH_TEST);
+    // stencil_buffer_disable_write();
     renderer->circle_renderer.shader = renderer->poly_border_shader;
     output_circle(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
+    // stencil_buffer_enable_write();
     renderer->circle_renderer.shader = renderer->poly_shader;
 }
 
@@ -1181,9 +1164,11 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
 
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+    // TODO(lucas): Stencil test should be scoped better. It can mess with draw order and transparency if it's global.
+    // glEnable(GL_STENCIL_TEST);
+    // glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    // glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     renderer.command_buffer_arena = memory_arena_alloc(command_buffer_bytes);
     renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_bytes);
@@ -1276,7 +1261,8 @@ void renderer_new_frame(Renderer* renderer, Window* window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glEnable(GL_SCISSOR_TEST);
-    glEnable(GL_STENCIL_TEST);
+    // TODO(lucas): Stencil test should be scoped better. It can mess with draw order and transparency if it's global.
+    // glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
     renderer->window_width = window->width;
@@ -1378,7 +1364,8 @@ void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f3
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
         return;
-    v2 origin = v2_scale(v2_add(start, end), 0.5f);
+    v2 delta = v2_sub(end, start);
+    v2 origin = v2_add(start, v2_scale(delta, 0.5f));
     cmd->start = start;
     cmd->end = end;
     cmd->origin = origin;
@@ -1445,7 +1432,7 @@ void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
     cmd->rotation = rotation;
 }
 
-void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 thickness, f32 rotation)
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness)
 {
     RenderCommandQuadOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadOutline);
     if (!cmd)
