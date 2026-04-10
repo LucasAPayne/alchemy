@@ -102,9 +102,9 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
             {
                 const struct nk_command_line* l = (const struct nk_command_line*)cmd;
                 v4 color = nk_color_to_v4(l->color);
-                v2 start = {(f32)l->begin.x, (f32)l->end.y};
-                v2 end = {(f32)l->end.x, (f32)l->begin.y};
-                draw_line(renderer, start, end, color, (f32)l->line_thickness, 0.0f);
+                v2 start = {(f32)l->begin.x, (f32)l->begin.y};
+                v2 end = {(f32)l->end.x, (f32)l->end.y};
+                draw_line(renderer, start, end, color, (f32)l->line_thickness);
             } break;
 
             // TODO(lucas): Rounding

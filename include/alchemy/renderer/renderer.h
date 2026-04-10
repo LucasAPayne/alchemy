@@ -62,9 +62,7 @@ typedef struct RenderCommandLine
     v4 color;
     v2 start;
     v2 end;
-    v2 origin;
     f32 thickness;
-    f32 rotation;
 } RenderCommandLine;
 
 typedef struct RenderCommandTriangle
@@ -283,7 +281,8 @@ void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
 
 // TODO(lucas): Add additional functions that take in origins, and consider taking rotation out of the default functions
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation);
+
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 
 // NOTE(lucas): Vertices must be specified in couter-clockwise order!
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation);
@@ -348,6 +347,5 @@ inline v4 linear1_to_srgb255(v4 c)
 
     return result;
 }
-
 
 void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr);

@@ -408,10 +408,20 @@ internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
     f32 length = v2_mag(delta);
     if (length == 0.0f) return;
 
-    f32 angle = atan_f32(delta.y, delta.x);
+    // TODO(lucas): Wrap this function
+    /* NOTE(lucas): Quad positions are top-left by default.
+     * Since line endpoints should be centered on the points, find and apply the appropriate offset
+     * based on direction and thickness.
+     */
+    v2 dir = glms_vec2_normalize(delta);
+    v2 perp = v2_perp(dir);
+    v2 offset = v2_scale(perp, cmd->thickness*0.5f);
+    v2 pos = v2_add(cmd->start, offset);
 
-    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, v2(length, cmd->thickness),
-        cmd->color, deg_f32(angle) + cmd->rotation};
+    v2 dim = v2(length, cmd->thickness);
+    f32 angle = atan_f32(-delta.y, delta.x);
+
+    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, pos, pos, dim, cmd->color, deg_f32(angle)};
     output_quad(renderer, &quad_cmd);
 }
 
@@ -479,45 +489,13 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
 
 internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
 {
-    /* NOTE(lucas): To find the vertices of the shrunken triangle, first find incenter of the triangle (the center of
-     * the inscribed circle). Then, find the inradius, the radius of the inscribed circle. Trivially, the two triangles
-     * share angle bisectors and thus incenters. So, we want to find a coefficient that gives us new vertices based on
-     * moving X units along the inradius, where X is the outline thickness, which can be done with the all-too-familiar
-     * linear blend. If A is the old vertex, A' is the new vertx, Q is the incenter, and k is the coefficient, we have
-     * A' = A(1-k) + Qk
-     * More details found here: https://math.stackexchange.com/questions/17561/how-to-shrink-a-triangle
-     */
-    f32 ab = v2_mag(v2_sub(cmd->b, cmd->a));
-    f32 bc = v2_mag(v2_sub(cmd->c, cmd->b));
-    f32 ca = v2_mag(v2_sub(cmd->c, cmd->a));
+    RenderCommandLine ab = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->a, cmd->b, cmd->thickness};
+    RenderCommandLine bc = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->b, cmd->c, cmd->thickness};
+    RenderCommandLine ca = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->c, cmd->a, cmd->thickness};
 
-    v2 incenter = {(ab*cmd->c.x + bc*cmd->a.x + ca*cmd->b.x) / (ab + bc + ca),
-                   (ab*cmd->c.y + bc*cmd->a.y + ca*cmd->b.y) / (ab + bc + ca)};
-
-    f32 semiperimeter = (ab + bc + ca) / 2.0f;
-    f32 inradius = sqrt_f32(((semiperimeter-ab)*(semiperimeter-bc)*(semiperimeter-ca)) / semiperimeter);
-    f32 k = cmd->thickness / inradius;
-    v2 qk = v2_scale(incenter, k);
-
-    v2 new_a = v2_add(v2_scale(cmd->a, 1.0f-k), qk);
-    v2 new_b = v2_add(v2_scale(cmd->b, 1.0f-k), qk);
-    v2 new_c = v2_add(v2_scale(cmd->c, 1.0f-k), qk);
-
-    RenderCommandTriangle transparent_cmd = {RENDER_COMMAND_RenderCommandTriangle, new_a, new_b, new_c, cmd->origin,
-                                             color_transparent(), cmd->rotation};
-    RenderCommandTriangle outline_cmd = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin,
-                                         cmd->color, cmd->rotation};
-
-    // glEnable(GL_DEPTH_TEST);
-    // stencil_buffer_enable_write();
-    output_triangle(renderer, &transparent_cmd);
-
-    // glDisable(GL_DEPTH_TEST);
-    // stencil_buffer_disable_write();
-    renderer->triangle_renderer.shader = renderer->poly_border_shader;
-    output_triangle(renderer, &outline_cmd);
-    // stencil_buffer_enable_write();
-    renderer->triangle_renderer.shader = renderer->poly_shader;
+    output_line(renderer, &ab);
+    output_line(renderer, &bc);
+    output_line(renderer, &ca);
 }
 
 // TODO(lucas): Think about pulling out common code and default vertices for shape variants
@@ -881,6 +859,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     vao_unbind();
 }
 
+// TODO(lucas): Test drawing, moving, and rotating this since line rendering has been updated
 internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
 {
     if (cmd->inner_radius > cmd->outer_radius)
@@ -983,10 +962,8 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     v2 cap_start = {cmd->center.x + cmd->inner_radius, cmd->center.y};
     v2 cap_end = {cmd->center.x + cmd->outer_radius, cmd->center.y};
 
-    RenderCommandLine start_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
-                                   cmd->thickness, cmd->start_angle + cmd->rotation};
-    RenderCommandLine end_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
-                                 cmd->thickness, cmd->end_angle + cmd->rotation};
+    RenderCommandLine start_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->thickness};
+    RenderCommandLine end_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->thickness};
 
     output_line(renderer, &start_cap);
     output_line(renderer, &end_cap);
@@ -1359,19 +1336,15 @@ void renderer_clear(v4 color)
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation)
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
         return;
-    v2 delta = v2_sub(end, start);
-    v2 origin = v2_add(start, v2_scale(delta, 0.5f));
     cmd->start = start;
     cmd->end = end;
-    cmd->origin = origin;
     cmd->color = color;
     cmd->thickness = thickness;
-    cmd->rotation = rotation;
 }
 
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)

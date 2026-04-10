@@ -217,7 +217,7 @@ UPDATE_AND_RENDER(update_and_render)
     // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
     // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
 
-    // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
+    // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f);
 
     // renderer->config.wireframe_mode = true;
 

@@ -190,6 +190,12 @@ inline v2 v2_reflect(v2 v, v2 r)
     return result;
 }
 
+inline v2 v2_perp(v2 v)
+{
+    v2 result = v2(v.y, -v.x);
+    return result;
+}
+
 inline v2 v2_clamp_to_rect(v2 v, rect r)
 {
     v2 result = v;
