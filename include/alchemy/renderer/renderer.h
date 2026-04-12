@@ -163,6 +163,8 @@ typedef struct RenderCommandCircleSector
     f32 rotation;
 } RenderCommandCircleSector;
 
+// TODO(lucas): Either rename Ring to Arc because it doesn't have to be fully closed,
+// or make a separate ring command that does not need start and end angles.
 typedef struct RenderCommandRing
 {
     RenderCommand header;
@@ -306,6 +308,8 @@ void draw_ring(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius
                v4 color, f32 rotation);
 void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius, f32 start_angle,
                        f32 end_angle, v4 color, f32 rotation, f32 thickness);
+
+void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness);
 
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);

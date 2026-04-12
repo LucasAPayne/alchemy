@@ -1336,6 +1336,75 @@ void renderer_clear(v4 color)
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
+// Join two lines with a bevel (flat join)
+internal void draw_bevel(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
+{
+    // Get the unit vectors in the direction prev -> curr and curr -> next
+    v2 d0 = glms_vec2_normalize(v2_sub(curr, prev));
+    v2 d1 = glms_vec2_normalize(v2_sub(next, curr));
+
+    // Get the normal vectors to the direction vectors
+    v2 n0 = v2_perp(d0);
+    v2 n1 = v2_perp(d1);
+
+    f32 off_scale = 0.5f*thickness;
+    v2 offset0 = v2_scale(n0, off_scale);
+    v2 offset1 = v2_scale(n1, off_scale);
+
+    // Get the normal vectors to the direction vectors
+    f32 cross = v2_cross(d0, d1);
+    if (cross < 0)
+    {
+        offset0 = v2_scale(offset0, -1);
+        offset1 = v2_scale(offset1, -1);
+    }
+
+    // Outer corners of each segment at the joint
+    v2 p0 = v2_add(curr, offset0);
+    v2 p1 = v2_add(curr, offset1);
+
+    draw_triangle(renderer, curr, p0, p1, color, 0.0f);
+}
+
+// Join two lines with a miter (sharp join)
+internal void draw_miter(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
+{
+    // Get the unit vectors in the direction prev -> curr and curr -> next
+    v2 d0 = glms_vec2_normalize(v2_sub(curr, prev));
+    v2 d1 = glms_vec2_normalize(v2_sub(next, curr));
+
+    // Get the normal vectors to the direction vectors
+    v2 n0 = v2_perp(d0);
+    v2 n1 = v2_perp(d1);
+
+    // If the cross product is negative, we have made a left turn at this corner
+    // and need to flip which side the corner appears on.
+    f32 cross = v2_cross(d0, d1);
+    if (cross < 0)
+    {
+        n0 = v2_scale(n0, -1.0f);
+        n1 = v2_scale(n1, -1.0f);
+    }
+
+    v2 miter_dir = glms_vec2_normalize(v2_add(n0, n1));
+
+    // The length goes along a diagonal. Scale it so that its projection onto the normal equals 0.5
+    f32 denom = v2_dot(miter_dir, n1);
+    // Prevent division by 0 or result explosion
+    if (abs_f32(denom) < 1e-4f) return;
+
+    f32 half_thick = 0.5f*thickness;
+    f32 length = half_thick / denom;
+
+    v2 miter_point = v2_add(curr, v2_scale(miter_dir, length));
+
+    // Build triangles to connect segments to miter point
+    v2 p0 = v2_add(curr, v2_scale(n0, half_thick));
+    v2 p1 = v2_add(curr, v2_scale(n1, half_thick));
+
+    draw_triangle(renderer, p0, miter_point, p1, color, 0.0f);
+}
+
 void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
@@ -1499,6 +1568,37 @@ void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inne
     cmd->end_angle = end_angle;
     cmd->rotation = rotation;
     cmd->thickness = thickness;
+}
+
+void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness)
+{
+    if (point_count < 2) return;
+
+    // TODO(lucas): It might be better to bake the line joints into the vertices. Instead of drawing a triangle to fill
+    // in each joint, just adjust the quad endpoints so that they are trapezoidal and meet nicely.
+
+    // We need to draw one line before the first bevel because bevels must be centered on the current point.
+    draw_line(renderer, points[0], points[1], color, thickness);
+
+    // For each point, draw a line between the current and next point, and draw a bevel on the current point.
+    for (u32 point_idx = 1; point_idx < point_count - 1; ++point_idx)
+    {
+        draw_line(renderer, points[point_idx], points[point_idx+1], color, thickness);
+        draw_bevel(renderer, points[point_idx-1], points[point_idx], points[point_idx+1], color, thickness);
+        draw_miter(renderer, points[point_idx-1], points[point_idx], points[point_idx+1], color, thickness);
+    }
+
+    /* NOTE(lucas): If the first and last points are the same, we have a closed shape.
+     * In that case, we need one more bevel between the last and first line segments.
+     * Because the first and last points are the same, we need to be careful to pick unique points.
+     * In particular, pick count-2, either count-1 or 0, and 1.
+     */
+    b32 closed = (points[0].x == points[point_count-1].x && points[0].y == points[point_count-1].y);
+    if (closed)
+    {
+        draw_bevel(renderer, points[point_count-2], points[0], points[1], color, thickness);
+        draw_miter(renderer, points[point_count-2], points[0], points[1], color, thickness);
+    }
 }
 
 void draw_sprite(Renderer* renderer, Sprite sprite)

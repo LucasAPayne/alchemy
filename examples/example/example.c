@@ -235,7 +235,63 @@ UPDATE_AND_RENDER(update_and_render)
     // draw_ring(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation);
     // draw_ring_outline(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation, 5.0f);
 
-    draw_sprite(renderer, state->logo);
+    // Straight horizontal line
+    // v2 pts[] = {
+        // {100, 100},
+        // {300, 100}
+    // };
+
+    // 90 degree corner
+    // v2 pts[] = {
+    //     {100, 100},
+    //     {200, 100},
+    //     {200, 200}
+    // };
+
+    // Sharp angle
+    // v2 pts[] = {
+    //     {150, 200},
+    //     {200, 100},
+    //     {250, 200}
+    // };
+
+    // Odd angle
+    // v2 pts[] = {
+    //     {150, 200},
+    //     {200, 100},
+    //     {250, 200}
+    // };
+
+    // Zig-zag
+    v2 pts[] = {
+      {100, 100},
+      {200, 150},
+      {100, 200},
+      {200, 250},
+      {100, 300}
+    };
+
+    // Square
+    // v2 pts[] = {
+    //     {100, 100},
+    //     {200, 100},
+    //     {200, 200},
+    //     {100, 200},
+    //     {100, 100}
+    // };
+
+    // Diamond
+    // v2 pts[] = {
+    //     {100, 150},
+    //     {200, 100},
+    //     {300, 150},
+    //     {200, 200},
+    //     {100, 150}
+    // };
+
+    draw_polyline(renderer, pts, countof(pts), color_white(), 20.0f);
+
+    // draw_sprite(renderer, state->logo);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init(s8("Alchemy Engine"), &state->cardinal_font, v2(500.0f, 50.0f), 48);

@@ -96,7 +96,6 @@ inline f32 acos_f32(f32 x)
 
 inline f32 atan_f32(f32 y, f32 x)
 {
-    ASSERT(x != 0.0f, "Divide by zero");
     f32 result = atan2f(y, x);
     return result;
 }
@@ -193,6 +192,12 @@ inline v2 v2_reflect(v2 v, v2 r)
 inline v2 v2_perp(v2 v)
 {
     v2 result = v2(v.y, -v.x);
+    return result;
+}
+
+inline f32 v2_cross(v2 a, v2 b)
+{
+    f32 result = a.x*b.y - a.y*b.x;
     return result;
 }
 

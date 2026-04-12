@@ -83,8 +83,6 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
     const struct nk_command* cmd;
     nk_foreach(cmd, &state->ctx)
     {
-        // TODO(lucas): The lines and points on the chart don't look quite right. The points are offset and the lines
-        // don't connect very gracefully. Also had to swap begin and end y in line drawing. Mismatch in coordinate systems?
         // TODO(lucas): The mouse slightly obscures tooltips. Mismatch in coordinate systems?
         switch (cmd->type)
         {
