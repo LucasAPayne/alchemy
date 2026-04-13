@@ -215,6 +215,21 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
                 draw_text(renderer, text);
             } break;
 
+            case NK_COMMAND_POLYLINE:
+            {
+                const struct nk_command_polyline* p = (const struct nk_command_polyline*)cmd;
+                v4 color = nk_color_to_v4(p->color);
+                size pts_size = p->point_count*sizeof(v2);
+                v2* pts = push_size(&renderer->scratch_arena, pts_size);
+                for (u32 point_idx = 0; point_idx < p->point_count; ++point_idx)
+                {
+                    struct nk_vec2i point = p->points[point_idx];
+                    pts[point_idx] = v2((f32)point.x, (f32)point.y);
+                }
+                draw_polyline(renderer, pts, (u32)p->point_count, color, (f32)p->line_thickness);
+                memory_arena_pop(&renderer->scratch_arena, pts_size);
+            } break;
+
             case NK_COMMAND_IMAGE:
             {
                 const struct nk_command_image* i = (const struct nk_command_image*)cmd;

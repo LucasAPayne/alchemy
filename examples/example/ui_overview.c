@@ -1429,7 +1429,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
             nk_tree_pop(ctx);
         }
 
-        if (nk_tree_push(ctx, NK_TREE_TAB, "Image", NK_MINIMIZED))
+        if (nk_tree_push(ctx, NK_TREE_TAB, "Images", NK_MINIMIZED))
         {
             nk_layout_row_static(ctx, 100, 100, 2);
             struct nk_color color = {0, 0, 255, 255};
@@ -1441,7 +1441,7 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Shapes", NK_MINIMIZED))
         {
-            nk_layout_row_dynamic(ctx, 200, 1);
+            nk_layout_row_dynamic(ctx, 300, 1);
 
             struct nk_command_buffer* out = nk_window_get_canvas(ctx);
             struct nk_rect space;
@@ -1451,6 +1451,17 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
             struct nk_color color = nk_rgba(255, 255, 255, 255);
 
             nk_fill_rect(out, bounds, 0, color);
+
+            f32 zigzag_start_x = space.x + bounds.w + 20.0f;
+            f32 zigzag[] =
+            {
+                zigzag_start_x,          space.y + 5.0f,
+                zigzag_start_x + 50.0f,  space.y + 30.0f,
+                zigzag_start_x,          space.y + 55.0f,
+                zigzag_start_x + 50.0f,  space.y + 80.0f,
+                zigzag_start_x,          space.y + 105.0f
+            };
+            nk_stroke_polyline(out, zigzag, countof(zigzag)/2, 10.0f, color);
 
             nk_tree_pop(ctx);
         }
