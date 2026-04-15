@@ -310,6 +310,7 @@ void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inne
                        f32 end_angle, v4 color, f32 rotation, f32 thickness);
 
 void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness);
+void draw_polygon_outline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness);
 
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);

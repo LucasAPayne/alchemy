@@ -266,14 +266,14 @@ UPDATE_AND_RENDER(update_and_render)
     // };
 
     // Zig-zag
-    v2 pts[] =
-    {
-        v2(100.0f, 100.0f),
-        v2(200.0f, 150.0f),
-        v2(100.0f, 200.0f),
-        v2(200.0f, 250.0f),
-        v2(100.0f, 300.0f)
-    };
+    // v2 pts[] =
+    // {
+    //     v2(100.0f, 100.0f),
+    //     v2(200.0f, 150.0f),
+    //     v2(100.0f, 200.0f),
+    //     v2(200.0f, 250.0f),
+    //     v2(100.0f, 300.0f)
+    // };
 
     // Square
     // v2 pts[] =
@@ -295,7 +295,37 @@ UPDATE_AND_RENDER(update_and_render)
     //     v2(100.0f, 150.0f)
     // };
 
-    draw_polyline(renderer, pts, countof(pts), color_white(), 20.0f);
+    // draw_polyline(renderer, pts, countof(pts), color_white(), 20.0f);
+
+    // Zig-zag
+    // v2 pts2[] =
+    // {
+    //     v2(100.0f, 100.0f),
+    //     v2(200.0f, 150.0f),
+    //     v2(100.0f, 200.0f),
+    //     v2(200.0f, 250.0f),
+    //     v2(100.0f, 300.0f)
+    // };
+
+    // Square
+    // v2 pts2[] =
+    // {
+    //     v2(100.0f, 100.0f),
+    //     v2(200.0f, 100.0f),
+    //     v2(200.0f, 200.0f),
+    //     v2(100.0f, 200.0f)
+    // };
+
+    // Diamond
+    v2 pts2[] =
+    {
+        v2(100.0f, 150.0f),
+        v2(200.0f, 100.0f),
+        v2(300.0f, 150.0f),
+        v2(200.0f, 200.0f)
+    };
+
+    draw_polygon_outline(renderer, pts2, countof(pts2), color_white(), 20.0f);
 
     // draw_sprite(renderer, state->logo);
 

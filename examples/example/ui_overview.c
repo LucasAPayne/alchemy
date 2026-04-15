@@ -1463,6 +1463,15 @@ int ui_overview(Renderer* renderer, struct nk_context *ctx, u32 window_width, Te
             };
             nk_stroke_polyline(out, zigzag, countof(zigzag)/2, 10.0f, color);
 
+            f32 square[] =
+            {
+                bounds.x + 5.0f,  bounds.y + 110.0f,
+                bounds.x + 95.0f, bounds.y + 110.0f,
+                bounds.x + 95.0f, bounds.y + 200.0f,
+                bounds.x + 5.0f,  bounds.y + 200.0f
+            };
+            nk_stroke_polygon(out, square, countof(square)/2, 10.0f, color);
+
             nk_tree_pop(ctx);
         }
     }

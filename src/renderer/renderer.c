@@ -1577,7 +1577,7 @@ void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f3
     // TODO(lucas): It might be better to bake the line joints into the vertices. Instead of drawing a triangle to fill
     // in each joint, just adjust the quad endpoints so that they are trapezoidal and meet nicely.
 
-    // We need to draw one line before the first bevel because bevels must be centered on the current point.
+    // We need to draw one line before the first bevel because joins must be centered on the current point.
     draw_line(renderer, points[0], points[1], color, thickness);
 
     // For each point, draw a line between the current and next point, and draw a bevel on the current point.
@@ -1598,6 +1598,25 @@ void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f3
     {
         draw_bevel(renderer, points[point_count-2], points[0], points[1], color, thickness);
         draw_miter(renderer, points[point_count-2], points[0], points[1], color, thickness);
+    }
+}
+
+void draw_polygon_outline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness)
+{
+    // NOTE(lucas): This is exactly the same as drawing a polyline, except the first and last points
+    // are automatically joined.
+
+    if (point_count < 2) return;
+
+    draw_line(renderer, points[0], points[1], color, thickness);
+    for (u32 i = 0; i < point_count; ++i)
+    {
+        u32 prev = (i + point_count - 1) % point_count;
+        u32 next = (i + 1) % point_count;
+
+        draw_line(renderer, points[i], points[next], color, thickness);
+        draw_bevel(renderer, points[prev], points[i], points[next], color, thickness);
+        draw_miter(renderer, points[prev], points[i], points[next], color, thickness);
     }
 }
 
