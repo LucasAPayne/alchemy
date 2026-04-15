@@ -413,7 +413,7 @@ internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
      * Since line endpoints should be centered on the points, find and apply the appropriate offset
      * based on direction and thickness.
      */
-    v2 dir = glms_vec2_normalize(delta);
+    v2 dir = v2_normalize(delta);
     v2 perp = v2_perp(dir);
     v2 offset = v2_scale(perp, cmd->thickness*0.5f);
     v2 pos = v2_add(cmd->start, offset);
@@ -474,7 +474,7 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -533,7 +533,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -575,7 +575,7 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -618,7 +618,7 @@ internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -675,7 +675,7 @@ internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     u32 index = 0;
     for (u32 i = 0; i < segs; ++i)
     {
-        f32 a = glm_rad(angle_delta*i);
+        f32 a = rad_f32(angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
 
@@ -728,7 +728,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -755,7 +755,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
     u32 index = 6;
     for (u32 i = 0; i < iterations; ++i)
     {
-        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        f32 a = rad_f32(cmd->start_angle + angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
 
@@ -801,7 +801,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -821,7 +821,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     f32 k = cmd->inner_radius / cmd->outer_radius;
     for (u32 i = 0; i < iterations; i += 2)
     {
-        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        f32 a = rad_f32(cmd->start_angle + angle_delta*i);
         vertices[index++] = k*cos_f32(a);
         vertices[index++] = k*sin_f32(a);
 
@@ -874,7 +874,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -898,7 +898,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     for (u32 i = 0; i <= segs; i += 2)
     {
         f32 a_deg = cmd->start_angle + angle_delta*i;
-        f32 a = glm_rad(a_deg);
+        f32 a = rad_f32(a_deg);
         vertices[index++] = k_in*cos_f32(a);
         vertices[index++] = -k_in*sin_f32(a);
 
@@ -920,7 +920,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     for (u32 i = 0; i <= segs; i += 2)
     {
         f32 a_deg = cmd->end_angle - angle_delta*i;
-        f32 a = glm_rad(a_deg);
+        f32 a = rad_f32(a_deg);
         vertices[index++] = cos_f32(a);
         vertices[index++] = -sin_f32(a);
 
@@ -1340,8 +1340,8 @@ void renderer_clear(v4 color)
 internal void draw_bevel(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
 {
     // Get the unit vectors in the direction prev -> curr and curr -> next
-    v2 d0 = glms_vec2_normalize(v2_sub(curr, prev));
-    v2 d1 = glms_vec2_normalize(v2_sub(next, curr));
+    v2 d0 = v2_normalize(v2_sub(curr, prev));
+    v2 d1 = v2_normalize(v2_sub(next, curr));
 
     // Get the normal vectors to the direction vectors
     v2 n0 = v2_perp(d0);
@@ -1370,8 +1370,8 @@ internal void draw_bevel(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color
 internal void draw_miter(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
 {
     // Get the unit vectors in the direction prev -> curr and curr -> next
-    v2 d0 = glms_vec2_normalize(v2_sub(curr, prev));
-    v2 d1 = glms_vec2_normalize(v2_sub(next, curr));
+    v2 d0 = v2_normalize(v2_sub(curr, prev));
+    v2 d1 = v2_normalize(v2_sub(next, curr));
 
     // Get the normal vectors to the direction vectors
     v2 n0 = v2_perp(d0);
@@ -1386,7 +1386,7 @@ internal void draw_miter(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color
         n1 = v2_scale(n1, -1.0f);
     }
 
-    v2 miter_dir = glms_vec2_normalize(v2_add(n0, n1));
+    v2 miter_dir = v2_normalize(v2_add(n0, n1));
 
     // The length goes along a diagonal. Scale it so that its projection onto the normal equals 0.5
     f32 denom = v2_dot(miter_dir, n1);

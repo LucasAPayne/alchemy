@@ -181,6 +181,12 @@ inline f32 v2_mag(v2 v)
     return result;
 }
 
+inline v2 v2_normalize(v2 v)
+{
+    v2 result = glms_vec2_normalize(v);
+    return result;
+}
+
 inline v2 v2_reflect(v2 v, v2 r)
 {
     v2 result = {0};
