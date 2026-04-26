@@ -123,16 +123,39 @@ void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, ptr);
 }
 
+// Ensure stencil test is enabled, and set up the write mask
 internal void stencil_buffer_enable_write(void)
 {
+    glEnable(GL_STENCIL_TEST);
     glStencilMask(0xFF);
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 }
 
+// Disable writing but not the stencil test
 internal void stencil_buffer_disable_write(void)
 {
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilMask(0x00);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+}
+
+// Reset stencil state to default and disable stencil test
+internal void stencil_buffer_reset(void)
+{
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    glDisable(GL_STENCIL_TEST);
+}
+
+internal void depth_test_enable(void)
+{
+    glEnable(GL_DEPTH_TEST);
+}
+
+internal void depth_test_disable(void)
+{
+    glDisable(GL_DEPTH_TEST);
 }
 
 internal RenderObject framebuffer_renderer_init(u32 shader)
@@ -489,13 +512,43 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
 
 internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
 {
-    RenderCommandLine ab = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->a, cmd->b, cmd->thickness};
-    RenderCommandLine bc = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->b, cmd->c, cmd->thickness};
-    RenderCommandLine ca = {RENDER_COMMAND_RenderCommandLine, cmd->color, cmd->c, cmd->a, cmd->thickness};
+    /* NOTE(lucas): To find the vertices of the shrunken triangle, first find incenter of the triangle (the center of
+     * the inscribed circle). Then, find the inradius, the radius of the inscribed circle. Trivially, the two triangles
+     * share angle bisectors and thus incenters. So, we want to find a coefficient that gives us new vertices based on
+     * moving X units along the inradius, where X is the outline thickness, which can be done with the all-too-familiar
+     * linear blend. If A is the old vertex, A' is the new vertx, Q is the incenter, and k is the coefficient, we have
+     * A' = A(1-k) + Qk
+     * More details found here: https://math.stackexchange.com/questions/17561/how-to-shrink-a-triangle
+     */
+    f32 ab = v2_mag(v2_sub(cmd->b, cmd->a));
+    f32 bc = v2_mag(v2_sub(cmd->c, cmd->b));
+    f32 ca = v2_mag(v2_sub(cmd->c, cmd->a));
 
-    output_line(renderer, &ab);
-    output_line(renderer, &bc);
-    output_line(renderer, &ca);
+    v2 incenter = {(ab*cmd->c.x + bc*cmd->a.x + ca*cmd->b.x) / (ab + bc + ca),
+                   (ab*cmd->c.y + bc*cmd->a.y + ca*cmd->b.y) / (ab + bc + ca)};
+
+    f32 semiperimeter = (ab + bc + ca) / 2.0f;
+    f32 inradius = sqrt_f32(((semiperimeter-ab)*(semiperimeter-bc)*(semiperimeter-ca)) / semiperimeter);
+    f32 k = cmd->thickness / inradius;
+    v2 qk = v2_scale(incenter, k);
+
+    v2 new_a = v2_add(v2_scale(cmd->a, 1.0f-k), qk);
+    v2 new_b = v2_add(v2_scale(cmd->b, 1.0f-k), qk);
+    v2 new_c = v2_add(v2_scale(cmd->c, 1.0f-k), qk);
+
+    RenderCommandTriangle inner = {RENDER_COMMAND_RenderCommandTriangle, new_a, new_b, new_c, cmd->origin, color_transparent(), cmd->rotation};
+    RenderCommandTriangle outer = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->rotation};
+
+    depth_test_enable();
+    stencil_buffer_enable_write();
+    output_triangle(renderer, &inner);
+
+    depth_test_disable();
+    stencil_buffer_disable_write();
+    renderer->triangle_renderer.shader = renderer->poly_border_shader;
+    output_triangle(renderer, &outer);
+    stencil_buffer_reset();
+    renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
 // TODO(lucas): Think about pulling out common code and default vertices for shape variants
@@ -591,22 +644,22 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 
 internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
 {
-    v2 top_left  = cmd->position;
-    v2 top_right = v2(top_left.x + cmd->size.x - cmd->thickness, top_left.y);
-    v2 bot_left  = v2(top_left.x, top_left.y + cmd->size.y - cmd->thickness);
+    v2 new_pos = v2_add(cmd->position, v2_full(cmd->thickness));
+    v2 new_size = v2_sub(cmd->size, v2_full(2.0f*cmd->thickness));
 
-    v2 horiz_dim = v2(cmd->size.x, cmd->thickness);
-    v2 vert_dim  = v2(cmd->thickness, cmd->size.y);
+    RenderCommandQuad inner = {RENDER_COMMAND_RenderCommandQuad, new_pos, cmd->origin, new_size, color_transparent(), cmd->rotation};
+    RenderCommandQuad outer = {RENDER_COMMAND_RenderCommandQuad, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation};
 
-    RenderCommandQuad top    = {RENDER_COMMAND_RenderCommandQuad, top_left,  cmd->origin, horiz_dim, cmd->color, cmd->rotation};
-    RenderCommandQuad left   = {RENDER_COMMAND_RenderCommandQuad, top_left,  cmd->origin, vert_dim,  cmd->color, cmd->rotation};
-    RenderCommandQuad bottom = {RENDER_COMMAND_RenderCommandQuad, bot_left,  cmd->origin, horiz_dim, cmd->color, cmd->rotation};
-    RenderCommandQuad right  = {RENDER_COMMAND_RenderCommandQuad, top_right, cmd->origin, vert_dim,  cmd->color, cmd->rotation};
+    depth_test_enable();
+    stencil_buffer_enable_write();
+    output_quad(renderer, &inner);
 
-    output_quad(renderer, &top);
-    output_quad(renderer, &left);
-    output_quad(renderer, &bottom);
-    output_quad(renderer, &right);
+    depth_test_disable();
+    stencil_buffer_disable_write();
+    renderer->quad_renderer.shader = renderer->poly_border_shader;
+    output_quad(renderer, &outer);
+    stencil_buffer_reset();
+    renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
 internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient* cmd)
@@ -708,19 +761,19 @@ internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
 
 internal void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
 {
-    RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center,
-                                           color_transparent(), cmd->radius - cmd->thickness};
-    RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
+    f32 inner_r = cmd->radius - cmd->thickness;
+    RenderCommandCircle inner = {RENDER_COMMAND_RenderCommandCircle, cmd->center, color_transparent(), inner_r};
+    RenderCommandCircle outer = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
 
-    // glEnable(GL_DEPTH_TEST);
-    // stencil_buffer_enable_write();
-    output_circle(renderer, &transparent_cmd);
+    depth_test_enable();
+    stencil_buffer_enable_write();
+    output_circle(renderer, &inner);
 
-    // glDisable(GL_DEPTH_TEST);
-    // stencil_buffer_disable_write();
+    depth_test_disable();
+    stencil_buffer_disable_write();
     renderer->circle_renderer.shader = renderer->poly_border_shader;
-    output_circle(renderer, &outline_cmd);
-    // stencil_buffer_enable_write();
+    output_circle(renderer, &outer);
+    stencil_buffer_reset();
     renderer->circle_renderer.shader = renderer->poly_shader;
 }
 
@@ -859,7 +912,6 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     vao_unbind();
 }
 
-// TODO(lucas): Test drawing, moving, and rotating this since line rendering has been updated
 internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
 {
     if (cmd->inner_radius > cmd->outer_radius)
@@ -874,7 +926,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -898,7 +950,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     for (u32 i = 0; i <= segs; i += 2)
     {
         f32 a_deg = cmd->start_angle + angle_delta*i;
-        f32 a = rad_f32(a_deg);
+        f32 a = glm_rad(a_deg);
         vertices[index++] = k_in*cos_f32(a);
         vertices[index++] = -k_in*sin_f32(a);
 
@@ -920,7 +972,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     for (u32 i = 0; i <= segs; i += 2)
     {
         f32 a_deg = cmd->end_angle - angle_delta*i;
-        f32 a = rad_f32(a_deg);
+        f32 a = glm_rad(a_deg);
         vertices[index++] = cos_f32(a);
         vertices[index++] = -sin_f32(a);
 
@@ -939,7 +991,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     }
 
     index = 0;
-    for (u32 i = 0; i < n_indices; i += 3, ++index)
+    for (u32 i = 0; i < n_indices-12; i += 3, ++index)
     {
         indices[i] = index;
         indices[i+1] = index+1;
@@ -962,11 +1014,17 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     v2 cap_start = {cmd->center.x + cmd->inner_radius, cmd->center.y};
     v2 cap_end = {cmd->center.x + cmd->outer_radius, cmd->center.y};
 
-    RenderCommandLine start_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->thickness};
-    RenderCommandLine end_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->thickness};
+    // TODO(lucas): The resulting quads from this are certainly not perfect,
+    // but they will be cleaned up on the next renderer pass.
+    v2 delta = v2_sub(cap_end, cap_start);
+    f32 length = v2_mag(delta);
+    v2 dim = v2(length, cmd->thickness);
 
-    output_line(renderer, &start_cap);
-    output_line(renderer, &end_cap);
+    RenderCommandQuad start_cap = {RENDER_COMMAND_RenderCommandQuad, cap_start, cmd->center, dim, cmd->color, cmd->start_angle + cmd->rotation};
+    RenderCommandQuad end_cap = {RENDER_COMMAND_RenderCommandQuad, cap_start, cmd->center, dim, cmd->color, cmd->end_angle + cmd->rotation};
+
+    output_quad(renderer, &start_cap);
+    output_quad(renderer, &end_cap);
 }
 
 internal void output_scissor_test(Renderer* renderer, RenderCommandScissorTest* cmd)
@@ -1142,11 +1200,6 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    // TODO(lucas): Stencil test should be scoped better. It can mess with draw order and transparency if it's global.
-    // glEnable(GL_STENCIL_TEST);
-    // glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    // glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
     renderer.command_buffer_arena = memory_arena_alloc(command_buffer_bytes);
     renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_bytes);
 
@@ -1238,8 +1291,6 @@ void renderer_new_frame(Renderer* renderer, Window* window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glEnable(GL_SCISSOR_TEST);
-    // TODO(lucas): Stencil test should be scoped better. It can mess with draw order and transparency if it's global.
-    // glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
     renderer->window_width = window->width;
