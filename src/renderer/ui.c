@@ -78,7 +78,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
     shader_bind(shader);
     shader_set_i32(shader, "tex", 0);
     shader_set_m4(shader, "projection", projection, false);
-    renderer_viewport(renderer, rect_min_dim(v2_zero(), v2((f32)renderer->window_width, (f32)renderer->window_height)));
+    renderer_viewport(renderer, rect_min_dim(v2_zero(), v2((f32)state->width, (f32)state->height)));
 
     const struct nk_command* cmd;
     nk_foreach(cmd, &state->ctx)
@@ -91,7 +91,7 @@ void ui_render(Renderer* renderer, enum nk_anti_aliasing aa)
             case NK_COMMAND_SCISSOR:
             {
                 const struct nk_command_scissor* s = (const struct nk_command_scissor*)cmd;
-                f32 y = (f32)(renderer->window_height - s->h - s->y);
+                f32 y = (f32)(state->height - s->h - s->y);
                 rect clip = rect_min_dim(v2((f32)s->x, y), v2((f32)s->w, (f32)s->h));
                 draw_scissor_test(renderer, clip);
             } break;

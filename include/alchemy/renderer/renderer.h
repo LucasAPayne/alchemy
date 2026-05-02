@@ -262,8 +262,6 @@ typedef struct Renderer
     Framebuffer intermediate_framebuffer;
 
     rect viewport;
-    int window_width;
-    int window_height;
     v4 clear_color;
 
     RendererConfig config;
@@ -273,10 +271,12 @@ typedef struct Renderer
 
 void opengl_init(Window* window);
 
-Renderer renderer_init(Window* window, int viewport_width, int viewport_height, size command_buffer_size);
+// NOTE(lucas): The renderer no longer requires a window to be passed in and no longer
+// inits OpenGL. However, a window must still be created and exist for OpenGL to initialize and work.
+Renderer renderer_init(int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
-void renderer_new_frame(Renderer* renderer, Window* window);
+void renderer_new_frame(Renderer* renderer, int window_width, int window_height);
 void renderer_render(Renderer* renderer);
 
 void renderer_viewport(Renderer* renderer, rect viewport);
