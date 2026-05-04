@@ -1064,7 +1064,7 @@ internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer
     return result;
 }
 
-internal void render_command_buffer_output(Renderer* renderer)
+void render_command_buffer_output(Renderer* renderer)
 {
     RenderCommandBuffer* command_buffer = &renderer->command_buffer;
     for (size base_address = 0; base_address < command_buffer->bytes;)
@@ -1204,7 +1204,8 @@ Renderer renderer_init(int viewport_width, int viewport_height, size command_buf
     // Don't want it to be necessary to define a memory arena to pass in to here.
     renderer.scratch_arena = memory_arena_alloc(MEGABYTES(4));
 
-    renderer.viewport = rect_min_dim(v2_zero(), v2((f32)viewport_width, (f32)viewport_height));
+    rect viewport = rect_min_dim(v2_zero(), v2((f32)viewport_width, (f32)viewport_height));
+    renderer_viewport(&renderer, viewport);
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
     renderer.config.circle_line_segments = 128;
@@ -1334,15 +1335,14 @@ void renderer_render(Renderer* renderer)
     ui_render(renderer, NK_ANTI_ALIASING_ON);
     render_command_buffer_output(renderer);
 
-    // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the
-    // intermediate framebuffer
+    // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the intermediate framebuffer
     if (renderer->config.msaa_level > 0)
     {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer->framebuffer.id);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer->intermediate_framebuffer.id);
         glBlitFramebuffer((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
-                        (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
-                        GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+                          (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
+                          GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
     }
 
     fbo_unbind();

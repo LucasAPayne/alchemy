@@ -276,6 +276,7 @@ void opengl_init(Window* window);
 Renderer renderer_init(int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
+void render_command_buffer_output(Renderer* renderer);
 void renderer_new_frame(Renderer* renderer, int window_width, int window_height);
 void renderer_render(Renderer* renderer);
 

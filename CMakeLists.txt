@@ -23,6 +23,7 @@ SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup
 
 set(ALCHEMY_SOURCE
     ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
+    ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image_write.c
     ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
     ${PROJECT_SOURCE_DIR}/src/renderer/font.c
     ${PROJECT_SOURCE_DIR}/src/renderer/renderer.c
