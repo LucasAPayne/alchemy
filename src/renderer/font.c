@@ -480,6 +480,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
          */
         s8 line_slice = s8_slice(s, 0, s.len);
         Text line_text = text_init_scale(line_slice, font, text->position, text->px, text->scale);
+        line_text.color = text->color;
 
         switch (alignment)
         {
@@ -513,6 +514,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
             v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+            line_text.color = text->color;
             // Pass max_width instead of line_width to avoid justification
             flush_line(renderer, text_area, line_text, max_width, spaces_in_line, false);
 
@@ -540,6 +542,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
             v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+            line_text.color = text->color;
 
             // When a word overflows the line, the space following the last word of the line
             // should not be counted.
@@ -580,6 +583,7 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
 
         Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+        line_text.color = text->color;
         flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
     }
 }

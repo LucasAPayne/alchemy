@@ -6,6 +6,7 @@
 
 #include <glad/gl.h>
 #include <stb_image/stb_image.h>
+#include <stb_image/stb_image_write.h>
 
 internal void vao_bind(u32 vao)
 {
@@ -1064,7 +1065,7 @@ internal RenderCommand* render_command_push_(RenderCommandBuffer* command_buffer
     return result;
 }
 
-void render_command_buffer_output(Renderer* renderer)
+internal void render_command_buffer_output(Renderer* renderer)
 {
     RenderCommandBuffer* command_buffer = &renderer->command_buffer;
     for (size base_address = 0; base_address < command_buffer->bytes;)
@@ -1193,6 +1194,7 @@ Renderer renderer_init(int viewport_width, int viewport_height, size command_buf
     Renderer renderer = {0};
 
     stbi_set_flip_vertically_on_load(true);
+    stbi_flip_vertically_on_write(true);
 
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
@@ -1283,7 +1285,7 @@ void renderer_delete(Renderer* renderer)
     framebuffer_delete(&renderer->intermediate_framebuffer);
 }
 
-void renderer_new_frame(Renderer* renderer, int window_width, int window_height)
+void renderer_new_frame(Renderer* renderer, int viewport_width, int viewport_height)
 {
     if (renderer->config.wireframe_mode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1291,17 +1293,15 @@ void renderer_new_frame(Renderer* renderer, int window_width, int window_height)
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
-    // fit the viewport to the window.
+    // NOTE(lucas): If the user does set the viewport size themselves, use the passed-in size
+    rect viewport = renderer->viewport;
     if (rect_is_zero(renderer->viewport))
-    {
-        rect viewport = rect_min_dim(v2_zero(), v2((f32)window_width, (f32)window_height));
-        renderer_viewport(renderer, viewport);
-    }
+        viewport = rect(0.0f, 0.0f, (f32)viewport_width, (f32)viewport_height);
+
+    renderer_viewport(renderer, viewport);
 
     fbo_bind(renderer->framebuffer.id);
 
-    rect viewport = renderer->viewport;
     int msaa = renderer->config.msaa_level;
     texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, msaa);
     texture_fill_empty_data(&renderer->intermediate_framebuffer.texture, (int)viewport.width, (int)viewport.height, 0);
@@ -1322,28 +1322,47 @@ void renderer_new_frame(Renderer* renderer, int window_width, int window_height)
     shader_set_m4(renderer->font_renderer.shader,     "projection", projection, false);
     shader_set_m4(renderer->ui_renderer.shader,       "projection", projection, false);
 
-    ui_new_frame(renderer, window_width, window_height);
+    // TODO(lucas): Consider making UI rendering optional
+    ui_new_frame(renderer, viewport_width, viewport_height);
 
     renderer_clear(color_black());
 }
 
-void renderer_render(Renderer* renderer)
+internal void renderer_finalize_frame(Renderer* renderer)
 {
-    rect viewport = renderer->viewport;
-
     // TODO(lucas): Use renderer AA settings
+    // TODO(lucas): Consider making UI rendering optional
     ui_render(renderer, NK_ANTI_ALIASING_ON);
     render_command_buffer_output(renderer);
 
     // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the intermediate framebuffer
     if (renderer->config.msaa_level > 0)
     {
+        // TODO(lucas): Pull out OpenGL code
+        rect viewport = renderer->viewport;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer->framebuffer.id);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer->intermediate_framebuffer.id);
         glBlitFramebuffer((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
                           (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
                           GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+
     }
+}
+
+internal void renderer_end_frame(Renderer* renderer)
+{
+    // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
+    // window dimensions if the user does not resize the viewport themselves
+    renderer->viewport = rect_zero();
+
+    memory_arena_clear(&renderer->scratch_arena);
+    memory_arena_clear(&renderer->command_buffer_arena);
+    render_command_buffer_clear(&renderer->command_buffer);
+}
+
+void renderer_render(Renderer* renderer)
+{
+    renderer_finalize_frame(renderer);
 
     fbo_unbind();
     renderer_clear(renderer->clear_color);
@@ -1361,12 +1380,34 @@ void renderer_render(Renderer* renderer)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_unbind();
 
-    // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
-    // window dimensions if the user does not resize the viewport themselves
-    renderer->viewport = rect_zero();
-    memory_arena_clear(&renderer->scratch_arena);
-    memory_arena_clear(&renderer->command_buffer_arena);
-    render_command_buffer_clear(&renderer->command_buffer);
+    renderer_end_frame(renderer);
+}
+
+void renderer_save_to_image(Renderer* renderer, s8 filename, MemoryArena* arena)
+{
+    renderer_finalize_frame(renderer);
+
+    u32 framebuffer_id = renderer->config.msaa_level > 0 ? renderer->intermediate_framebuffer.id : renderer->framebuffer.id;
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+
+    int width = (int)renderer->viewport.width;
+    int height = (int)renderer->viewport.height;
+    int channels = 4;
+    int pixel_bytes = (int)width*(int)height*channels;
+    ubyte* data = push_array(arena, pixel_bytes, ubyte);
+    glReadnPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixel_bytes, data);
+
+    // Export image
+    char* save_path_cstr = s8_get_char(arena, filename);
+    int stride = (int)width*channels;
+    if (!stbi_write_png(save_path_cstr, width, height, channels, data, stride))
+        log_error("Image not saved.");
+
+    // Reclaim arena space
+    size total_arena_bytes = filename.len+1 + pixel_bytes; 
+    memory_arena_pop(arena, total_arena_bytes);
+
+    renderer_end_frame(renderer);
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)

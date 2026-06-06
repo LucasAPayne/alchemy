@@ -276,9 +276,12 @@ void opengl_init(Window* window);
 Renderer renderer_init(int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
-void render_command_buffer_output(Renderer* renderer);
 void renderer_new_frame(Renderer* renderer, int window_width, int window_height);
 void renderer_render(Renderer* renderer);
+
+// Save a frame to an image.
+// All memory used by the arena is freed back within this function.
+void renderer_save_to_image(Renderer* renderer, s8 filename, MemoryArena* arena);
 
 void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
