@@ -180,9 +180,6 @@ internal inline s8 s8_copyn(s8 src, size len, MemoryArena* arena)
     s8 result = s8_init(arena, len);
     memcpy(result.data, src.data, len);
 
-    // assert(((uintptr_t)result.data & 15) == 0);
-    // assert(((uintptr_t)src.data & 15) == 0);
-
     return result;
 }
 
@@ -237,6 +234,29 @@ internal inline s8 s8_cat_arena(s8 a, s8 b, MemoryArena* arena)
     s8_cat(a, b, result);
     return result;
 }
+
+internal inline s8 s8_join_arena(MemoryArena* arena, size count, s8* strings)
+{
+    size total_len = 0;
+    for (size i = 0; i < count; ++i)
+        total_len += strings[i].len;
+
+    s8 result = s8_init(arena, total_len);
+
+    u8* dst = result.data;
+    for (size i = 0; i < count; ++i)
+    {
+        memcpy(dst, strings[i].data, strings[i].len);
+        dst += strings[i].len;
+    }
+
+    return result;
+}
+
+#define s8_join(arena, ...) \
+    s8_join_arena((arena), \
+                  sizeof((s8[]){__VA_ARGS__}) / sizeof(s8), \
+                  (s8[]){__VA_ARGS__})
 
 internal inline s8 s8_substr(s8 src, size start, size len, MemoryArena* arena)
 {
