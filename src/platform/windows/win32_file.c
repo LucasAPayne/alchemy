@@ -322,3 +322,24 @@ void file_set_end(void* file_handle)
         log_error("Failed to extend/truncate file %s", filename);
     }
 }
+
+// TODO(lucas): Create parent directories if necessary
+void directory_create(s8 path)
+{
+    char path_cstr[MAX_PATH];
+    memcpy(path_cstr, path.data, path.len);
+    path_cstr[path.len] = 0;
+
+    b32 success = CreateDirectoryA(path_cstr, NULL);
+    if (!success)
+    {
+        // If the path already exists and is a directory, it is stil a success
+        DWORD error = GetLastError();
+        if (error == ERROR_ALREADY_EXISTS)
+        {
+            DWORD attrs = GetFileAttributesA(path_cstr);
+            b32 valid = (attrs != INVALID_FILE_ATTRIBUTES) && (attrs & FILE_ATTRIBUTE_DIRECTORY);
+            if (!valid) log_fatal("Failed to create directory '%s' (error %lu)", path_cstr, error);
+        }
+    }
+}

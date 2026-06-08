@@ -41,3 +41,7 @@ int file_write(void* file_handle, void* buffer, size num_bytes_to_write);
 int file_write_byte(void* file_handle, size offset, u8 byte); // Writes byte to file at offset from beginning of file
 
 void file_set_end(void* file_handle); // Truncates or extends a file based on current file cursor position
+
+// Create a directory.
+// If the path already exists, this is a no-op.
+void directory_create(s8 path);
