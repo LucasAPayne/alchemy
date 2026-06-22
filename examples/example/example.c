@@ -352,26 +352,26 @@ UPDATE_AND_RENDER(update_and_render)
 
     /* Text justification Test */
     // rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
-    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(200.0f, 80.0f));
+    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(400.0f, 200.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    // s8 str = s8("●Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
-    //             "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
-    //             "aliquip ex ea commodo consequat.");
+    s8 str = s8("●Lorem     ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
+                "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+                "aliquip ex ea commodo consequat.");
 
-    // TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
-    // text_area.text.color = color_black();
-    // text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    // text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
-    // text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
-    // draw_text_area(renderer, &text_area);
-
-    s8 str = s8("Blue-Eyes White Dragon");
     TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();
-    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_LEFT;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_BOTTOM;
+    text_area.horiz_alignment = TEXT_ALIGN_H_FLUSH;
+    text_area.vert_alignment = TEXT_ALIGN_V_DISTRIBUTED;
+    text_area.style |= TEXT_AREA_WRAP;
     draw_text_area(renderer, &text_area);
+
+    // s8 str = s8("Blue-Eyes White Dragon");
+    // TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
+    // text_area.text.color = color_black();
+    // text_area.horiz_alignment = TEXT_ALIGN_H_LEFT;
+    // text_area.vert_alignment = TEXT_ALIGN_V_BOTTOM;
+    // draw_text_area(renderer, &text_area);
 
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);
     *logo_tex = state->logo_tex;

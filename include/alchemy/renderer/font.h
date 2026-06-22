@@ -67,35 +67,49 @@ typedef struct Text
     s8 string;
 } Text;
 
-typedef enum TextAlignmentHoriz
+// Text horizontal alignment
+typedef enum TextAlignH
 {
-    // Text is horizontally aligned to the left border of the text area bounds. All leftover space goes to the right side.
-    TEXT_ALIGN_HORIZ_LEFT = 0,
+    // Text is horizontally aligned to the left border of the text area bounds.
+    // All leftover space goes to the right side.
+    TEXT_ALIGN_H_LEFT = 0,
 
-    // Text is horizontally aligned to the right border of the text area bounds. All leftover space goes to the left side.
-    TEXT_ALIGN_HORIZ_RIGHT,
+    // Text is horizontally aligned to the right border of the text area bounds.
+    // All leftover space goes to the left side.
+    TEXT_ALIGN_H_RIGHT,
 
-    // Text is horizontally aligned to the center of the text area bounds. Leftover space is evenly divided between the
-    // left and right sides.
-    TEXT_ALIGN_HORIZ_CENTER,
+    // Text is horizontally aligned to the center of the text area bounds.
+    // Leftover space is evenly divided between the left and right sides.
+    TEXT_ALIGN_H_CENTER,
 
-    // Text is horizontally aligned to both the left and right borders of the text area bounds. Leftover space is
-    // evenly distributed between each word.
-    TEXT_ALIGN_HORIZ_JUSTIFIED
-} TextAlignmentHoriz;
+    // Text is horizontally aligned to both the left and right borders of the text area bounds.
+    // Leftover space is evenly distributed between each word.
+    // If text wraps, the last line is not justified.
+    TEXT_ALIGN_H_JUSTIFIED,
 
-typedef enum TextAlignmentVert
+    // Same as justified, but the last line of wrapping text is justified.
+    TEXT_ALIGN_H_FLUSH,
+} TextAlignH;
+
+// Text vertical alignment
+typedef enum TextAlignV
 {
-    // Text is vertically aligned to the top border of the text area bounds. All leftover space goes to the bottom.
-    TEXT_ALIGN_VERT_TOP = 0,
+    // Text is vertically aligned to the top border of the text area bounds.
+    // All leftover space goes to the bottom.
+    TEXT_ALIGN_V_TOP = 0,
 
-    // Text is vertically aligned to the bottom border of the text area bounds. All leftover space goes to the top.
-    TEXT_ALIGN_VERT_BOTTOM,
+    // Text is vertically aligned to the bottom border of the text area bounds.
+    // All leftover space goes to the top.
+    TEXT_ALIGN_V_BOTTOM,
 
-    // Text is vertically aligned to the center of the text area bounds. Leftover space is evenly divided between the
-    // bottom and top.
-    TEXT_ALIGN_VERT_CENTER
-} TextAlignmentVert;
+    // Text is vertically aligned to the center of the text area bounds.
+    // Leftover space is evenly divided between the bottom and top.
+    TEXT_ALIGN_V_CENTER,
+
+    // Text is vertically aligned to both the top and bottom of the text area bounds.
+    // Leftover space is evenly distributed between each word.
+    TEXT_ALIGN_V_DISTRIBUTED,
+} TextAlignV;
 
 // TODO(lucas): Background style?
 typedef enum TextAreaStyle
@@ -113,14 +127,17 @@ typedef enum TextAreaStyle
 // TODO(lucas): Margins, borders, and other options
 typedef struct TextArea
 {
-    TextAlignmentHoriz horiz_alignment;
-    TextAlignmentVert vert_alignment;
+    TextAlignH horiz_alignment;
+    TextAlignV vert_alignment;
     TextAreaStyle style;
     rect bounds;
     Text text;
 
     // Scales the spacing between lines for wrapping text (default 1.0)
     f32 line_spacing;
+
+    // Used for vertically distributed alignment to evenly distribute leftover space among each line
+    f32 extra_height_per_line;
 } TextArea;
 
 /* Load a font from a file. Glyph data is cached in a memory arena for the font size specified on load.

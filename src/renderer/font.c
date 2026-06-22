@@ -431,19 +431,20 @@ internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text
     f32 max_width = text_area->bounds.width;
 
     f32 width_remaining = max_width - line_width;
-    TextAlignmentHoriz alignment = text_area->horiz_alignment;
+    TextAlignH alignment = text_area->horiz_alignment;
 
-    ASSERT((alignment != TEXT_ALIGN_HORIZ_JUSTIFIED && alignment != TEXT_ALIGN_HORIZ_RIGHT) ||
+    ASSERT((alignment != TEXT_ALIGN_H_JUSTIFIED && alignment != TEXT_ALIGN_H_RIGHT) ||
         width_remaining >= 0.0f, "Negative width remaining");
     ASSERT(spaces_in_line >= 0, "Negative spaces in line");
 
     switch (alignment)
     {
-        case TEXT_ALIGN_HORIZ_LEFT:   break;
-        case TEXT_ALIGN_HORIZ_RIGHT:  line_text.position.x += width_remaining;      break;
-        case TEXT_ALIGN_HORIZ_CENTER: line_text.position.x += 0.5f*width_remaining; break;
+        case TEXT_ALIGN_H_LEFT:   break;
+        case TEXT_ALIGN_H_RIGHT:  line_text.position.x += width_remaining;                                 break;
+        case TEXT_ALIGN_H_CENTER: line_text.position.x += 0.5f*width_remaining;                            break;
+        case TEXT_ALIGN_H_FLUSH:  line_text.extra_width_per_space = width_remaining / (f32)spaces_in_line; break;
 
-        case TEXT_ALIGN_HORIZ_JUSTIFIED:
+        case TEXT_ALIGN_H_JUSTIFIED:
         {
             // If the text is justified, distribute the remaining width among all spaces in the line.
             // However, the final line in a text area should not be justified.
@@ -469,9 +470,9 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (!(text_area->style & TEXT_AREA_WRAP))
     {
         f32 width_remaining = max_width - text->string_width;
-        TextAlignmentHoriz alignment = text_area->horiz_alignment;
+        TextAlignH alignment = text_area->horiz_alignment;
 
-        ASSERT((alignment != TEXT_ALIGN_HORIZ_JUSTIFIED && alignment != TEXT_ALIGN_HORIZ_RIGHT) ||
+        ASSERT((alignment != TEXT_ALIGN_H_JUSTIFIED && alignment != TEXT_ALIGN_H_RIGHT) ||
             width_remaining >= 0.0f, "Negative width remaining");
 
         /* NOTE(lucas): Directly submitting text_area->text to draw_text() results in access violations with
@@ -484,10 +485,10 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
 
         switch (alignment)
         {
-            case TEXT_ALIGN_HORIZ_LEFT:      break;
-            case TEXT_ALIGN_HORIZ_JUSTIFIED: break; // One line of justified text is the same as left-aligned.
-            case TEXT_ALIGN_HORIZ_CENTER:    line_text.position.x += 0.5f * width_remaining; break;
-            case TEXT_ALIGN_HORIZ_RIGHT:     line_text.position.x += width_remaining;        break;
+            case TEXT_ALIGN_H_LEFT:      break;
+            case TEXT_ALIGN_H_JUSTIFIED: break; // One line of justified text is the same as left-aligned.
+            case TEXT_ALIGN_H_CENTER:    line_text.position.x += 0.5f * width_remaining; break;
+            case TEXT_ALIGN_H_RIGHT:     line_text.position.x += width_remaining;        break;
             INVALID_DEFAULT_CASE();
         }
         draw_text(renderer, line_text);
@@ -510,8 +511,13 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         // Handle explicit newline (no horizontal justification)
         if (s.data[i] == '\n')
         {
+            /* TODO(lucas): This handling of flushing a line needs to be pulled out somehow.
+             * It repeats 3 times almost exactly the same.
+             */
             s8 line_slice = s8_slice(s, line_begin, i);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
+            f32 extra = text_area->extra_height_per_line;
+            f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+            v2 pos = v2(text->position.x, new_y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
             line_text.color = text->color;
@@ -539,7 +545,9 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         if (line_width + word.string_width > max_width && line_width > 0.0f)
         {
             s8 line_slice = s8_slice(s, line_begin, space_begin);
-            v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
+            f32 extra = text_area->extra_height_per_line;
+            f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+            v2 pos = v2(text->position.x, new_y);
 
             Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
             line_text.color = text->color;
@@ -566,12 +574,15 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
         // Check if there was any whitespace
         if (i > space_begin)
         {
+            /* TODO(lucas): Consider only counting and rendering one space between each word
+             * in justified text, even if there are multiple consecutive spaces, or leaving it as an option.
+             */
             s8 space_slice = s8_slice(s, space_begin, i);
             space = text_init_scale(space_slice, font, v2_zero(), text->px, text->scale);
 
             // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
             // with the next word that gets consumed.
-            ++spaces_in_line;
+            spaces_in_line += (i32)(i - space_begin);
             line_width += space.string_width;
         }
     }
@@ -580,7 +591,9 @@ internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
     if (line_begin < s.len)
     {
         s8 line_slice = s8_slice(s, line_begin, s.len);
-        v2 pos = v2(text->position.x, text->position.y + line_idx*text->line_height*text_area->line_spacing*text->scale.y);
+        f32 extra = text_area->extra_height_per_line;
+        f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+        v2 pos = v2(text->position.x, new_y);
 
         Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
         line_text.color = text->color;
@@ -668,9 +681,16 @@ void draw_text_area(Renderer* renderer, TextArea* text_area)
 
     switch (text_area->vert_alignment)
     {
-        case TEXT_ALIGN_VERT_TOP:    break;
-        case TEXT_ALIGN_VERT_BOTTOM: text_area->text.position.y += vert_space_remaining;      break;
-        case TEXT_ALIGN_VERT_CENTER: text_area->text.position.y += 0.5f*vert_space_remaining; break;
+        case TEXT_ALIGN_V_TOP:         break;
+        case TEXT_ALIGN_V_BOTTOM:      text_area->text.position.y += vert_space_remaining;      break;
+        case TEXT_ALIGN_V_CENTER:      text_area->text.position.y += 0.5f*vert_space_remaining; break;
+
+        case TEXT_ALIGN_V_DISTRIBUTED:
+        {
+            i32 lines = get_text_metrics(text_area).lines;
+            text_area->extra_height_per_line = vert_space_remaining / ((f32)lines-1.0f);
+        } break;
+
         INVALID_DEFAULT_CASE();
     }
 
