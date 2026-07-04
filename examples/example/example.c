@@ -6,9 +6,11 @@
 
 #include "ui_overview.h"
 
+#include <glad/gl.h>
+
 #include <stdlib.h> // rand
 
-internal void bounce_dvd(ExampleState* state, f32* direction)
+internal void bounce_logo(ExampleState* state, f32* direction)
 {
     // Bounce off screen boundary
     *direction *= -1.0f;
@@ -21,7 +23,7 @@ internal void bounce_dvd(ExampleState* state, f32* direction)
     state->last_color_index = color_index;
 }
 
-internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
+internal void update_logo(ExampleState* state, f32 delta_time, u32 window_width, u32 window_height)
 {
     f32 speed = 100.0f; // pixels per second
     rect window_bounds = rect_min_max(v2_zero(), v2((f32)(window_width - state->logo.size.x),
@@ -32,9 +34,9 @@ internal void update_dvd(ExampleState* state, f32 delta_time, u32 window_width, 
     v2 min = window_bounds.position;
     v2 max = v2_add(min, window_bounds.size);
     if ((state->logo.position.x > max.x) || (state->logo.position.x < min.x))
-        bounce_dvd(state, &state->logo_direction.x);
+        bounce_logo(state, &state->logo_direction.x);
     if ((state->logo.position.y > max.y) || (state->logo.position.y < min.y))
-        bounce_dvd(state, &state->logo_direction.y);
+        bounce_logo(state, &state->logo_direction.y);
 
     state->logo.position = v2_clamp_to_rect(state->logo.position, window_bounds);
 }
@@ -103,18 +105,21 @@ internal void update_player(ExampleState* state, Input* input, f32 delta_time, u
 
 internal void example_state_init(ExampleState* state, GameMemory* memory, Input* input, Renderer* renderer, Window* window)
 {
+    gladLoaderLoadGL();
+
     srand(0);
 
+    void* permanent_base = (void*)((u8*)memory->permanent_storage + sizeof(ExampleState));
+    state->permanent_arena = memory_arena_init_from_base(permanent_base, memory->permanent_storage_bytes - sizeof(ExampleState));
     state->transient_arena = memory_arena_init_from_base(memory->transient_storage, memory->transient_storage_bytes);
-    state->permanent_arena = memory_arena_init_from_base(memory->permanent_storage, memory->permanent_storage_bytes);
 
-    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf");
-    state->immortal_font = font_load_from_file("fonts/immortal.ttf");
-    state->matrix_font = font_load_from_file("fonts/matrix_book.ttf");
+    state->cardinal_font = font_load_from_file("fonts/cardinal.ttf",    64, &state->permanent_arena);
+    state->immortal_font = font_load_from_file("fonts/immortal.ttf",    64, &state->permanent_arena);
+    state->matrix_font   = font_load_from_file("fonts/matrix_book.ttf", 64, &state->permanent_arena);
 
-    state->logo_tex = texture_load_from_file("textures/dvd.png", renderer, &state->permanent_arena);
+    state->logo_tex = texture_load_from_file("textures/potion.png", &state->permanent_arena);
     state->logo = sprite_init(&state->logo_tex);
-    state->logo.size = v2(300.0f, 150.0f);
+    state->logo.size = v2(150.0f, 150.0f);
     state->logo.position = v2_zero();
     state->logo_direction = v2(1.0f, -1.0f);
 
@@ -169,7 +174,7 @@ UPDATE_AND_RENDER(update_and_render)
     stopwatch_update(&state->stopwatch, delta_time);
     Gamepad* gamepad = &input->gamepads[0];
     Keyboard* keyboard = &input->keyboard;
-    update_dvd(state, delta_time, window->width, window->height);
+    update_logo(state, delta_time, window->width, window->height);
     update_player(state, input, delta_time, window->width, window->height);
 
     if (key_pressed(keyboard, KEY_LBRACKET))
@@ -201,34 +206,6 @@ UPDATE_AND_RENDER(update_and_render)
     /* Draw */
     Player* player = &state->player;
     draw_quad(renderer, player->position, player->size, player->color, player->rotation);
-    // draw_quad_outline(renderer, player->position, player->size, color_red(), player->rotation, 5.0f);
-    // draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
-                    //    player->rotation);
-
-    // v2 a = player->position;
-    // v2 b = v2_add(player->position, v2(200.0f, 50.0f));
-    // v2 c = v2_add(player->position, v2(-100.0f, -100.0f));
-    // draw_triangle(renderer, a, b, c, player->color, player->rotation);
-    // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
-    // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
-
-    // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f, player->rotation);
-
-    // renderer->config.wireframe_mode = true;
-
-    // v2 center = v2_add(player->position, v2(300.0f, -300.0f));
-    // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
-
-    // f32 in_rad = player->size.x*4.0f;
-    // f32 out_rad = player->size.x*2.0f;
-    // persist f32 time = 0.0f;
-    // f32 freq = 2.0f;
-    // f32 start_angle = 45.0f - 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
-    // f32 end_angle = 315.0f + 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
-    // time += delta_time;
-    // draw_circle_sector(renderer, center, out_rad, start_angle, end_angle, player->color, 0.0f);
-    // draw_ring(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation);
-    // draw_ring_outline(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation, 5.0f);
 
     draw_sprite(renderer, state->logo);
 
@@ -254,18 +231,18 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
+    rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(400.0f, 200.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
-    s8 str = s8("●If you have \"Right Leg of the Forbidden One\", \"Left Leg of the Forbidden One\", \"Right Arm of the "
-                "Forbidden One\" and \"Left Arm of the Forbidden One\" in addition to this card in your hand, you win "
-                "the Duel.");
+    s8 str = s8("●Lorem     ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore "
+                "et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+                "aliquip ex ea commodo consequat.");
 
-    TextArea text_area = text_area_init(renderer, text_bounds, str, &state->matrix_font, 18);
+    TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
     text_area.text.color = color_black();
-    text_area.horiz_alignment = TEXT_ALIGN_HORIZ_JUSTIFIED;
-    text_area.vert_alignment = TEXT_ALIGN_VERT_TOP;
-    text_area.style |= TEXT_AREA_WRAP|TEXT_AREA_SHRINK_TO_FIT;
+    text_area.horiz_alignment = TEXT_ALIGN_H_FLUSH;
+    text_area.vert_alignment = TEXT_ALIGN_V_DISTRIBUTED;
+    text_area.style |= TEXT_AREA_WRAP;
     draw_text_area(renderer, &text_area);
 
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);

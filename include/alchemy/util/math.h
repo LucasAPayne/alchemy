@@ -5,6 +5,7 @@
 
 #include <math.h>
 
+#define rect(x, y, w, h) (rect){(x), (y), (w), (h)}
 typedef struct rect
 {
     union
@@ -33,7 +34,7 @@ inline f32 clamp_f32(f32 value, f32 min, f32 max)
         result = min;
     else if (value > max)
         result = max;
-    
+
     return result;
 }
 
@@ -95,7 +96,6 @@ inline f32 acos_f32(f32 x)
 
 inline f32 atan_f32(f32 y, f32 x)
 {
-    ASSERT(x != 0.0f, "Divide by zero");
     f32 result = atan2f(y, x);
     return result;
 }
@@ -181,11 +181,29 @@ inline f32 v2_mag(v2 v)
     return result;
 }
 
+inline v2 v2_normalize(v2 v)
+{
+    v2 result = glms_vec2_normalize(v);
+    return result;
+}
+
 inline v2 v2_reflect(v2 v, v2 r)
 {
     v2 result = {0};
     v2 vrr = v2_scale(r, 2.0f*v2_dot(v, r));
     result = v2_sub(v, vrr);
+    return result;
+}
+
+inline v2 v2_perp(v2 v)
+{
+    v2 result = v2(v.y, -v.x);
+    return result;
+}
+
+inline f32 v2_cross(v2 a, v2 b)
+{
+    f32 result = a.x*b.y - a.y*b.x;
     return result;
 }
 
@@ -455,7 +473,7 @@ inline b32 rect_point_in_bounds(rect bounds, v2 test)
 
     b32 result = ((test.x >= min.x) &&
                   (test.y >= min.y) &&
-                  (test.x <  max.x) && 
+                  (test.x <  max.x) &&
                   (test.y <  max.y));
 
     return result;

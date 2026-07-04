@@ -38,7 +38,7 @@
 #define CYANB    "\x1b[46m"
 #define WHITEB   "\x1b[47m"
 
-// High intensty background 
+// High intensty background
 #define BLACKHB   "\x1b[0;100m"
 #define REDHB     "\x1b[0;101m"
 #define GREENHB   "\x1b[0;102m"

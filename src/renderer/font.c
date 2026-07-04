@@ -5,20 +5,101 @@
 #include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
+#include <freetype/ftoutln.h>
+
+// Generate the grayscale texture for one glyph from a font
+internal Glyph cache_glyph(Font* font, u32 glyph_idx, u32 charcode)
+{
+    Glyph new_glyph = {0};
+    if (FT_Load_Glyph(font->face, glyph_idx, FT_LOAD_RENDER))
+    {
+        u8 err[5] = {0};
+        utf8_from_codepoint(err, charcode);
+        log_error("FreeType2 error: Failed to load character %c (codepoint: %u, glyph index: %u)",
+                  err, charcode, glyph_idx);
+        if (utf8_get_num_bytes(*err) == 4)
+            log_debug("4-byte UTF-8 characters may fail to display in the terminal.");
+    }
+
+    FT_Bitmap bmp = font->face->glyph->bitmap;
+
+    glGenTextures(1, &new_glyph.tex_id);
+    glBindTexture(GL_TEXTURE_2D, new_glyph.tex_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bmp.width, bmp.rows, 0, GL_RED, GL_UNSIGNED_BYTE, bmp.buffer);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    new_glyph.dim = v2((f32)bmp.width, (f32)bmp.rows);
+    new_glyph.bearing = v2((f32)font->face->glyph->bitmap_left, (f32)font->face->glyph->bitmap_top);
+    new_glyph.advance = font->face->glyph->advance.x;
+
+    return new_glyph;
+}
+
+// TODO(lucas): Rework glyph caching to cache an atlas instead of individual textures.
 // TODO(lucas): Almost all FreeType functions return an error. Check each of these.
+// TODO(lucas): Some fields of the font need to be checked before using certain metrics.
+// See here: https://freetype.org/freetype2/docs/tutorial/step2.html
 
-Font font_load_from_file(const char* filename)
+Font font_load_from_file(const char* filename, u32 px, MemoryArena* arena)
 {
     Font font = {0};
     FT_Library ft;
 
+    // Init FreeType and load the font at the specific px size.
     if (FT_Init_FreeType(&ft))
         log_error("FreeType2 error: Failed to iniitialize FreeType");
-
     if (FT_New_Face(ft, filename, 0, &font.face))
         log_error("FreeType2 error: Failed to open font %s", filename);
+    if (FT_Set_Pixel_Sizes(font.face, 0, px))
+        log_error("FreeType2 error: Failed to set pixel size");
+
+    // TODO(lucas): font.face->num_glyphs seems to be the size of the glyph index space, rather than the
+    // number of supported glyphs in the font. This works for now because the glyph index is used as a direct index.
+    // However, depending on the font, the glyph cache could become pretty sparse.
+    font.px = px;
+    font.has_kerning = FT_HAS_KERNING(font.face);
+    font.glyph_cache = push_array(arena, font.face->num_glyphs, Glyph);
+    zero_array(font.glyph_cache, font.face->num_glyphs, Glyph);
+
+    // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
+    // but we need 1-byte alignment for grayscale glyph bitmaps
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // Generate and cache textures for all glyphs in the font.
+    // They are stored at the original px size, and the user can scale them as needed.
+    u32 glyph_idx = 0;
+    u32 charcode = FT_Get_First_Char(font.face, &glyph_idx);
+    while (glyph_idx != 0)
+    {
+        font.glyph_cache[glyph_idx] = cache_glyph(&font, glyph_idx, charcode);
+
+        if (FT_Load_Glyph(font.face, glyph_idx, FT_LOAD_NO_BITMAP) == 0)
+        {
+            /* TODO(lucas): For now, a font will cache the metric for the tallest A-Z character for the
+             * purposes of vertical alignment.
+             * In the future, it will probably make more sense to get this measurement for a specific line of text
+             * to get more consistency.
+             */
+            if (charcode >= 'A' && charcode <= 'Z')
+            {
+                FT_GlyphSlot slot = font.face->glyph;
+
+                FT_BBox bbox;
+                FT_Outline_Get_CBox(&slot->outline, &bbox);
+
+                f32 top = (f32)(bbox.yMax >> 6); // Distance above baseline
+                font.max_top = max(top, font.max_top);
+            }
+        }
+
+        charcode = FT_Get_Next_Char(font.face, charcode, &glyph_idx);
+    }
 
     return font;
 }
@@ -27,13 +108,13 @@ Font font_load_from_file(const char* filename)
 f32 text_get_width(Text* text)
 {
     f32 result = 0.0f;
-
-    FT_Set_Pixel_Sizes(text->font->face, text->px_width, text->px);
-    FT_GlyphSlot glyph = text->font->face->glyph;
+    f32 scale_x = text->font_scale*text->scale.x;
 
     for (size i = 0; i < text->string.len; ++i)
     {
         u32 charcode = utf8_get_codepoint(text->string.data + i);
+        int num_bytes = utf8_get_num_bytes(text->string.data[i]);
+        i += num_bytes - 1;
         if (FT_Load_Char(text->font->face, charcode, FT_LOAD_NO_BITMAP))
         {
             u8 c[5] = {0};
@@ -42,30 +123,29 @@ f32 text_get_width(Text* text)
             if (utf8_get_num_bytes(*c) == 4)
                 log_debug("4-byte UTF-8 characters may fail to display in the terminal.");
         }
-
-        result += text->font->face->glyph->advance.x/64;
+        result += (f32)(text->font->face->glyph->advance.x >> 6)*scale_x;
     }
 
     return result;
 }
 
-void text_set_size_px(Text* text, u32 px)
+void text_set_size_px(Text* text, f32 px)
 {
     text->px = px;
-    FT_Set_Pixel_Sizes(text->font->face, 0, text->px);
-    text->px_width = FT_MulFix(text->font->face->units_per_EM, text->font->face->size->metrics.x_scale) / 64;
 
+    // Since the px size changed, the measurements that depend on it need to change as well.
+    text->font_scale = text->px / (f32)text->font->px;
     text->string_width = text_get_width(text);
-    text->line_height = (f32)text->font->face->size->metrics.height/64;
+    text->line_height = (f32)(text->font->face->size->metrics.height >> 6)*text->font_scale*text->scale.y;
 }
 
 void text_scale(Text* text, f32 factor)
 {
-    u32 new_size = (u32)((f32)text->px*factor);
+    f32 new_size = text->px_original*factor;
     text_set_size_px(text, new_size);
 }
 
-Text text_init(s8 string, Font* font, v2 position, u32 px)
+Text text_init(s8 string, Font* font, v2 position, f32 px)
 {
     Text text = {0};
 
@@ -73,6 +153,24 @@ Text text_init(s8 string, Font* font, v2 position, u32 px)
     text.font = font;
     text.position = position;
     text.color = color_black();
+    text.px_original = px;
+    text.scale = v2(1.0f, 1.0f);
+
+    text_set_size_px(&text, px);
+
+    return text;
+}
+
+Text text_init_scale(s8 string, Font* font, v2 position, f32 px, v2 scale)
+{
+    Text text = {0};
+
+    text.string = string;
+    text.font = font;
+    text.position = position;
+    text.color = color_black();
+    text.px_original = px;
+    text.scale = scale;
 
     text_set_size_px(&text, px);
 
@@ -82,22 +180,18 @@ Text text_init(s8 string, Font* font, v2 position, u32 px)
 void output_text(Renderer* renderer, RenderCommandText* cmd)
 {
     Text text = cmd->text;
-    
-    // Set font size in pixels
-    FT_Set_Pixel_Sizes(text.font->face, text.px_width, text.px);
-    FT_Face face = text.font->face;
-    FT_GlyphSlot glyph = face->glyph;
-    FT_Bool use_kerning = FT_HAS_KERNING(text.font->face);
+    Font* font = text.font;
+
+    f32 scale_x = text.font_scale*text.scale.x;
+    f32 scale_y = text.font_scale*text.scale.y;
+
+    FT_Face face = font->face;
     FT_UInt glyph_index = 0;
     FT_UInt previous_glyph_index = 0;
 
     shader_set_v4(renderer->font_renderer.shader, "text_color", text.color);
     glBindVertexArray(renderer->font_renderer.vao);
-
-    // NOTE(lucas): By default, OpenGL requires that textures are aligned on 4-byte boundaries,
-    // but we need 1-byte alignment for grayscale glyph bitmaps
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    Texture texture = texture_generate(0);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->font_renderer.vbo);
 
     f32 x = text.position.x;
     f32 y = text.position.y;
@@ -106,124 +200,67 @@ void output_text(Renderer* renderer, RenderCommandText* cmd)
     {
         u8* c = text.string.data + i;
 
-        // TODO(lucas): Decode entire string at once.
-        u32 charcode = utf8_get_codepoint(c);
-        int num_bytes = utf8_get_num_bytes(*c);
-        i += num_bytes-1;
-        glyph_index = FT_Get_Char_Index(face, charcode);
-
-        // When appropriate, retrieve kerning information and advance cursor
-        if (use_kerning && previous_glyph_index && glyph_index)
-        {
-            FT_Vector delta;
-            FT_Get_Kerning(face, previous_glyph_index, glyph_index, FT_KERNING_DEFAULT, &delta);
-            x += (f32)delta.x/64;
-        }
-
-        previous_glyph_index = glyph_index;
-
-        if (FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER))
-        {
-            u8 err[5] = {0};
-            utf8_from_codepoint(err, charcode);
-            log_error("FreeType2 error: Failed to load character %c (codepoint: %u, glyph index: %u)", err, charcode, glyph_index);
-            if (utf8_get_num_bytes(*err) == 4)
-                log_debug("4-byte UTF-8 characters may fail to display in the terminal.");
-        }
-
-        // TODO(lucas): Only do texture generation once when the font is loaded.
-        glTexImage2D(GL_TEXTURE_2D,
-                     0,
-                     GL_RED,
-                     glyph->bitmap.width,
-                     glyph->bitmap.rows,
-                     0,
-                     GL_RED,
-                     GL_UNSIGNED_BYTE,
-                     glyph->bitmap.buffer);
-
-        f32 x2 = x + (f32)glyph->bitmap_left;
-        f32 y2 = y - (f32)glyph->bitmap_top;
-        f32 w = (f32)glyph->bitmap.width;
-        f32 h = (f32)glyph->bitmap.rows;
-
-        f32 vertices[] =
-        {
-            x2 + w, y2, 1.0f, 0.0f,
-            x2 + w, y2 + h, 1.0f, 1.0f,
-            x2,     y2 + h, 0.0f, 1.0f,
-            x2,     y2, 0.0f, 0.0f,
-        };
-
-        // TODO(lucas): Update with glBufferSubData?
-        // Update VBO memory
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->font_renderer.vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        // Advance cursor for next glyph
         if ((*c == '\r') && (*(c+1) == '\n'))
         {
             // If \r\n is used to end a line, need to skip the next character (\n)
             y += text.line_height;
             x = text.position.x;
             ++i;
+            previous_glyph_index = 0;
+            continue;
         }
-        else if ((*c == '\n'))
+        else if (*c == '\n')
         {
             y += text.line_height;
             x = text.position.x;
+            previous_glyph_index = 0;
+            continue;
         }
-        else
-            x += glyph->advance.x/64;
+
+        // TODO(lucas): Decode entire string at once.
+        int num_bytes = utf8_get_num_bytes(*c);
+        u32 charcode = utf8_get_codepoint(c);
+        i += num_bytes-1;
+        glyph_index = FT_Get_Char_Index(face, charcode);
+
+        // When appropriate, retrieve kerning information and advance cursor
+        if (font->has_kerning && previous_glyph_index && glyph_index)
+        {
+            FT_Vector delta;
+            FT_Get_Kerning(face, previous_glyph_index, glyph_index, FT_KERNING_DEFAULT, &delta);
+            x += (f32)(delta.x >> 6)*scale_x;
+            previous_glyph_index = glyph_index;
+        }
+
+        // TODO(lucas): Extra width should only be added once
+        Glyph* g = font->glyph_cache + glyph_index;
+        if (*c == ' ')
+        {
+            x += (f32)(g->advance >> 6)*scale_x + text.extra_width_per_space;
+            continue;
+        }
+
+        f32 x2 = x + (f32)g->bearing.x*scale_x;
+        f32 y2 = y - (f32)g->bearing.y*scale_y;
+        f32 w = g->dim.x*scale_x;
+        f32 h = g->dim.y*scale_y;
+
+        m4 transform = transform = m4_translate(m4_identity(), v3(x2, y2, 0.0f));
+        transform = m4_scale(transform, v3(w, h , 0.0f));
+        shader_set_m4(renderer->font_renderer.shader, "transform", transform, false);
+        texture_bind_id(g->tex_id, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, renderer->font_renderer.vbo);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1);
+
+        x += (g->advance >> 6)*scale_x;
     }
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-    texture_unbind(0);
-    texture_delete(&texture);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-typedef struct TextNode TextNode;
-struct TextNode
-{
-    Text text;
-    TextNode* next;
-};
-
-typedef struct OverflowText
-{
-    Text word;
-    Text space;
-} OverflowText;
-
-typedef struct ParsedText
-{
-    f32 width;
-    f32 height;
-    TextNode* first_node;
-} ParsedText;
-
-#pragma optimize("", off)
-internal void parsed_text_push(ParsedText* parsed_text, Text* text, MemoryArena* arena)
-{
-    TextNode* new_node = push_struct(arena, TextNode);
-    new_node->text = *text;
-    new_node->next = 0;
-
-    TextNode* it = parsed_text->first_node;
-    if (!it)
-        parsed_text->first_node = new_node;
-    else
-    {
-        while (it->next)
-            it = it->next;
-        
-        it->next = new_node;
-    }
-}
-#pragma optimize("", on)
-
+// Returns whether all characters in the string of a `Text` object are whitespace.
 internal b32 text_is_whitespace(Text text)
 {
     b32 result = false;
@@ -239,167 +276,13 @@ internal b32 text_is_whitespace(Text text)
     return result;
 }
 
-// TODO(lucas): Take another look at the tokenizer structure
-internal Text tokenizer_process_token(s8_iter* tokenizer, ParsedText* parsed_text, Text token, MemoryArena* arena)
-{
-    Text result = token;
-
-    usize word_len = tokenizer->at - token.string.data;
-    result.string = s8_copyn(token.string, word_len, arena);
-    result.string_width = text_get_width(&result);
-    return result;
-}
-
-#pragma optimize("", off)
-internal ParsedText parse_text(s8_iter* tokenizer, TextArea* text_area, OverflowText* overflow_text, MemoryArena* arena)
-{
-    ParsedText parsed_text = {0};
-    Text token = text_area->text;
-    token.string.data = tokenizer->at;
-
-    int num_spaces = 0;
-    b32 line_overflowed = false;
-
-    if (overflow_text->word.string.data)
-    {
-        parsed_text_push(&parsed_text, &overflow_text->word, arena);
-        parsed_text_push(&parsed_text, &overflow_text->space, arena);
-        parsed_text.width += overflow_text->word.string_width + overflow_text->space.string_width;
-        token.position.x = text_area->text.position.x + parsed_text.width;
-        ++num_spaces;
-    }
-
-    // NOTE(lucas): After overflow has been written, make sure to reset it again.
-    overflow_text->word = (Text){0};
-    overflow_text->space = (Text){0};
-
-    // NOTE(lucas): Break up into words. For now, keep punctuation with the word as one node.
-    b32 parsing = true;
-    while (parsing)
-    {
-        size len = tokenizer->at - token.string.data;
-        b32 final_token = (tokenizer->idx == token.string.len) || (tokenizer->at[0] == '\0');
-        if (char_is_whitespace(tokenizer->at[0]) || final_token)
-        {
-                Text word = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
-                parsed_text.width += word.string_width;
-                token.string.data = tokenizer->at;
-
-                if (!final_token)
-                {
-                    while (tokenizer->at[0] && char_is_whitespace(tokenizer->at[0]))
-                        s8_iter_move(tokenizer, 1);
-                }
-
-                Text space = tokenizer_process_token(tokenizer, &parsed_text, token, arena);
-                ++num_spaces;
-                parsed_text.width += space.string_width;
-                token.string.data = tokenizer->at;
-
-                if (parsed_text.width - space.string_width > text_area->bounds.width)
-                {
-                    line_overflowed = true;
-                    // NOTE(lucas): Parsing line will usually leave a word and space leftover.
-                    // If this is the case, they need to be added at the beginning
-                    // of the next line.
-                    parsed_text.height += text_area->text.line_height; 
-                    word.position.x = text_area->text.position.x;
-                    word.position.y += text_area->text.line_height;
-                    space.position.x = text_area->text.position.x + word.string_width;
-                    space.position.y += text_area->text.line_height;
-
-                    overflow_text->word = word;
-                    overflow_text->space = space;
-
-                    // NOTE(lucas): Number of spaces is overcounted by 2: space after final word and overflow space
-                    // Subtract back the width of the overflow word and 2 spaces to get the actual line width
-                    num_spaces -= 2;
-                    parsed_text.width -= (word.string_width + 2.0f*space.string_width);
-                    parsing = false;
-                }
-                else
-                {
-                    // Push new tokens onto parsed_text and put the string at the tokenizer position
-                    parsed_text_push(&parsed_text, &word, arena);
-                    parsed_text_push(&parsed_text, &space, arena);
-                    token.position.x = text_area->text.position.x + parsed_text.width;
-                }
-
-                // NOTE(lucas): End the line if the null terminator or newline is encountered.
-                // In the latter case, advance the tokenizer past the newline escapes
-                if (final_token)
-                    parsing = false;
-                else if (tokenizer->at[0] == '\n')
-                {
-                    s8_iter_move(tokenizer, 1);
-                    parsing = false;
-                }
-                else if (tokenizer->at[0] == '\r' && tokenizer->at[1] == '\n')
-                {
-                    s8_iter_move(tokenizer, 2);
-                    parsing = false;
-                }
-        }
-        else
-            s8_iter_move(tokenizer, 1);
-    }
-
-    // TODO(lucas): Draw while aligning?
-    f32 width_remaining = text_area->bounds.width - parsed_text.width;
-    switch(text_area->horiz_alignment)
-    {
-        case TEXT_ALIGN_HORIZ_JUSTIFIED:
-        {
-            // Line is only justified if it does not overflow to another line
-            if (!line_overflowed)
-                break;
-
-            f32 width_per_space = width_remaining / (f32)num_spaces;
-            int count = 1;
-
-            // NOTE(lucas): Evenly distribute remaining width to all spaces except any trailing space.
-            // For each node, if it is a space, increase the position of the next node (if it exists)
-            for (TextNode* node = parsed_text.first_node; node; node = node->next)
-            {
-                // TODO(lucas): Consider other whitespace
-                if ((node->text.string.data[0] == ' ') && node->next)
-                {
-                    node->next->text.position.x += width_per_space * (f32)count;
-                    ++count;
-                }
-            }
-        } break;
-
-        case TEXT_ALIGN_HORIZ_RIGHT:
-        {
-            // NOTE(lucas): Add all additional space to the leftmost (first) space by
-            // shifting each word over by the entire width remaining
-            for (TextNode* node = parsed_text.first_node; node; node = node->next)
-                node->text.position.x += width_remaining;
-        } break;
-
-        case TEXT_ALIGN_HORIZ_CENTER:
-        {
-            // NOTE(lucas): Divide all additional space between the leftmost (first) and rightmost (last) spaces by
-            // shifting each word over by half the width remaining.
-            for (TextNode* node = parsed_text.first_node; node; node = node->next)
-                node->text.position.x += 0.5f*width_remaining;
-        } break;
-
-        // NOTE(lucas): Assume left-align and do nothing.
-        default: break;
-    }
-
-    return parsed_text;
-}
-#pragma optimize("", on)
-
-TextArea text_area_init(Renderer* renderer, rect bounds, s8 str, Font* font, u32 text_size_px)
+TextArea text_area_init(rect bounds, s8 str, Font* font, f32 text_size_px)
 {
     TextArea result = {0};
     result.bounds = bounds;
-    v2 text_pos = {bounds.x, result.bounds.y + result.bounds.height - (f32)text_size_px};
+    v2 text_pos = v2(result.bounds.x, result.bounds.y);
     result.text = text_init(str, font, text_pos, text_size_px);
+    result.line_spacing = 1.0f;
     return result;
 }
 
@@ -409,122 +292,408 @@ void text_area_scale(TextArea* text_area, f32 factor)
     text_scale(&text_area->text, factor);
 }
 
-internal f32 get_text_height(TextArea* text_area)
+typedef struct
 {
-    i32 lines_req = ceil_f32(text_area->text.string_width / text_area->bounds.width);
-    f32 text_height = (f32)(lines_req) * text_area->text.line_height;
-    return text_height;
-}
+    f32 height;
+    i32 lines;
+} TextLayoutMetrics;
 
-internal b32 text_in_bounds(TextArea* text_area)
+// Get the minimum pixel height and lines required by the text in a text area, assuming the text wraps.
+// Other text styling, such as being flush on both the top and bottom bounds, does not affect this measurement.
+internal TextLayoutMetrics get_text_metrics(TextArea* text_area)
 {
-    b32 result = text_area->text.position.y < text_area->bounds.position.y + text_area->bounds.height;
+    TextLayoutMetrics result = {0};
+    result.lines = 1;
+
+    Text* text = &text_area->text;
+    s8 s = text_area->text.string;
+    Font* font = text->font;
+    f32 max_width = text_area->bounds.width;
+
+    Text word = {0};
+    Text space = {0};
+
+    f32 line_width = 0.0f;
+    size i = 0;
+    while (i < s.len)
+    {
+        // Handle explicit newline
+        if (s.data[i] == '\n')
+        {
+            ++result.lines;
+            line_width = 0.0f;
+
+            ++i;
+            continue;
+        }
+
+        // Consume a word
+        size word_begin = i;
+        while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        s8 word_slice = s8_slice(s, word_begin, i);
+        word = text_init_scale(word_slice, font, v2_zero(), text->px, text->scale);
+
+        // Chedk if the word overflowed the line
+        if (line_width + word.string_width > max_width && line_width > 0.0f)
+        {
+            // Move to the next line and reset the metrics
+            ++result.lines;
+            line_width = 0.0f;
+        }
+
+        line_width += word.string_width;
+
+        // Consume whitespace
+        size space_begin = i;
+        while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        // Check if there was any whitesapce
+        if (i > space_begin)
+        {
+            // NOTE(lucas): While the space could overfloweme the line, it is simpler to catch all overflow
+            // with the next word that gets consumed.
+            s8 space_slice = s8_slice(s, space_begin, i);
+            space = text_init_scale(space_slice, font, v2_zero(), text->px, text->scale);
+            line_width += space.string_width;
+        }
+    }
+
+    result.height = (f32)(result.lines)*text_area->text.line_height*text_area->line_spacing;
     return result;
 }
 
-#pragma optimize("", off)
+// Find the best font size to fit the text area bounds as exactly as possible when
+// the text must shrink to fit and wrap.
+// Also, if it would save a line of text, horizontally compress the text.
+internal void find_best_px(TextArea* text_area)
+{
+    f32 h = 0.0f;
+    f32 max_h = text_area->bounds.height;
+
+    f32 low = 0.0f;
+    f32 high = text_area->text.px;
+    f32 eps = 0.1f; // Acceptable error on font's pixel size
+
+    // Binary search
+    b32 binary_search_done = false;
+    while (!binary_search_done)
+    {
+        f32 mid = low + (high - low) / 2.0f;
+        text_set_size_px(&text_area->text, mid);
+        h = get_text_metrics(text_area).height;
+
+        if (h > max_h)
+            high = mid;
+        else
+            low = mid;
+
+        if (h <= max_h && abs_f32(high - low) < eps)
+            binary_search_done = true;
+    }
+    text_set_size_px(&text_area->text, low);
+
+    // Try horizontally compressing text if it will save a line
+    f32 original_scale_x = text_area->text.scale.x;
+    i32 original_lines = get_text_metrics(text_area).lines;
+    /* TODO(lucas): This condition is a band-aid for Yugioh cards, where shrinking below 6 lines causes the text area
+     * text to overlap with the text above it. This is because the next step currently increases y scale to compensate
+     * for extra vertical space, instead of increasing line spacing to compensate.
+     * Either add a max_lines parameter or use a hybrid approach of scaling the y up to a certain point and doing
+     * the rest with increased line spacing, which would avoid extreme stretching.
+     */
+    if (original_lines > 6)
+    {
+        b32 fewer_lines = false;
+        for (f32 factor = 0.98f; factor > 0.9f; factor -= 0.02f)
+        {
+            text_area->text.scale.x = original_scale_x*factor;
+
+            i32 lines = get_text_metrics(text_area).lines;
+            if (lines < original_lines)
+                fewer_lines = true;
+
+            if (fewer_lines)
+                break;
+        }
+        if (!fewer_lines)
+            text_area->text.scale.x = original_scale_x;
+    }
+}
+
+// Submit a draw command for a line of text in a `TextArea`.
+internal void flush_line(Renderer* renderer, TextArea* text_area, Text line_text, f32 line_width, i32 spaces_in_line,
+    b32 last_line)
+{
+    Text* text = &text_area->text;
+    f32 max_width = text_area->bounds.width;
+
+    f32 width_remaining = max_width - line_width;
+    TextAlignH alignment = text_area->horiz_alignment;
+
+    ASSERT((alignment != TEXT_ALIGN_H_JUSTIFIED && alignment != TEXT_ALIGN_H_RIGHT) ||
+        width_remaining >= 0.0f, "Negative width remaining");
+    ASSERT(spaces_in_line >= 0, "Negative spaces in line");
+
+    switch (alignment)
+    {
+        case TEXT_ALIGN_H_LEFT:   break;
+        case TEXT_ALIGN_H_RIGHT:  line_text.position.x += width_remaining;                                 break;
+        case TEXT_ALIGN_H_CENTER: line_text.position.x += 0.5f*width_remaining;                            break;
+        case TEXT_ALIGN_H_FLUSH:  line_text.extra_width_per_space = width_remaining / (f32)spaces_in_line; break;
+
+        case TEXT_ALIGN_H_JUSTIFIED:
+        {
+            // If the text is justified, distribute the remaining width among all spaces in the line.
+            // However, the final line in a text area should not be justified.
+            if (!last_line && spaces_in_line != 0)
+                line_text.extra_width_per_space = width_remaining / (f32)spaces_in_line;
+        } break;
+
+        INVALID_DEFAULT_CASE();
+    }
+
+    draw_text(renderer, line_text);
+}
+
+// Parse text line by line, according to `TextArea` style, and submit draw commands for each line.
+internal void parse_and_draw_text(Renderer* renderer, TextArea* text_area)
+{
+    Text* text = &text_area->text;
+    s8 s = text->string;
+    Font* font = text->font;
+    f32 max_width = text_area->bounds.width;
+
+    // If the text should not wrap, simply perform horizontal alignment and draw the text as-is.
+    if (!(text_area->style & TEXT_AREA_WRAP))
+    {
+        f32 width_remaining = max_width - text->string_width;
+        TextAlignH alignment = text_area->horiz_alignment;
+
+        ASSERT((alignment != TEXT_ALIGN_H_JUSTIFIED && alignment != TEXT_ALIGN_H_RIGHT) ||
+            width_remaining >= 0.0f, "Negative width remaining");
+
+        /* NOTE(lucas): Directly submitting text_area->text to draw_text() results in access violations with
+         * the /Og flag enabled in MSVC.
+         * Slicing the whole string and making another copy fixes it and matches the behavior of other paths.
+         */
+        s8 line_slice = s8_slice(s, 0, s.len);
+        Text line_text = text_init_scale(line_slice, font, text->position, text->px, text->scale);
+        line_text.color = text->color;
+
+        switch (alignment)
+        {
+            case TEXT_ALIGN_H_LEFT:      break;
+            case TEXT_ALIGN_H_JUSTIFIED: break; // One line of justified text is the same as left-aligned.
+            case TEXT_ALIGN_H_CENTER:    line_text.position.x += 0.5f * width_remaining; break;
+            case TEXT_ALIGN_H_RIGHT:     line_text.position.x += width_remaining;        break;
+            INVALID_DEFAULT_CASE();
+        }
+        draw_text(renderer, line_text);
+        return;
+    }
+
+    size line_begin = 0;
+    size word_begin = 0;
+    size space_begin = 0;
+    f32 line_width = 0.0f;
+    i32 spaces_in_line = 0;
+    i32 line_idx = 0;
+
+    Text word = {0};
+    Text space = {0};
+
+    size i = 0;
+    while (i < s.len)
+    {
+        // Handle explicit newline (no horizontal justification)
+        if (s.data[i] == '\n')
+        {
+            /* TODO(lucas): This handling of flushing a line needs to be pulled out somehow.
+             * It repeats 3 times almost exactly the same.
+             */
+            s8 line_slice = s8_slice(s, line_begin, i);
+            f32 extra = text_area->extra_height_per_line;
+            f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+            v2 pos = v2(text->position.x, new_y);
+
+            Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+            line_text.color = text->color;
+            // Pass max_width instead of line_width to avoid justification
+            flush_line(renderer, text_area, line_text, max_width, spaces_in_line, false);
+
+            // Reset everything and move immediately to the next line.
+            ++line_idx;
+            ++i;
+            line_begin = i;
+            line_width = 0.0f;
+            spaces_in_line = 0;
+            continue;
+        }
+
+        // Consume a word
+        word_begin = i;
+        while (i < s.len && !char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        s8 word_slice = s8_slice(s, word_begin, i);
+        word = text_init_scale(word_slice, font, v2_zero(), text->px, text->scale);
+
+        // Check if the word overflowed the line
+        if (line_width + word.string_width > max_width && line_width > 0.0f)
+        {
+            s8 line_slice = s8_slice(s, line_begin, space_begin);
+            f32 extra = text_area->extra_height_per_line;
+            f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+            v2 pos = v2(text->position.x, new_y);
+
+            Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+            line_text.color = text->color;
+
+            // When a word overflows the line, the space following the last word of the line
+            // should not be counted.
+            line_width -= space.string_width;
+            flush_line(renderer, text_area, line_text, line_width, spaces_in_line-1, false);
+
+            // Move to the next line and reset the metrics
+            ++line_idx;
+            line_begin = word_begin;
+            line_width = 0.0f;
+            spaces_in_line = 0;
+        }
+
+        line_width += word.string_width;
+
+        // Consume whitespace
+        space_begin = i;
+        while (i < s.len && char_is_whitespace(s.data[i]) && s.data[i] != '\n')
+            ++i;
+
+        // Check if there was any whitespace
+        if (i > space_begin)
+        {
+            /* TODO(lucas): Consider only counting and rendering one space between each word
+             * in justified text, even if there are multiple consecutive spaces, or leaving it as an option.
+             */
+            s8 space_slice = s8_slice(s, space_begin, i);
+            space = text_init_scale(space_slice, font, v2_zero(), text->px, text->scale);
+
+            // NOTE(lucas): While the space could overflow the line, it is simpler to catch all overflow
+            // with the next word that gets consumed.
+            spaces_in_line += (i32)(i - space_begin);
+            line_width += space.string_width;
+        }
+    }
+
+    // Flush final line
+    if (line_begin < s.len)
+    {
+        s8 line_slice = s8_slice(s, line_begin, s.len);
+        f32 extra = text_area->extra_height_per_line;
+        f32 new_y = text->position.y + line_idx*(extra + text->line_height*text_area->line_spacing*text->scale.y);
+        v2 pos = v2(text->position.x, new_y);
+
+        Text line_text = text_init_scale(line_slice, font, pos, text->px, text->scale);
+        line_text.color = text->color;
+        flush_line(renderer, text_area, line_text, line_width, spaces_in_line, true);
+    }
+}
+
 void draw_text_area(Renderer* renderer, TextArea* text_area)
 {
-    // NOTE(lucas): Parse and process the text in the text area,
-    // then reconstruct one Text object and render it.
-    s8_iter tokenizer = {0};
-    s8_iter test_tokenizer = {0};
-    tokenizer.at = test_tokenizer.at = text_area->text.string.data;
-    text_area->text.position = text_area->bounds.position;
-
-    // TODO(lucas): Text is not completely flush with the top of a text area unless only a fraction of the px
-    // size is used. It also seems to vary slightly across different fonts.
-    // Figure out a way to be more exact about this.
-
     f32 text_height = 0.0f;
+    text_area->text.position = v2(text_area->bounds.x, text_area->bounds.y);
+    f32 scale_y = text_area->text.font_scale*text_area->text.scale.y;
     if (text_area->style & TEXT_AREA_SHRINK_TO_FIT)
     {
-        if (text_area->text.px > (u32)text_area->bounds.height)
+        // Shrink to fit, and the text height is larger than the overall bounds height.
+        // TODO(lucas): Consider calculating the tallest character in the string, rather than the tallest overall.
+        text_height = text_area->text.font->max_top*scale_y;
+        if (text_height > text_area->bounds.height)
         {
-            f32 delta = (f32)text_area->text.px - text_area->bounds.height;
-            u32 new_size = text_area->text.px - (u32)delta;
+            // Resize the text to be exactly the same size as the bounds.
+            // The text needs to move down by the difference in the original size of the text and the bounds size.
+            f32 delta = text_height - text_area->bounds.height;
             text_area->text.position.y += delta;
+            f32 new_size = text_area->bounds.height;
             text_set_size_px(&text_area->text, new_size);
+            text_height = text_area->text.font->max_top*scale_y;
         }
 
-        // NOTE(lucas): Wrap text and shrink to fit.
-        // Wrap text, and if text height exceeds bounds, decrease font size.
+        // Wrap text and shrink to fit.
         if (text_area->style & TEXT_AREA_WRAP)
         {
-            text_height = get_text_height(text_area);
-            while (text_height > text_area->bounds.height)
+            // If text height exceeds bounds, find the best pixel size to fit the bounds as closely as possible.
+            // Also, tweak the line spacing to keep text flush with the bottom bound in this case.
+            text_height = get_text_metrics(text_area).height;
+            if (text_height > text_area->bounds.height)
             {
-                text_set_size_px(&text_area->text, text_area->text.px-1);
-                text_height = get_text_height(text_area);
+                find_best_px(text_area);
+
+                // Compensate for any leftover vertical whitespace
+                TextLayoutMetrics metrics = get_text_metrics(text_area);
+                text_area->text.scale.y *= text_area->bounds.height / metrics.height;
+                text_height = text_area->bounds.height;
             }
+
+            // TODO(lucas): Test with very small text area
+            if (text_area->text.px < 1.0f)
+                return;
         }
+        // Don't wrap but shrink text to fit.
         else
         {
-            // NOTE(lucas): Don't wrap but shrink text to fit.
-            text_height = (f32)text_area->text.px;
+            // If text width exceeds bounds, squeeze text horizontally to fit.
+            text_height = text_area->text.font->max_top*scale_y;
             f32 text_width = text_get_width(&text_area->text);
-            while (text_width > text_area->bounds.width)
-            {
-                --text_area->text.px_width;
-                text_width = text_get_width(&text_area->text);
-            }
+
+            // NOTE(lucas): The text's x scale starts at 0, so in addition to scaling with relation to the bounds,
+            // it also needs to inherit the y scale.
+            if (text_width > text_area->bounds.width)
+                text_area->text.scale.x = (text_area->bounds.width / text_width);
         }
     }
-    // NOTE(lucas): Wrap but don't shrink to fit
+    // Wrap but don't shrink to fit
     else if (text_area->style & TEXT_AREA_WRAP)
     {
-        text_height = get_text_height(text_area);
+        text_height = get_text_metrics(text_area).height;
     }
-    // NOTE(lucas): Don't wrap or shrink to fit
+    // Don't wrap or shrink to fit
     else
     {
-        text_height = text_area->text.line_height;
-        text_area->bounds.height = text_area->text.line_height;
+        text_height = text_area->text.font->max_top*scale_y;
     }
 
-    f32 vert_space_remaining = text_area->bounds.height - text_height + text_area->text.line_height;
+    f32 vert_space_remaining = text_area->bounds.height - text_height;
+
+    // The y position of the text area is the top, which the text will view as the baseline.
+    // To correct this, use the ascender (baseline to highest glyph position) to make the text flush with the top bound.
+    f32 ascent = text_area->text.font->max_top*scale_y;
+    text_area->text.position.y += ascent;
+
+    /* TODO(lucas): Currently, the descender not subtracted from bottom-aligned text.
+    * This means that descending characters like "y" can extend below the box, and everything is flush with the bottom bound.
+    * Revisit whether this seems "correct" after using it more.
+    */
+    // f32 descent = -(f32)(text_area->text.font->face->descender >> 6);
+
     switch (text_area->vert_alignment)
     {
-        case TEXT_ALIGN_VERT_BOTTOM:
+        case TEXT_ALIGN_V_TOP:         break;
+        case TEXT_ALIGN_V_BOTTOM:      text_area->text.position.y += vert_space_remaining;      break;
+        case TEXT_ALIGN_V_CENTER:      text_area->text.position.y += 0.5f*vert_space_remaining; break;
+
+        case TEXT_ALIGN_V_DISTRIBUTED:
         {
-            text_area->text.position.y += vert_space_remaining;
+            i32 lines = get_text_metrics(text_area).lines;
+            text_area->extra_height_per_line = vert_space_remaining / ((f32)lines-1.0f);
         } break;
 
-        case TEXT_ALIGN_VERT_CENTER:
-        {
-            text_area->text.position.y += 0.5f*vert_space_remaining;
-        } break;
-
-        case TEXT_ALIGN_VERT_TOP:
-        {
-            text_area->text.position.y += text_area->text.px;
-        } break;
-
-        default: break; 
+        INVALID_DEFAULT_CASE();
     }
 
-    OverflowText overflow = {0};
-    while (tokenizer.at[0])
-    {
-        ParsedText parsed_text = parse_text(&tokenizer, text_area, &overflow, &renderer->scratch_arena);
-        for (TextNode* node = parsed_text.first_node; node; node = node->next)
-        {
-            node->text.px = text_area->text.px;
-            draw_text(renderer, node->text);
-        }
-
-        text_area->text.position.y += text_area->text.line_height;
-
-        // NOTE(lucas): This should only be hit if NOT shrink to fit.
-        // Discard any text that overflows y bound
-        if (!text_in_bounds(text_area))
-            break;
-    }
-
-    // NOTE(lucas): Draw the overflow text if there is any.
-    // Overflow text should only be drawn if the text area is shrink to fit or if there is room for the extra line.
-    if (overflow.word.string.data && ((text_area->style & TEXT_AREA_SHRINK_TO_FIT) || text_in_bounds(text_area)))
-        draw_text(renderer, overflow.word);
+    // TODO(lucas): If text is not shrink to fit, discard any text that overflows the y bound
+    parse_and_draw_text(renderer, text_area);
 }
-#pragma optimize("", on)
- 

@@ -5,7 +5,7 @@
 #include "alchemy/util/str.h"
 #include "alchemy/util/types.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include <stdio.h> // File I/O
 
@@ -37,7 +37,7 @@ internal void shader_error_check(GLuint shader, const char* filename)
 {
     GLint success = 0;
     GLchar info_log[512];
-    
+
     if (glIsShader(shader))
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     else if (glIsProgram(shader))

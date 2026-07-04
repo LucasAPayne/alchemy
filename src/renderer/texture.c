@@ -4,7 +4,7 @@
 #include "alchemy/util/intrin.h"
 #include "alchemy/util/log.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <stb_image/stb_image.h>
 
 // TODO(lucas): Full bitmap support should separate the BMP header from the DIB header
@@ -42,9 +42,51 @@ typedef struct BitmapHeader
 } BitmapHeader;
 #pragma pack(pop)
 
+Texture texture_generate(int samples)
+{
+    GLenum target = (samples > 0) ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+
+    // Generate texture
+    Texture texture = {0};
+    glGenTextures(1, &texture.id);
+    glBindTexture(target, texture.id);
+
+    // Texture options
+    if (samples <= 0)
+    {
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+
+    return texture;
+}
+
+internal void texture_upload(Texture tex)
+{
+    if (!tex.data)
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    GLenum format = 0;
+    switch(tex.channels)
+    {
+        case 1: format = GL_RED;  break;
+        case 2: format = GL_RG;   break;
+        case 3: format = GL_RGB;  break;
+        case 4: format = GL_RGBA; break;
+        default: break;
+    }
+
+    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
+    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
+}
+
 Texture load_bmp_from_memory(u8* data, size data_size)
 {
-    Texture tex = {0};
+    Texture tex = texture_generate(0);
     if (data_size)
     {
         BitmapHeader* header = (BitmapHeader*)data;
@@ -135,6 +177,7 @@ Texture load_bmp_from_memory(u8* data, size data_size)
     }
 
     ASSERT(tex.data, "Failed to load texture");
+    texture_upload(tex);
     return tex;
 }
 
@@ -144,6 +187,7 @@ Texture load_bmp_from_file(const char* filename, MemoryArena* arena)
     void* file = file_open(filename, FileMode_Read);
     u8* data = push_size(arena, file_size);
     file_read(file, data, file_size);
+    file_close(file);
     Texture result = load_bmp_from_memory(data, file_size);
 
     return result;
@@ -153,7 +197,7 @@ Texture load_any_texture_from_file(const char* filename)
 {
     stbi_set_flip_vertically_on_load(true);
 
-    Texture tex = {0};
+    Texture tex = texture_generate(0);
 
     // Load image for texture
     int size_x, size_y;
@@ -163,41 +207,20 @@ Texture load_any_texture_from_file(const char* filename)
     return tex;
 }
 
-Texture texture_generate(int samples)
-{
-    GLenum target = (samples > 0) ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-
-    // Generate texture
-    Texture texture = {0};
-    glGenTextures(1, &texture.id);
-    glBindTexture(target, texture.id);
-
-    // Texture options
-    if (samples <= 0)
-    {
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    }
-
-    return texture;
-}
-
 void texture_fill_empty_data(Texture* texture, int width, int height, int samples)
 {
     texture_bind(texture, samples);
 
     // TODO(lucas): Using irregular sampling causes the framebuffer to be incomplete
     if (samples > 0)
-        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGB, width, height, GL_TRUE);
+        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGBA8, width, height, GL_TRUE);
     else
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     texture_unbind(samples);
 }
 
-Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryArena* arena)
+Texture texture_load_from_file(const char* filename, MemoryArena* arena)
 {
     size file_size = file_get_size(filename);
     void* file = file_open(filename, FileMode_Read);
@@ -220,21 +243,19 @@ Texture texture_load_from_file(const char* filename, Renderer* renderer, MemoryA
         tex = load_any_texture_from_file(filename);
     }
     ASSERT(tex.data, "Failed to load texture");
+    texture_upload(tex);
 
-    tex.id = renderer_next_tex_id(renderer);
-    renderer_push_texture(renderer, tex);
     return tex;
 }
 
-Texture texture_load_from_memory(Renderer* renderer, int width, int height, int channels, ubyte* memory)
+Texture texture_load_from_memory(int width, int height, int channels, ubyte* memory)
 {
-    Texture tex = {0};
-    tex.id = renderer_next_tex_id(renderer);
+    Texture tex = texture_generate(0);
     tex.data = memory;
     tex.size = v2((f32)width, (f32)height);
     tex.channels = channels;
+    texture_upload(tex);
 
-    renderer_push_texture(renderer, tex);
     return tex;
 }
 
@@ -257,6 +278,7 @@ void texture_unbind(int samples)
     glBindTexture(target, 0);
 }
 
+// TODO(lucas): This is only valid for non-BMP textures
 void texture_delete(Texture* tex)
 {
     glDeleteTextures(1, &tex->id);

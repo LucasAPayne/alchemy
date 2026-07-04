@@ -62,9 +62,7 @@ typedef struct RenderCommandLine
     v4 color;
     v2 start;
     v2 end;
-    v2 origin;
     f32 thickness;
-    f32 rotation;
 } RenderCommandLine;
 
 typedef struct RenderCommandTriangle
@@ -165,6 +163,8 @@ typedef struct RenderCommandCircleSector
     f32 rotation;
 } RenderCommandCircleSector;
 
+// TODO(lucas): Either rename Ring to Arc because it doesn't have to be fully closed,
+// or make a separate ring command that does not need start and end angles.
 typedef struct RenderCommandRing
 {
     RenderCommand header;
@@ -262,32 +262,33 @@ typedef struct Renderer
     Framebuffer intermediate_framebuffer;
 
     rect viewport;
-    int window_width;
-    int window_height;
     v4 clear_color;
 
     RendererConfig config;
     MemoryArena command_buffer_arena;
     MemoryArena scratch_arena;
-
-    RenderID tex_ids[1024];
-    Texture textures_to_generate[1024];
-    u32 tex_index;
 } Renderer;
 
 void opengl_init(Window* window);
 
-Renderer renderer_init(Window* window, int viewport_width, int viewport_height, size command_buffer_size);
+// NOTE(lucas): The renderer no longer requires a window to be passed in and no longer
+// inits OpenGL. However, a window must still be created and exist for OpenGL to initialize and work.
+Renderer renderer_init(int viewport_width, int viewport_height, size command_buffer_size);
 void renderer_delete(Renderer* renderer);
 
-void renderer_new_frame(Renderer* renderer, Window* window);
+void renderer_new_frame(Renderer* renderer, int window_width, int window_height);
 void renderer_render(Renderer* renderer);
+
+// Save a frame to an image.
+// All memory used by the arena is freed back within this function.
+void renderer_save_to_image(Renderer* renderer, s8 filename, MemoryArena* arena);
 
 void renderer_viewport(Renderer* renderer, rect viewport);
 void renderer_clear(v4 color);
 
 // TODO(lucas): Add additional functions that take in origins, and consider taking rotation out of the default functions
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation);
+
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness);
 
 // NOTE(lucas): Vertices must be specified in couter-clockwise order!
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation);
@@ -312,13 +313,13 @@ void draw_ring(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius
 void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inner_radius, f32 start_angle,
                        f32 end_angle, v4 color, f32 rotation, f32 thickness);
 
+void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness);
+void draw_polygon_outline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness);
+
 void draw_sprite(Renderer* renderer, Sprite sprite);
 void draw_text(Renderer* renderer, Text text);
 
 void draw_scissor_test(Renderer* renderer, rect clip);
-
-u32 renderer_next_tex_id(Renderer* renderer);
-void renderer_push_texture(Renderer* renderer, Texture texture);
 
 inline v4 color_red(void)         {return (v4){1.0f, 0.0f, 0.0f, 1.0f};}
 inline v4 color_green(void)       {return (v4){0.0f, 1.0f, 0.0f, 1.0f};}
@@ -355,6 +356,5 @@ inline v4 linear1_to_srgb255(v4 c)
 
     return result;
 }
-
 
 void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr);

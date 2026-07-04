@@ -22,8 +22,8 @@ option(ALCHEMY_CONSOLE "Enable debug console" ON)
 SET(STARTUP "example" CACHE STRING "Project in examples folder to run on startup")
 
 set(ALCHEMY_SOURCE
-    ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
     ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image.c
+    ${PROJECT_SOURCE_DIR}/lib/stb_image/stb_image_write.c
     ${PROJECT_SOURCE_DIR}/lib/nuklear/nuklear.c
     ${PROJECT_SOURCE_DIR}/src/renderer/font.c
     ${PROJECT_SOURCE_DIR}/src/renderer/renderer.c
@@ -35,7 +35,6 @@ set(ALCHEMY_SOURCE
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_input.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_intrin.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_memory.c
-    ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_opengl.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_sound.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_state.c
     ${PROJECT_SOURCE_DIR}/src/platform/windows/win32_window.c
@@ -79,6 +78,12 @@ add_subdirectory(lib/cglm/ EXCLUDE_FROM_ALL)
 target_compile_definitions(alchemy PRIVATE
                            ALCHEMY_INSTALL_PATH="${CMAKE_CURRENT_LIST_DIR}"
                            CMAKE_EXPORT_COMPILE_COMMANDS=1)
+
+# NOTE(lucas): For some reason, CMake insists on trying to set /RTC1 on Release builds,
+# which of course doesn't work. So just remove any RTC variation
+STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+
 if(MSVC)
     target_compile_options(alchemy PRIVATE ${COMMON_COMPILER_FLAGS})
     target_compile_definitions(alchemy PUBLIC VC_EXTRALEAN WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -97,7 +102,6 @@ endif()
 
 if(ALCHEMY_INCLUDE_EXAMPLES)
     add_subdirectory(examples/example)
-    add_subdirectory(examples/snake)
 endif()
 if(ALCHEMY_NO_HOT_RELOAD)
     target_compile_definitions(alchemy PUBLIC ALCHEMY_NO_HOT_RELOAD)

@@ -134,7 +134,7 @@ b32 file_is_modified(char* filename, u64 reference_time)
 s8 file_to_string(char* filename, MemoryArena* arena)
 {
     size file_size = file_get_size(filename);
-    s8 result = s8_alloc(arena, file_size);
+    s8 result = s8_init(arena, file_size);
     u8* begin = result.data;
 
     HANDLE file = win32_file_open_normal_read(filename);
@@ -215,18 +215,18 @@ i64 file_seek(void* file_handle, i64 byte_offset, FileSeekMethod seek_method)
     {
         case FileSeek_Begin:   method = FILE_BEGIN;   break;
         case FileSeek_Current: method = FILE_CURRENT; break;
-        case FileSeek_End:     method = FILE_END;     break; 
+        case FileSeek_End:     method = FILE_END;     break;
         default: log_error("Invalid file seek method: %d", seek_method); break;
     }
 
     b32 success = SetFilePointerEx(file_handle, dist_to_move, &new_ptr, method);
     if (success == FALSE)
     {
+        win32_error_callback();
         char* filename = get_filename(file_handle);
         log_warn("Failed to move file pointer %lld bytes using seek method %d in file %s",
                  byte_offset, seek_method, filename);
         free(filename);
-        win32_error_callback();
     }
     i64 result = new_ptr.QuadPart;
     return result;
@@ -250,10 +250,10 @@ int file_read(void* file_handle, void* buffer, size num_bytes_to_read)
     b32 success = ReadFile(file_handle, buffer, (u32)num_bytes_to_read, &num_bytes_read, NULL);
     if (success == FALSE)
     {
+        win32_error_callback();
         char* filename = get_filename(file_handle);
         log_warn("Failed to read from file %s", filename);
         free(filename);
-        win32_error_callback();
     }
     if (num_bytes_read != num_bytes_to_read)
     {
@@ -261,7 +261,6 @@ int file_read(void* file_handle, void* buffer, size num_bytes_to_read)
         log_warn("Number of bytes read (%u) does not match expected number of bytes (%u) in file %s",
                  num_bytes_read, num_bytes_to_read, filename);
         free(filename);
-        win32_error_callback();
     }
 
     return num_bytes_read;
@@ -272,11 +271,18 @@ int file_write(void* file_handle, void* buffer, size num_bytes_to_write)
     ASSERT(file_handle, "Invalid file handle");
     DWORD num_bytes_written = 0;
     b32 success = WriteFile(file_handle, buffer, (u32)num_bytes_to_write, &num_bytes_written, NULL);
-    if (success == FALSE || (num_bytes_to_write != num_bytes_written))
+    if (success == FALSE)
     {
+        win32_error_callback();
         char* filename = get_filename(file_handle);
         log_warn("Failed to write to file %s", filename);
-        win32_error_callback();
+        free(filename);
+    }
+    if (num_bytes_to_write != num_bytes_written)
+    {
+        char* filename = get_filename(file_handle);
+        log_warn("Number of bytes written (%u) does not match expected number of bytes (%u) in file %s",
+                 num_bytes_written, num_bytes_to_write, filename);
         free(filename);
     }
 
@@ -305,4 +311,35 @@ int file_write_byte(void* file_handle, size offset, u8 byte)
     }
 
     return num_bytes_written;
+}
+
+void file_set_end(void* file_handle)
+{
+    if (!SetEndOfFile(file_handle))
+    {
+        win32_error_callback();
+        char* filename = get_filename(file_handle);
+        log_error("Failed to extend/truncate file %s", filename);
+    }
+}
+
+// TODO(lucas): Create parent directories if necessary
+void directory_create(s8 path)
+{
+    char path_cstr[MAX_PATH];
+    memcpy(path_cstr, path.data, path.len);
+    path_cstr[path.len] = 0;
+
+    b32 success = CreateDirectoryA(path_cstr, NULL);
+    if (!success)
+    {
+        // If the path already exists and is a directory, it is stil a success
+        DWORD error = GetLastError();
+        if (error == ERROR_ALREADY_EXISTS)
+        {
+            DWORD attrs = GetFileAttributesA(path_cstr);
+            b32 valid = (attrs != INVALID_FILE_ATTRIBUTES) && (attrs & FILE_ATTRIBUTE_DIRECTORY);
+            if (!valid) log_fatal("Failed to create directory '%s' (error %lu)", path_cstr, error);
+        }
+    }
 }

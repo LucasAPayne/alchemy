@@ -2,7 +2,7 @@
 #include "alchemy/renderer/renderer.h"
 #include "alchemy/util/math.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 Sprite sprite_init(Texture* tex)
 {

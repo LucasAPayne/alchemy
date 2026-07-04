@@ -5,11 +5,13 @@
 #include <windows.h>
 #include <xaudio2.h>
 
+// TODO(lucas): Allow multiple sounds
 typedef struct XAudio2State
 {
     b32 initialized;
     IXAudio2* xaudio2;
     IXAudio2MasteringVoice* master_voice;
+    IXAudio2SourceVoice* source_voice;
 } XAudio2State;
 
 // Little-Endian
@@ -93,11 +95,11 @@ internal b32 find_chunk(HANDLE file, DWORD fourcc, DWORD* chunk_size, DWORD* chu
         // The first 4 bytes (characters) are the chunk type (e.g., RIFF)
         if (ReadFile(file, &chunk_type, sizeof(DWORD), &read, NULL) == 0)
             hr = HRESULT_FROM_WIN32(GetLastError());
-        
+
         // The next 4 bytes give the size of the data in the file
         if (ReadFile(file, &chunk_data_size, sizeof(DWORD), &read, NULL) == 0)
             hr = HRESULT_FROM_WIN32(GetLastError());
-        
+
         switch(chunk_type)
         {
             case FOURCC_RIFF:
@@ -154,7 +156,6 @@ internal b32 read_chunk_data(HANDLE file, void* buffer, DWORD buffer_size, DWORD
     return 1;
 }
 
-// TODO(lucas): IMPORTANT(lucas): Looks like there is a memory leak in or around this function.
 void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
 {
     persist XAudio2State xaudio2_state = {0};
@@ -181,7 +182,7 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     DWORD chunk_size;
     DWORD chunk_pos;
     DWORD file_type;
-    
+
     // Find the "RIFF" chunk and determine file type
     find_chunk(sound_file, FOURCC_RIFF, &chunk_size, &chunk_pos);
     read_chunk_data(sound_file, &file_type, sizeof(DWORD), chunk_pos);
@@ -192,7 +193,7 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
         log_error("Unsupported file type for sound file");
         return;
     }
-    
+
     // Locate "fmt" chunk and copy contents into wave struct
     find_chunk(sound_file, FOURCC_FMT, &chunk_size, &chunk_pos);
     read_chunk_data(sound_file, &wave, chunk_size, chunk_pos);
@@ -205,25 +206,31 @@ void sound_output_process(SoundOutput* sound_output, MemoryArena* arena)
     buffer.AudioBytes = chunk_size;
     buffer.pAudioData = data_buffer;
     buffer.Flags = XAUDIO2_END_OF_STREAM; // Tell source voice not to expect data after this buffer
-    
-    IXAudio2SourceVoice* source_voice;
-    if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &source_voice, (WAVEFORMATEX*)&wave, 0,
-                                          XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
+
+    if (!xaudio2_state.source_voice)
     {
-        log_error("IXAudio2_CreateSourceVoice() failed");
+        if (FAILED(IXAudio2_CreateSourceVoice(xaudio2_state.xaudio2, &xaudio2_state.source_voice, (WAVEFORMATEX*)&wave, 0,
+            XAUDIO2_DEFAULT_FREQ_RATIO, &xaudio_callbacks, NULL, NULL)))
+        {
+            log_error("IXAudio2_CreateSourceVoice() failed");
+        }
     }
-    
-    if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(source_voice, &buffer, NULL)))
-        log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
+
+    if (sound_output->volume > 1.0f)
+        sound_output->volume = 1.0f;
+    if (sound_output->volume < 0.0f)
+        sound_output->volume = 0.0f;
+    if (FAILED(IXAudio2SourceVoice_SetVolume(xaudio2_state.source_voice, sound_output->volume, 0)))
+        log_error("IXAudio2SourceVoice_SetVolume() failed");
 
     if (sound_output->should_play)
     {
-        if (FAILED(IXAudio2SourceVoice_Start(source_voice, 0, XAUDIO2_COMMIT_NOW)))
-            log_error("IXAudio2SourceVoice_Start() failed");
+        if (FAILED(IXAudio2SourceVoice_SubmitSourceBuffer(xaudio2_state.source_voice, &buffer, NULL)))
+            log_error("IXAudio2SourceVoice_SubmitSourceBuffer() failed");
     }
 
-    if (FAILED(IXAudio2SourceVoice_SetVolume(source_voice, sound_output->volume, 0)))
-        log_error("IXAudio2SourceVoice_SetVolume() failed");
+    if (FAILED(IXAudio2SourceVoice_Start(xaudio2_state.source_voice, 0, XAUDIO2_COMMIT_NOW)))
+        log_error("IXAudio2SourceVoice_Start() failed");
 
     CloseHandle(sound_file);
 }

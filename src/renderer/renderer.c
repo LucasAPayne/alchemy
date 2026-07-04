@@ -4,8 +4,9 @@
 #include "alchemy/util/memory.h"
 #include "alchemy/util/str.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <stb_image/stb_image.h>
+#include <stb_image/stb_image_write.h>
 
 internal void vao_bind(u32 vao)
 {
@@ -123,16 +124,39 @@ void vertex_layout_set(u32 index, int size, u32 stride, const void* ptr)
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, ptr);
 }
 
+// Ensure stencil test is enabled, and set up the write mask
 internal void stencil_buffer_enable_write(void)
 {
+    glEnable(GL_STENCIL_TEST);
     glStencilMask(0xFF);
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 }
 
+// Disable writing but not the stencil test
 internal void stencil_buffer_disable_write(void)
 {
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilMask(0x00);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+}
+
+// Reset stencil state to default and disable stencil test
+internal void stencil_buffer_reset(void)
+{
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    glDisable(GL_STENCIL_TEST);
+}
+
+internal void depth_test_enable(void)
+{
+    glEnable(GL_DEPTH_TEST);
+}
+
+internal void depth_test_disable(void)
+{
+    glDisable(GL_DEPTH_TEST);
 }
 
 internal RenderObject framebuffer_renderer_init(u32 shader)
@@ -161,8 +185,7 @@ internal RenderObject framebuffer_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);    
+    vao_unbind();
 
     return framebuffer_renderer;
 }
@@ -179,8 +202,8 @@ internal RenderObject sprite_renderer_init(u32 shader)
     RenderObject sprite_renderer = {0};
     sprite_renderer.shader = shader;
 
-    f32 vertices[] = 
-    { 
+    f32 vertices[] =
+    {
         // pos      // tex
         0.0f, 1.0f, 0.0f, 0.0f, // bottom left
         1.0f, 1.0f, 1.0f, 0.0f, // bottom right
@@ -188,10 +211,10 @@ internal RenderObject sprite_renderer_init(u32 shader)
         0.0f, 0.0f, 0.0f, 1.0f  // top left
     };
 
-    u32 indices[] = 
+    u32 indices[] =
     {
         0, 1, 3,
-        1, 2, 3  
+        1, 2, 3
     };
 
     sprite_renderer.vao = vao_init();
@@ -200,8 +223,7 @@ internal RenderObject sprite_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 4*sizeof(f32), 0);
     vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-    
-    vao_bind(0);
+    vao_unbind();
 
     return sprite_renderer;
 }
@@ -222,8 +244,7 @@ internal RenderObject triangle_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
+    vao_unbind();
 
     return triangle_renderer;
 }
@@ -254,35 +275,9 @@ internal RenderObject quad_renderer_init(u32 shader)
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
+    vao_unbind();
 
-    vao_bind(0);
-    
     return quad_renderer;
-}
-
-internal RenderObject font_renderer_init(u32 shader)
-{
-    RenderObject font_renderer = {0};
-    font_renderer.shader = shader;
-
-    // NOTE(lucas): While vertex buffer data changes a lot, the order in which indices are drawn
-    // does not. So, indices and index buffer can be defined here.
-    u32 indices[] = 
-    {
-      0, 1, 3,
-      1, 2, 3
-    };
-
-    font_renderer.vao = vao_init();
-    font_renderer.vbo = vbo_init_empty();
-    font_renderer.ibo = ibo_init(indices, sizeof(indices));
-
-    vertex_layout_set(0, 2, 4*sizeof(f32), 0);
-    vertex_layout_set(1, 2, 4*sizeof(f32), (void*)(2*sizeof(f32)));
-
-    vao_bind(0);
-
-    return font_renderer;
 }
 
 internal RenderObject circle_renderer_init(u32 shader, u32 segs)
@@ -296,9 +291,31 @@ internal RenderObject circle_renderer_init(u32 shader, u32 segs)
 
     vertex_layout_set(0, 2, 6*sizeof(f32), 0);
     vertex_layout_set(1, 4, 6*sizeof(f32), (void*)(2*sizeof(f32)));
-    vao_bind(0);
+    vao_unbind();
 
     return circle_renderer;
+}
+
+internal RenderObject font_renderer_init(u32 shader)
+{
+    RenderObject font_renderer = {0};
+    font_renderer.shader = shader;
+
+    f32 vertices[] =
+    {
+        0.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f
+    };
+
+    font_renderer.vao = vao_init();
+    font_renderer.vbo = vbo_init(vertices, sizeof(vertices));
+
+    vertex_layout_set(0, 2, 0, 0);
+    vao_unbind();
+
+    return font_renderer;
 }
 
 internal void render_object_delete(RenderObject* render_object)
@@ -393,9 +410,7 @@ internal Framebuffer framebuffer_init(u32 shader, int window_width, int window_h
         default: ASSERT(0, "OpenGL framebuffer error: Unexpected value from glCheckFramebufferStatus()"); break;
     }
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    
-
-    fbo_unbind();    
+        fbo_unbind();
 
     shader_bind(shader);
 
@@ -409,61 +424,28 @@ internal void framebuffer_delete(Framebuffer* framebuffer)
     fbo_delete(&framebuffer->id);
 }
 
-internal void renderer_gen_texture(Texture tex)
-{
-    if (!tex.data)
-        return;
-
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-
-    // TODO(lucas): Make options configurable
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    GLenum format = 0;
-    switch(tex.channels)
-    {
-        case 1: format = GL_RED;  break;
-        case 2: format = GL_RG;   break;
-        case 3: format = GL_RGB;  break;
-        case 4: format = GL_RGBA; break;
-        default: break;
-    }
-
-    // TODO(lucas): Internal format is supposed to be like GL_RGBA8
-    glTexImage2D(GL_TEXTURE_2D, 0, format, (int)tex.size.x, (int)tex.size.y, 0, format, GL_UNSIGNED_BYTE, tex.data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-}
-
 internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd);
 
 internal void output_line(Renderer* renderer, RenderCommandLine* cmd)
 {
     v2 delta = v2_sub(cmd->end, cmd->start);
+    f32 length = v2_mag(delta);
+    if (length == 0.0f) return;
 
-    // NOTE(lucas): Horizontal and vertical lines need special treatment
-    // since they will cause trig functions to be undefined
-    v2 size = v2_zero();
-    f32 initial_rotation = 0.0f;
+    // TODO(lucas): Wrap this function
+    /* NOTE(lucas): Quad positions are top-left by default.
+     * Since line endpoints should be centered on the points, find and apply the appropriate offset
+     * based on direction and thickness.
+     */
+    v2 dir = v2_normalize(delta);
+    v2 perp = v2_perp(dir);
+    v2 offset = v2_scale(perp, cmd->thickness*0.5f);
+    v2 pos = v2_add(cmd->start, offset);
 
-    // NOTE(lucas): atan is undefined for vertical lines,
-    // so only call it if the line has slope
-    if (delta.x)
-        initial_rotation = atan_f32(delta.y, delta.x);
+    v2 dim = v2(length, cmd->thickness);
+    f32 angle = atan_f32(-delta.y, delta.x);
 
-    if (delta.x && delta.y) // Diagonal line
-        size = v2(v2_mag(delta), cmd->thickness);
-    else if (delta.x && !delta.y) // Horizontal line
-        size = v2(delta.x, cmd->thickness);
-    else if (delta.y && !delta.x) // Vertical line
-        size = v2(cmd->thickness, delta.y);
-
-    // TODO(lucas): The initial rotation needs to be about the starting point,
-    // white the additional rotation needs to be about the origin
-    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->start, cmd->origin, size, cmd->color,
-                                  glm_deg(initial_rotation) + cmd->rotation};
+    RenderCommandQuad quad_cmd = {RENDER_COMMAND_RenderCommandQuad, pos, pos, dim, cmd->color, deg_f32(angle)};
     output_quad(renderer, &quad_cmd);
 }
 
@@ -484,9 +466,9 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
     if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
-    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
-    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y;
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y;
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y;
 
     v2 scale = v2_sub(max_point, min_point);
 
@@ -516,7 +498,7 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -526,7 +508,7 @@ internal void output_triangle(Renderer* renderer, RenderCommandTriangle* cmd)
     shader_set_v4(renderer->triangle_renderer.shader, "color", cmd->color);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleOutline* cmd)
@@ -555,20 +537,18 @@ internal void output_triangle_outline(Renderer* renderer, RenderCommandTriangleO
     v2 new_b = v2_add(v2_scale(cmd->b, 1.0f-k), qk);
     v2 new_c = v2_add(v2_scale(cmd->c, 1.0f-k), qk);
 
-    RenderCommandTriangle transparent_cmd = {RENDER_COMMAND_RenderCommandTriangle, new_a, new_b, new_c, cmd->origin,
-                                             color_transparent(), cmd->rotation};
-    RenderCommandTriangle outline_cmd = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin,
-                                         cmd->color, cmd->rotation};
+    RenderCommandTriangle inner = {RENDER_COMMAND_RenderCommandTriangle, new_a, new_b, new_c, cmd->origin, color_transparent(), cmd->rotation};
+    RenderCommandTriangle outer = {RENDER_COMMAND_RenderCommandTriangle, cmd->a, cmd->b, cmd->c, cmd->origin, cmd->color, cmd->rotation};
 
-    glEnable(GL_DEPTH_TEST);
+    depth_test_enable();
     stencil_buffer_enable_write();
-    output_triangle(renderer, &transparent_cmd);
+    output_triangle(renderer, &inner);
 
-    glDisable(GL_DEPTH_TEST);
+    depth_test_disable();
     stencil_buffer_disable_write();
     renderer->triangle_renderer.shader = renderer->poly_border_shader;
-    output_triangle(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
+    output_triangle(renderer, &outer);
+    stencil_buffer_reset();
     renderer->triangle_renderer.shader = renderer->poly_shader;
 }
 
@@ -590,9 +570,9 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     if (cmd->b.x > max_point.x) max_point.x = cmd->b.x;
     if (cmd->c.x > max_point.x) max_point.x = cmd->c.x;
 
-    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y; 
-    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y; 
-    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y; 
+    if (cmd->a.y > max_point.y) max_point.y = cmd->a.y;
+    if (cmd->b.y > max_point.y) max_point.y = cmd->b.y;
+    if (cmd->c.y > max_point.y) max_point.y = cmd->c.y;
 
     v2 scale = v2_sub(max_point, min_point);
 
@@ -607,7 +587,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -637,7 +617,7 @@ internal void output_triangle_gradient(Renderer* renderer, RenderCommandTriangle
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    vao_bind(0);    
+    vao_unbind();
 }
 
 internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
@@ -649,7 +629,7 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -660,7 +640,7 @@ internal void output_quad(Renderer* renderer, RenderCommandQuad* cmd)
 
     vao_bind(renderer->quad_renderer.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* cmd)
@@ -668,20 +648,18 @@ internal void output_quad_outline(Renderer* renderer, RenderCommandQuadOutline* 
     v2 new_pos = v2_add(cmd->position, v2_full(cmd->thickness));
     v2 new_size = v2_sub(cmd->size, v2_full(2.0f*cmd->thickness));
 
-    RenderCommandQuad transparent_cmd = {RENDER_COMMAND_RenderCommandQuad, new_pos, cmd->origin, new_size,
-                                         color_transparent(), cmd->rotation};
-    RenderCommandQuad outline_cmd = {RENDER_COMMAND_RenderCommandQuad, cmd->position, cmd->origin, cmd->size,
-                                     cmd->color, cmd->rotation};
+    RenderCommandQuad inner = {RENDER_COMMAND_RenderCommandQuad, new_pos, cmd->origin, new_size, color_transparent(), cmd->rotation};
+    RenderCommandQuad outer = {RENDER_COMMAND_RenderCommandQuad, cmd->position, cmd->origin, cmd->size, cmd->color, cmd->rotation};
 
-    glEnable(GL_DEPTH_TEST);
+    depth_test_enable();
     stencil_buffer_enable_write();
-    output_quad(renderer, &transparent_cmd);
+    output_quad(renderer, &inner);
 
-    glDisable(GL_DEPTH_TEST);
+    depth_test_disable();
     stencil_buffer_disable_write();
     renderer->quad_renderer.shader = renderer->poly_border_shader;
-    output_quad(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
+    output_quad(renderer, &outer);
+    stencil_buffer_reset();
     renderer->quad_renderer.shader = renderer->poly_shader;
 }
 
@@ -694,7 +672,7 @@ internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient
     if (cmd->rotation)
     {
         model = m4_translate(model, (v3){delta.x, delta.y, 0.0f});
-        model = m4_rotate(model, glm_rad(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+        model = m4_rotate(model, rad_f32(-cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
         model = m4_translate(model, (v3){-delta.x, -delta.y, 0.0f});
     }
 
@@ -727,7 +705,7 @@ internal void output_quad_gradient(Renderer* renderer, RenderCommandQuadGradient
     glBufferData(GL_ARRAY_BUFFER, sizeof(gradient_vertices), gradient_vertices, GL_STATIC_DRAW);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(default_vertices), default_vertices, GL_STATIC_DRAW);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
@@ -751,7 +729,7 @@ internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     u32 index = 0;
     for (u32 i = 0; i < segs; ++i)
     {
-        f32 a = glm_rad(angle_delta*i);
+        f32 a = rad_f32(angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
 
@@ -779,24 +757,24 @@ internal void output_circle(Renderer* renderer, RenderCommandCircle* cmd)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_circle_outline(Renderer* renderer, RenderCommandCircleOutline* cmd)
 {
-    RenderCommandCircle transparent_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center,
-                                           color_transparent(), cmd->radius - cmd->thickness};
-    RenderCommandCircle outline_cmd = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
+    f32 inner_r = cmd->radius - cmd->thickness;
+    RenderCommandCircle inner = {RENDER_COMMAND_RenderCommandCircle, cmd->center, color_transparent(), inner_r};
+    RenderCommandCircle outer = {RENDER_COMMAND_RenderCommandCircle, cmd->center, cmd->color, cmd->radius};
 
-    glEnable(GL_DEPTH_TEST);
+    depth_test_enable();
     stencil_buffer_enable_write();
-    output_circle(renderer, &transparent_cmd);
+    output_circle(renderer, &inner);
 
-    glDisable(GL_DEPTH_TEST);
+    depth_test_disable();
     stencil_buffer_disable_write();
     renderer->circle_renderer.shader = renderer->poly_border_shader;
-    output_circle(renderer, &outline_cmd);
-    stencil_buffer_enable_write();
+    output_circle(renderer, &outer);
+    stencil_buffer_reset();
     renderer->circle_renderer.shader = renderer->poly_shader;
 }
 
@@ -804,7 +782,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
 {
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->radius, cmd->radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -831,7 +809,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
     u32 index = 6;
     for (u32 i = 0; i < iterations; ++i)
     {
-        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        f32 a = rad_f32(cmd->start_angle + angle_delta*i);
         vertices[index++] = cos_f32(a);
         vertices[index++] = sin_f32(a);
 
@@ -859,7 +837,7 @@ internal void output_circle_sector(Renderer* renderer, RenderCommandCircleSector
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
@@ -877,7 +855,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
 
     m4 model = m4_identity();
     model = m4_translate(model, (v3){cmd->center.x, cmd->center.y, 0.0f});
-    model = m4_rotate(model, glm_rad(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
+    model = m4_rotate(model, rad_f32(cmd->rotation), (v3){0.0f, 0.0f, 1.0f});
     model = m4_scale(model, (v3){cmd->outer_radius, cmd->outer_radius, 1.0f});
 
     shader_set_m4(renderer->circle_renderer.shader, "model", model, false);
@@ -897,7 +875,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     f32 k = cmd->inner_radius / cmd->outer_radius;
     for (u32 i = 0; i < iterations; i += 2)
     {
-        f32 a = glm_rad(cmd->start_angle + angle_delta*i);
+        f32 a = rad_f32(cmd->start_angle + angle_delta*i);
         vertices[index++] = k*cos_f32(a);
         vertices[index++] = k*sin_f32(a);
 
@@ -932,7 +910,7 @@ internal void output_ring(Renderer* renderer, RenderCommandRing* cmd)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 }
 
 internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* cmd)
@@ -956,8 +934,6 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     shader_set_v4(renderer->circle_renderer.shader, "color", cmd->color);
 
     u32 segs = renderer->config.circle_line_segments;
-    // u32 tris = 2*segs + 14;
-    // u32 n_verts = 4*segs + 28;
     u32 tris = 4*segs;
     u32 n_verts = 24*segs;
     u32 n_indices = 3*tris;
@@ -1016,7 +992,7 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     }
 
     index = 0;
-    for (u32 i = 0; i < n_indices; i += 3, ++index)
+    for (u32 i = 0; i < n_indices-12; i += 3, ++index)
     {
         indices[i] = index;
         indices[i+1] = index+1;
@@ -1032,20 +1008,24 @@ internal void output_ring_outline(Renderer* renderer, RenderCommandRingOutline* 
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices*sizeof(u32), indices, GL_STATIC_DRAW);
 
     glDrawElements(GL_TRIANGLES, n_indices, GL_UNSIGNED_INT, 0);
-    vao_bind(0);
+    vao_unbind();
 
     // NOTE(lucas): Draw cap lines
     // TODO(lucas): Figure out how to properly include cap lines directly in vertex data?
     v2 cap_start = {cmd->center.x + cmd->inner_radius, cmd->center.y};
     v2 cap_end = {cmd->center.x + cmd->outer_radius, cmd->center.y};
 
-    RenderCommandLine start_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
-                                   cmd->thickness, cmd->start_angle + cmd->rotation};
-    RenderCommandLine end_cap = {RENDER_COMMAND_RenderCommandLine, cmd->color, cap_start, cap_end, cmd->center,
-                                 cmd->thickness, cmd->end_angle + cmd->rotation};
+    // TODO(lucas): The resulting quads from this are certainly not perfect,
+    // but they will be cleaned up on the next renderer pass.
+    v2 delta = v2_sub(cap_end, cap_start);
+    f32 length = v2_mag(delta);
+    v2 dim = v2(length, cmd->thickness);
 
-    output_line(renderer, &start_cap);
-    output_line(renderer, &end_cap);
+    RenderCommandQuad start_cap = {RENDER_COMMAND_RenderCommandQuad, cap_start, cmd->center, dim, cmd->color, cmd->start_angle + cmd->rotation};
+    RenderCommandQuad end_cap = {RENDER_COMMAND_RenderCommandQuad, cap_start, cmd->center, dim, cmd->color, cmd->end_angle + cmd->rotation};
+
+    output_quad(renderer, &start_cap);
+    output_quad(renderer, &end_cap);
 }
 
 internal void output_scissor_test(Renderer* renderer, RenderCommandScissorTest* cmd)
@@ -1201,7 +1181,7 @@ internal void render_command_buffer_output(Renderer* renderer)
 
             INVALID_DEFAULT_CASE();
         }
-    }    
+    }
 }
 
 internal void path_from_install_dir(char* path, char* dest)
@@ -1209,20 +1189,15 @@ internal void path_from_install_dir(char* path, char* dest)
     str_cat(ALCHEMY_INSTALL_PATH, str_len(ALCHEMY_INSTALL_PATH), path, str_len(path), dest, MAX_FILEPATH_LEN);
 }
 
-Renderer renderer_init(Window* window, int viewport_width, int viewport_height, size command_buffer_bytes)
+Renderer renderer_init(int viewport_width, int viewport_height, size command_buffer_bytes)
 {
     Renderer renderer = {0};
-    renderer.window_width = window->width;
-    renderer.window_height = window->height;
 
     stbi_set_flip_vertically_on_load(true);
-    opengl_init(window);
+    stbi_flip_vertically_on_write(true);
 
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_MULTISAMPLE);
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     renderer.command_buffer_arena = memory_arena_alloc(command_buffer_bytes);
     renderer.command_buffer = render_command_buffer_alloc(&renderer.command_buffer_arena, command_buffer_bytes);
@@ -1231,7 +1206,8 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
     // Don't want it to be necessary to define a memory arena to pass in to here.
     renderer.scratch_arena = memory_arena_alloc(MEGABYTES(4));
 
-    renderer.viewport = rect_min_dim(v2_zero(), v2((f32)viewport_width, (f32)viewport_height));
+    rect viewport = rect_min_dim(v2_zero(), v2((f32)viewport_width, (f32)viewport_height));
+    renderer_viewport(&renderer, viewport);
     renderer.clear_color = (v4){0.0f, 0.0f, 0.0f, 1.0f};
 
     renderer.config.circle_line_segments = 128;
@@ -1268,6 +1244,10 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
     path_from_install_dir("/res/shaders/ui.fs", ui_frag_shader_full_path);
     path_from_install_dir("/res/shaders/border.fs", border_frag_shader_full_path);
 
+    // TODO(lucas): Seems to silence a warning of the polygon shader. Look into this more deeply.
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
     u32 framebuffer_shader = shader_init(&renderer, framebuffer_vert_shader_full_path, framebuffer_frag_shader_full_path);
     u32 poly_shader        = shader_init(&renderer, poly_vert_shader_full_path, poly_frag_shader_full_path);
     u32 sprite_shader      = shader_init(&renderer, sprite_vert_shader_full_path, sprite_frag_shader_full_path);
@@ -1285,16 +1265,10 @@ Renderer renderer_init(Window* window, int viewport_width, int viewport_height, 
 
     renderer.poly_shader = poly_shader;
     renderer.poly_border_shader = poly_border_shader;
-    
+
     renderer.framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height,
                                             renderer.config.msaa_level, false);
     renderer.intermediate_framebuffer = framebuffer_init(framebuffer_shader, viewport_width, viewport_height, 0, true);
-
-    for (u32 i = 0; i < countof(renderer.tex_ids); ++i)
-    {
-        RenderID* tex_id = renderer.tex_ids + i;
-        glGenTextures(1, &tex_id->id);
-    }
 
     return renderer;
 }
@@ -1311,29 +1285,23 @@ void renderer_delete(Renderer* renderer)
     framebuffer_delete(&renderer->intermediate_framebuffer);
 }
 
-void renderer_new_frame(Renderer* renderer, Window* window)
+void renderer_new_frame(Renderer* renderer, int viewport_width, int viewport_height)
 {
     if (renderer->config.wireframe_mode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glEnable(GL_SCISSOR_TEST);
-    glEnable(GL_STENCIL_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    renderer->window_width = window->width;
-    renderer->window_height = window->height;
-
-    // NOTE(lucas): If the user does not call renderer_viewport to set the viewport themselves,
-    // fit the viewport to the window.
+    // NOTE(lucas): If the user does set the viewport size themselves, use the passed-in size
+    rect viewport = renderer->viewport;
     if (rect_is_zero(renderer->viewport))
-    {
-        rect viewport = rect_min_dim(v2_zero(), v2((f32)window->width, (f32)window->height));
-        renderer_viewport(renderer, viewport);
-    }
+        viewport = rect(0.0f, 0.0f, (f32)viewport_width, (f32)viewport_height);
+
+    renderer_viewport(renderer, viewport);
 
     fbo_bind(renderer->framebuffer.id);
 
-    rect viewport = renderer->viewport;
     int msaa = renderer->config.msaa_level;
     texture_fill_empty_data(&renderer->framebuffer.texture, (int)viewport.width, (int)viewport.height, msaa);
     texture_fill_empty_data(&renderer->intermediate_framebuffer.texture, (int)viewport.width, (int)viewport.height, 0);
@@ -1354,40 +1322,47 @@ void renderer_new_frame(Renderer* renderer, Window* window)
     shader_set_m4(renderer->font_renderer.shader,     "projection", projection, false);
     shader_set_m4(renderer->ui_renderer.shader,       "projection", projection, false);
 
-    ui_new_frame(renderer, window->width, window->height);
+    // TODO(lucas): Consider making UI rendering optional
+    ui_new_frame(renderer, viewport_width, viewport_height);
 
     renderer_clear(color_black());
 }
 
-void renderer_render(Renderer* renderer)
+internal void renderer_finalize_frame(Renderer* renderer)
 {
-    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
-    {
-        RenderID* tex_id = renderer->tex_ids + i;
-        if (tex_id->used)
-        {
-            Texture tex = renderer->textures_to_generate[i];
-            renderer_gen_texture(tex);
-            glGenTextures(1, &tex_id->id);
-        }
-    }
-
-    rect viewport = renderer->viewport;
-
     // TODO(lucas): Use renderer AA settings
+    // TODO(lucas): Consider making UI rendering optional
     ui_render(renderer, NK_ANTI_ALIASING_ON);
     render_command_buffer_output(renderer);
 
-    // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the
-    // intermediate framebuffer
+    // NOTE(lucas): If MSAA is used, blit the multisampled framebuffer onto the intermediate framebuffer
     if (renderer->config.msaa_level > 0)
     {
+        // TODO(lucas): Pull out OpenGL code
+        rect viewport = renderer->viewport;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer->framebuffer.id);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer->intermediate_framebuffer.id);
         glBlitFramebuffer((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
-                        (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
-                        GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+                          (int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height,
+                          GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+
     }
+}
+
+internal void renderer_end_frame(Renderer* renderer)
+{
+    // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
+    // window dimensions if the user does not resize the viewport themselves
+    renderer->viewport = rect_zero();
+
+    memory_arena_clear(&renderer->scratch_arena);
+    memory_arena_clear(&renderer->command_buffer_arena);
+    render_command_buffer_clear(&renderer->command_buffer);
+}
+
+void renderer_render(Renderer* renderer)
+{
+    renderer_finalize_frame(renderer);
 
     fbo_unbind();
     renderer_clear(renderer->clear_color);
@@ -1405,15 +1380,34 @@ void renderer_render(Renderer* renderer)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     vao_unbind();
 
-    // NOTE(lucas): Invalidate the viewport so that the new frame call will set it correctly to
-    // window dimensions if the user does not resize the viewport themselves 
-    renderer->viewport = rect_zero();
-    memory_arena_clear(&renderer->scratch_arena);
-    memory_arena_clear(&renderer->command_buffer_arena);
-    render_command_buffer_clear(&renderer->command_buffer);
+    renderer_end_frame(renderer);
+}
 
-    for (u32 i = 0; i < countof(renderer->tex_ids); ++i)
-        renderer->textures_to_generate[i] = (Texture){0};
+void renderer_save_to_image(Renderer* renderer, s8 filename, MemoryArena* arena)
+{
+    renderer_finalize_frame(renderer);
+
+    u32 framebuffer_id = renderer->config.msaa_level > 0 ? renderer->intermediate_framebuffer.id : renderer->framebuffer.id;
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+
+    int width = (int)renderer->viewport.width;
+    int height = (int)renderer->viewport.height;
+    int channels = 4;
+    int pixel_bytes = (int)width*(int)height*channels;
+    ubyte* data = push_array(arena, pixel_bytes, ubyte);
+    glReadnPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixel_bytes, data);
+
+    // Export image
+    char* save_path_cstr = s8_get_char(arena, filename);
+    int stride = (int)width*channels;
+    if (!stbi_write_png(save_path_cstr, width, height, channels, data, stride))
+        log_error("Image not saved.");
+
+    // Reclaim arena space
+    size total_arena_bytes = filename.len+1 + pixel_bytes; 
+    memory_arena_pop(arena, total_arena_bytes);
+
+    renderer_end_frame(renderer);
 }
 
 void renderer_viewport(Renderer* renderer, rect viewport)
@@ -1424,22 +1418,91 @@ void renderer_viewport(Renderer* renderer, rect viewport)
 
 void renderer_clear(v4 color)
 {
+    // TODO(lucas): This seems to patch up some state leakage somewhere, where a scissor test leads to a non-fullscreen
+    // clear. Further investigation may be required.
+    glDisable(GL_SCISSOR_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness, f32 rotation)
+// Join two lines with a bevel (flat join)
+internal void draw_bevel(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
+{
+    // Get the unit vectors in the direction prev -> curr and curr -> next
+    v2 d0 = v2_normalize(v2_sub(curr, prev));
+    v2 d1 = v2_normalize(v2_sub(next, curr));
+
+    // Get the normal vectors to the direction vectors
+    v2 n0 = v2_perp(d0);
+    v2 n1 = v2_perp(d1);
+
+    f32 off_scale = 0.5f*thickness;
+    v2 offset0 = v2_scale(n0, off_scale);
+    v2 offset1 = v2_scale(n1, off_scale);
+
+    // Get the normal vectors to the direction vectors
+    f32 cross = v2_cross(d0, d1);
+    if (cross < 0)
+    {
+        offset0 = v2_scale(offset0, -1);
+        offset1 = v2_scale(offset1, -1);
+    }
+
+    // Outer corners of each segment at the joint
+    v2 p0 = v2_add(curr, offset0);
+    v2 p1 = v2_add(curr, offset1);
+
+    draw_triangle(renderer, curr, p0, p1, color, 0.0f);
+}
+
+// Join two lines with a miter (sharp join)
+internal void draw_miter(Renderer* renderer, v2 prev, v2 curr, v2 next, v4 color, f32 thickness)
+{
+    // Get the unit vectors in the direction prev -> curr and curr -> next
+    v2 d0 = v2_normalize(v2_sub(curr, prev));
+    v2 d1 = v2_normalize(v2_sub(next, curr));
+
+    // Get the normal vectors to the direction vectors
+    v2 n0 = v2_perp(d0);
+    v2 n1 = v2_perp(d1);
+
+    // If the cross product is negative, we have made a left turn at this corner
+    // and need to flip which side the corner appears on.
+    f32 cross = v2_cross(d0, d1);
+    if (cross < 0)
+    {
+        n0 = v2_scale(n0, -1.0f);
+        n1 = v2_scale(n1, -1.0f);
+    }
+
+    v2 miter_dir = v2_normalize(v2_add(n0, n1));
+
+    // The length goes along a diagonal. Scale it so that its projection onto the normal equals 0.5
+    f32 denom = v2_dot(miter_dir, n1);
+    // Prevent division by 0 or result explosion
+    if (abs_f32(denom) < 1e-4f) return;
+
+    f32 half_thick = 0.5f*thickness;
+    f32 length = half_thick / denom;
+
+    v2 miter_point = v2_add(curr, v2_scale(miter_dir, length));
+
+    // Build triangles to connect segments to miter point
+    v2 p0 = v2_add(curr, v2_scale(n0, half_thick));
+    v2 p1 = v2_add(curr, v2_scale(n1, half_thick));
+
+    draw_triangle(renderer, p0, miter_point, p1, color, 0.0f);
+}
+
+void draw_line(Renderer* renderer, v2 start, v2 end, v4 color, f32 thickness)
 {
     RenderCommandLine* cmd = render_command_push(&renderer->command_buffer, RenderCommandLine);
     if (!cmd)
         return;
-    v2 origin = v2_scale(v2_add(start, end), 0.5f);
     cmd->start = start;
     cmd->end = end;
-    cmd->origin = origin;
     cmd->color = color;
     cmd->thickness = thickness;
-    cmd->rotation = rotation;
 }
 
 void draw_triangle(Renderer* renderer, v2 a, v2 b, v2 c, v4 color, f32 rotation)
@@ -1500,7 +1563,7 @@ void draw_quad(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation)
     cmd->rotation = rotation;
 }
 
-void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 thickness, f32 rotation)
+void draw_quad_outline(Renderer* renderer, v2 position, v2 size, v4 color, f32 rotation, f32 thickness)
 {
     RenderCommandQuadOutline* cmd = render_command_push(&renderer->command_buffer, RenderCommandQuadOutline);
     if (!cmd)
@@ -1596,6 +1659,56 @@ void draw_ring_outline(Renderer* renderer, v2 center, f32 outer_radius, f32 inne
     cmd->thickness = thickness;
 }
 
+void draw_polyline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness)
+{
+    if (point_count < 2) return;
+
+    // TODO(lucas): It might be better to bake the line joints into the vertices. Instead of drawing a triangle to fill
+    // in each joint, just adjust the quad endpoints so that they are trapezoidal and meet nicely.
+
+    // We need to draw one line before the first bevel because joins must be centered on the current point.
+    draw_line(renderer, points[0], points[1], color, thickness);
+
+    // For each point, draw a line between the current and next point, and draw a bevel on the current point.
+    for (u32 point_idx = 1; point_idx < point_count - 1; ++point_idx)
+    {
+        draw_line(renderer, points[point_idx], points[point_idx+1], color, thickness);
+        draw_bevel(renderer, points[point_idx-1], points[point_idx], points[point_idx+1], color, thickness);
+        draw_miter(renderer, points[point_idx-1], points[point_idx], points[point_idx+1], color, thickness);
+    }
+
+    /* NOTE(lucas): If the first and last points are the same, we have a closed shape.
+     * In that case, we need one more bevel between the last and first line segments.
+     * Because the first and last points are the same, we need to be careful to pick unique points.
+     * In particular, pick count-2, either count-1 or 0, and 1.
+     */
+    b32 closed = (points[0].x == points[point_count-1].x && points[0].y == points[point_count-1].y);
+    if (closed)
+    {
+        draw_bevel(renderer, points[point_count-2], points[0], points[1], color, thickness);
+        draw_miter(renderer, points[point_count-2], points[0], points[1], color, thickness);
+    }
+}
+
+void draw_polygon_outline(Renderer* renderer, v2* points, u32 point_count, v4 color, f32 thickness)
+{
+    // NOTE(lucas): This is exactly the same as drawing a polyline, except the first and last points
+    // are automatically joined.
+
+    if (point_count < 2) return;
+
+    draw_line(renderer, points[0], points[1], color, thickness);
+    for (u32 i = 0; i < point_count; ++i)
+    {
+        u32 prev = (i + point_count - 1) % point_count;
+        u32 next = (i + 1) % point_count;
+
+        draw_line(renderer, points[i], points[next], color, thickness);
+        draw_bevel(renderer, points[prev], points[i], points[next], color, thickness);
+        draw_miter(renderer, points[prev], points[i], points[next], color, thickness);
+    }
+}
+
 void draw_sprite(Renderer* renderer, Sprite sprite)
 {
     RenderCommandSprite* cmd = render_command_push(&renderer->command_buffer, RenderCommandSprite);
@@ -1620,26 +1733,4 @@ void draw_scissor_test(Renderer* renderer, rect clip)
     if (!cmd)
         return;
     cmd->clip = clip;
-}
-
-u32 renderer_next_tex_id(Renderer* renderer)
-{
-    u32 id = 0;
-    
-    if (renderer->tex_index <= countof(renderer->tex_ids))
-    {
-        id = renderer->tex_ids[renderer->tex_index].id;
-        renderer->tex_ids[renderer->tex_index].used = true;
-    }
-
-    return id;
-}
-
-void renderer_push_texture(Renderer* renderer, Texture tex)
-{
-    if (renderer->tex_index <= countof(renderer->tex_ids))
-    {
-        renderer->textures_to_generate[renderer->tex_index] = tex;
-        ++renderer->tex_index;
-    }
 }

@@ -22,7 +22,7 @@ typedef struct MouseButtonState
 /* NOTE(lucas): IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
-*/ 
+*/
 enum Key
 {
     KEY_UNKNOWN = 0,
@@ -83,7 +83,7 @@ inline b32 key_released(Keyboard* input, int key)
 /* NOTE(lucas): IMPORTANT(lucas): This enum is used for array indexing.
 * The last value NUM_KEYS is used for declaring arrays of the proper size
 * Careful when changing this enum!
-*/ 
+*/
 typedef enum MouseButton
 {
     MOUSE_UNKONWN = 0,
@@ -217,7 +217,7 @@ typedef struct Gamepad
             ButtonState right_stick_downleft;
             ButtonState right_stick_downright;
         };
-    };  
+    };
 } Gamepad;
 
 inline b32 gamepad_button_pressed(ButtonState button)

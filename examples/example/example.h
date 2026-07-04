@@ -15,7 +15,7 @@ typedef struct Player
     v2 size;
     v4 color;
     f32 rotation;
-    
+
     int dash_counter;
     int dash_frames;
     f32 dash_direction; // -1: left, 1: right

@@ -18,25 +18,17 @@ internal void win32_toggle_fullscreen(HWND window)
     DWORD style = GetWindowLongA(window, GWL_STYLE);
     if (style & WS_OVERLAPPEDWINDOW)
     {
-        MONITORINFO monitor_info = {sizeof(monitor_info)};
-        if (GetWindowPlacement(window, &global_window_position_prev) && 
-            GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor_info))
+        MONITORINFO mi = {sizeof(mi)};
+        if (GetWindowPlacement(window, &global_window_position_prev) &&
+            GetMonitorInfoA(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &mi))
         {
-            /* NOTE(lucas): Make sure there are no styles that could potentially cause aritfacts, borders, etc.
-             * in fullscreen mode.
-             * In my case, one of the extended border styles was adding a 2 pixel white border
-             * around the whole screen.
-             */
-            style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-            DWORD ex_style = GetWindowLong(window, GWL_EXSTYLE);
-            ex_style &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-            SetWindowLongA(window, GWL_EXSTYLE, ex_style);
-
+            // TODO(lucas): Prevent window from immediately redrawing with each of these calls, which gives an
+            // odd appearance until the next time SwapBuffers is called.
             SetWindowLongA(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
             SetWindowPos(window, HWND_TOP,
-                         monitor_info.rcMonitor.left, monitor_info.rcMonitor.top,
-                         monitor_info.rcMonitor.right - monitor_info.rcMonitor.left,
-                         monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top,
+                         mi.rcMonitor.left, mi.rcMonitor.top,
+                         mi.rcMonitor.right - mi.rcMonitor.left,
+                         mi.rcMonitor.bottom - mi.rcMonitor.top,
                          SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         }
     }
@@ -62,12 +54,12 @@ internal UINT map_extended_keys(Keyboard* keyboard, WPARAM wparam, LPARAM lparam
      * For example, VK_LSHIFT and VK_RSHIFT are just converted to VK_SHIFT, which is true if either shift key is
      * pressed.
      * This function converts generic virtual-key codes to specific left and right ones.
-     */ 
+     */
     UINT vk = LOWORD(wparam); // virtual-key code
     WORD key_flags = HIWORD(lparam);
     UINT scan_code = LOBYTE(key_flags); // scancode
     BOOL extended = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
-    
+
     if (extended)
         scan_code = MAKEWORD(scan_code, 0xE0);
 
@@ -184,7 +176,7 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 // Could just grab the value of the bit, but comparison forces result to be bool
                 b32 was_down = (msg.lParam & (1 << 30)) != 0; // 30th bit is previous state (1 for down, 0 for up)
                 b32 is_down = (msg.lParam & (1 << 31)) == 0; // 31st bit is transition, always 1 for keyup, 0 for keydown
-               
+
                 // Disregard key repeats
                 // if (was_down == is_down)
                 //     break;
@@ -317,14 +309,17 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                     if ((virtual_key_code == VK_F4) && alt_key_down)
                         PostQuitMessage(0);
 
-                    // NOTE(lucas): Fullscreen key set to F11 for now,
-                    // but probably want ot make this configurable in the future
-                    // Also want to allow key combos like ALT+ENTER
+                    // TODO(lucas): Make fullscreen key/combo configurable
                     if (virtual_key_code == VK_F11)
                     {
                         if (msg.hwnd)
                             win32_toggle_fullscreen(msg.hwnd);
+
+                        return;
                     }
+                    // TODO(lucas): At least for now, Alt+Enter is disabled to prevent the chime from playing
+                    if ((virtual_key_code == VK_RETURN) && alt_key_down)
+                        return;
                 }
 
                 TranslateMessage(&msg);
@@ -379,13 +374,13 @@ void win32_keyboard_mouse_process_input(Window* window, Input* input)
                 ReleaseCapture();
                 win32_process_mouse_button(&mouse->buttons[MOUSE_LEFT], 0);
             } break;
-            
-            case WM_MBUTTONUP:     
+
+            case WM_MBUTTONUP:
             {
                 ReleaseCapture();
                 win32_process_mouse_button(&mouse->buttons[MOUSE_MIDDLE], 0);
             } break;
-            
+
             case WM_RBUTTONUP:
             {
                 ReleaseCapture();
@@ -466,7 +461,7 @@ void cursor_set_from_memory(void* cursor)
 internal void win32_xinput_button_release(ButtonState* button)
 {
     button->released = true;
-    button->pressed  = false; 
+    button->pressed  = false;
 }
 
 internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* gamepad)
@@ -561,7 +556,7 @@ internal void win32_process_xinput_buttons(XINPUT_KEYSTROKE keystroke, Gamepad* 
             case VK_PAD_RTHUMB_UPRIGHT:   win32_xinput_button_release(&gamepad->right_stick_upright);   break;
             case VK_PAD_RTHUMB_DOWNLEFT:  win32_xinput_button_release(&gamepad->right_stick_downleft);  break;
             case VK_PAD_RTHUMB_DOWNRIGHT: win32_xinput_button_release(&gamepad->right_stick_downright); break;
-            
+
             default: break;
         }
     }
@@ -584,7 +579,7 @@ internal f32 win32_process_xinput_stick(SHORT xinput_stick_value, SHORT deadzone
     {
         if (xinput_stick_value < SHRT_MIN)
             xinput_stick_value = SHRT_MIN;
-        
+
         xinput_stick_value += deadzone;
         result = (f32)xinput_stick_value / (f32)(SHRT_MAX - deadzone);
     }
@@ -644,17 +639,17 @@ void win32_xinput_gamepad_process_input(Input* input)
                     gamepad->is_connected = false;
                     log_info("Gamepad %d disconnected", i);
                 }
-            } break; 
+            } break;
             case ERROR_SUCCESS:
             {
                 win32_process_xinput_buttons(keystroke, gamepad);
-            } break;    
+            } break;
             default: break;
         }
 
         // Sticks
         XINPUT_GAMEPAD xinput_gamepad = controller_state.Gamepad;
-        gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX, 
+        gamepad->left_stick_x = win32_process_xinput_stick(xinput_gamepad.sThumbLX,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         gamepad->left_stick_y = win32_process_xinput_stick(xinput_gamepad.sThumbLY,
                                                             XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
