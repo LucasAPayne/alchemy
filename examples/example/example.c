@@ -206,128 +206,8 @@ UPDATE_AND_RENDER(update_and_render)
     /* Draw */
     Player* player = &state->player;
     draw_quad(renderer, player->position, player->size, player->color, player->rotation);
-    // draw_quad_outline(renderer, player->position, player->size, color_red(), player->rotation, 5.0f);
-    // draw_quad_gradient(renderer, player->position, player->size, color_black(), color_black(), color_red(), color_red(),
-                    //    player->rotation);
 
-    // v2 a = player->position;
-    // v2 b = v2_add(player->position, v2(200.0f, 50.0f));
-    // v2 c = v2_add(player->position, v2(-100.0f, -100.0f));
-    // draw_triangle(renderer, a, b, c, player->color, player->rotation);
-    // draw_triangle_outline(renderer, a, b, c, color_red(), player->rotation, 5.0f);
-    // draw_triangle_gradient(renderer, a, b, c, color_red(), color_green(), color_blue(), player->rotation);
-
-    // draw_line(renderer, player->position, v2_add(player->position, player->size), player->color, 5.0f);
-
-    // renderer->config.wireframe_mode = true;
-
-    // v2 center = v2_add(player->position, v2(300.0f, -300.0f));
-    // draw_circle_outline(renderer, center, player->size.x, player->color, 5.0f);
-
-    // f32 in_rad = player->size.x*4.0f;
-    // f32 out_rad = player->size.x*2.0f;
-    // persist f32 time = 0.0f;
-    // f32 freq = 2.0f;
-    // f32 start_angle = 45.0f - 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
-    // f32 end_angle = 315.0f + 22.5f*(1 + sin_f32(2.0f*(f32)GLM_PI*freq*time));
-    // time += delta_time;
-    // draw_circle_sector(renderer, center, out_rad, start_angle, end_angle, player->color, 0.0f);
-    // draw_ring(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation);
-    // draw_ring_outline(renderer, center, out_rad, in_rad, -90.0f, 180.0f, player->color, player->rotation, 5.0f);
-
-    // Straight horizontal line
-    // v2 pts[] = {
-        // {100, 100},
-        // {300, 100}
-    // };
-
-    // 90 degree corner
-    // v2 pts[] =
-    // {
-    //     v2(100.0f, 100.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(200.0f, 200.0f)
-    // };
-
-    // Sharp angle
-    // v2 pts[] =
-    // {
-    //     v2(150.0f, 200.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(250.0f, 200.0f)
-    // };
-
-    // Odd angle
-    // v2 pts[] =
-    // {
-    //     v2(150.0f, 200.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(250.0f, 200.0f)
-    // };
-
-    // Zig-zag
-    // v2 pts[] =
-    // {
-    //     v2(100.0f, 100.0f),
-    //     v2(200.0f, 150.0f),
-    //     v2(100.0f, 200.0f),
-    //     v2(200.0f, 250.0f),
-    //     v2(100.0f, 300.0f)
-    // };
-
-    // Square
-    // v2 pts[] =
-    // {
-    //     v2(100.0f, 100.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(200.0f, 200.0f),
-    //     v2(100.0f, 200.0f),
-    //     v2(100.0f, 100.0f)
-    // };
-
-    // Diamond
-    // v2 pts[] =
-    // {
-    //     v2(100.0f, 150.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(300.0f, 150.0f),
-    //     v2(200.0f, 200.0f),
-    //     v2(100.0f, 150.0f)
-    // };
-
-    // draw_polyline(renderer, pts, countof(pts), color_white(), 20.0f);
-
-    // Zig-zag
-    // v2 pts2[] =
-    // {
-    //     v2(100.0f, 100.0f),
-    //     v2(200.0f, 150.0f),
-    //     v2(100.0f, 200.0f),
-    //     v2(200.0f, 250.0f),
-    //     v2(100.0f, 300.0f)
-    // };
-
-    // Square
-    // v2 pts2[] =
-    // {
-    //     v2(100.0f, 100.0f),
-    //     v2(200.0f, 100.0f),
-    //     v2(200.0f, 200.0f),
-    //     v2(100.0f, 200.0f)
-    // };
-
-    // Diamond
-    v2 pts2[] =
-    {
-        v2(100.0f, 150.0f),
-        v2(200.0f, 100.0f),
-        v2(300.0f, 150.0f),
-        v2(200.0f, 200.0f)
-    };
-
-    draw_polygon_outline(renderer, pts2, countof(pts2), color_white(), 20.0f);
-
-    // draw_sprite(renderer, state->logo);
+    draw_sprite(renderer, state->logo);
 
     v4 font_color = {0.6f, 0.2f, 0.2f, 1.0f};
     Text engine_text = text_init(s8("Alchemy Engine"), &state->cardinal_font, v2(500.0f, 50.0f), 48);
@@ -351,7 +231,6 @@ UPDATE_AND_RENDER(update_and_render)
     draw_text(renderer, stopwatch_text);
 
     /* Text justification Test */
-    // rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(250.0f, 100.0f));
     rect text_bounds = rect_min_dim(v2(300.0f, 300.0f), v2(400.0f, 200.0f));
     draw_quad(renderer, text_bounds.position, text_bounds.size, color_white(), 0.0f);
 
@@ -365,13 +244,6 @@ UPDATE_AND_RENDER(update_and_render)
     text_area.vert_alignment = TEXT_ALIGN_V_DISTRIBUTED;
     text_area.style |= TEXT_AREA_WRAP;
     draw_text_area(renderer, &text_area);
-
-    // s8 str = s8("Blue-Eyes White Dragon");
-    // TextArea text_area = text_area_init(text_bounds, str, &state->matrix_font, 18);
-    // text_area.text.color = color_black();
-    // text_area.horiz_alignment = TEXT_ALIGN_H_LEFT;
-    // text_area.vert_alignment = TEXT_ALIGN_V_BOTTOM;
-    // draw_text_area(renderer, &text_area);
 
     Texture* logo_tex = push_struct(&state->transient_arena, Texture);
     *logo_tex = state->logo_tex;
